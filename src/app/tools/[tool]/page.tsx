@@ -3,21 +3,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import FileDropzone from "@/components/tools/FileDropzone";
-import PdfAnnotateEditTool from "@/components/tools/PdfAnnotateEditTool";
-import PdfCompressTool from "@/components/tools/PdfCompressTool";
-import PdfConvertTool from "@/components/tools/PdfConvertTool";
-import PdfMergeTool from "@/components/tools/PdfMergeTool";
-import PdfSignTool from "@/components/tools/PdfSignTool";
-import PdfSplitTool from "@/components/tools/PdfSplitTool";
-import PdfOrganizeTool from "@/components/tools/PdfOrganizeTool";
-import PdfWatermarkTool from "@/components/tools/PdfWatermarkTool";
-import PdfPasswordTool from "@/components/tools/PdfPasswordTool";
-import PdfUnlockTool from "@/components/tools/PdfUnlockTool";
-import PdfCropTool from "@/components/tools/PdfCropTool";
-import PdfRedactTool from "@/components/tools/PdfRedactTool";
 import { deleteUpload, loadUpload } from "@/lib/uploadStore";
 import { toolByKey } from "@/lib/tools";
+
+const PdfAnnotateEditTool = dynamic(() => import("@/components/tools/PdfAnnotateEditTool"), { ssr: false });
+const PdfCompressTool = dynamic(() => import("@/components/tools/PdfCompressTool"), { ssr: false });
+const PdfConvertTool = dynamic(() => import("@/components/tools/PdfConvertTool"), { ssr: false });
+const PdfMergeTool = dynamic(() => import("@/components/tools/PdfMergeTool"), { ssr: false });
+const PdfSignTool = dynamic(() => import("@/components/tools/PdfSignTool"), { ssr: false });
+const PdfSplitTool = dynamic(() => import("@/components/tools/PdfSplitTool"), { ssr: false });
+const PdfOrganizeTool = dynamic(() => import("@/components/tools/PdfOrganizeTool"), { ssr: false });
+const PdfWatermarkTool = dynamic(() => import("@/components/tools/PdfWatermarkTool"), { ssr: false });
+const PdfPasswordTool = dynamic(() => import("@/components/tools/PdfPasswordTool"), { ssr: false });
+const PdfUnlockTool = dynamic(() => import("@/components/tools/PdfUnlockTool"), { ssr: false });
+const PdfCropTool = dynamic(() => import("@/components/tools/PdfCropTool"), { ssr: false });
+const PdfRedactTool = dynamic(() => import("@/components/tools/PdfRedactTool"), { ssr: false });
 
 export default function ToolPage() {
   const params = useParams();
