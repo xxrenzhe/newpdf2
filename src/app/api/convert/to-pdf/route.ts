@@ -5,7 +5,7 @@ const GOTENBERG_URL = process.env.GOTENBERG_URL;
 export async function POST(request: NextRequest) {
   if (!GOTENBERG_URL) {
     return NextResponse.json(
-      { error: "GOTENBERG_URL is not configured" },
+      { error: "GOTENBERG_URL is not configured (self-hosted Gotenberg required)" },
       { status: 501 }
     );
   }

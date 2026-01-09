@@ -41,7 +41,23 @@ npm run dev
   - `STRIPE_WEBHOOK_SECRET`
   - `STRIPE_MONTHLY_PRICE_ID` / `STRIPE_ANNUAL_PRICE_ID`
 - Office 转换（可选）
-  - `GOTENBERG_URL`（例如 `http://localhost:3000` 的后台可访问的 Gotenberg 地址）
+  - `GOTENBERG_URL`（自托管的 Gotenberg 地址，例如 `http://localhost:3001`）
+
+## 开源自托管的 Office → PDF
+
+本项目的 Office → PDF 转换不依赖任何商业付费 SaaS。推荐使用开源的 Gotenberg（内部调用 LibreOffice）自托管部署。
+
+本地启动（Docker）：
+
+```bash
+docker compose -f docker-compose.gotenberg.yml up -d
+```
+
+然后在本项目设置：
+
+```bash
+export GOTENBERG_URL=http://localhost:3001
+```
 
 ## 计划中的功能（下一步）
 

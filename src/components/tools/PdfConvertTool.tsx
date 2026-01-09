@@ -39,7 +39,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
         const res = await fetch("/api/convert/to-pdf", { method: "POST", body: form });
         if (!res.ok) {
           const data = await res.json().catch(() => null);
-          throw new Error(data?.error || "Conversion service not available");
+          throw new Error(data?.error || "Self-hosted conversion service is not available");
         }
         const blob = await res.blob();
         downloadBlob(blob, f.name.replace(/\.[^.]+$/, "") + ".pdf");
@@ -79,7 +79,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
         multiple
         onFiles={setFiles}
         title="Drop files here to convert"
-        subtitle="PDF → images/text, images → PDF, or Office → PDF (via server)"
+        subtitle="PDF → images/text, images → PDF, or Office → PDF (self-hosted)"
       />
     );
   }
@@ -113,7 +113,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
           <option value="pdf-to-images">PDF → Images (.zip)</option>
           <option value="pdf-to-text">PDF → Text (.txt)</option>
           <option value="images-to-pdf">Images → PDF</option>
-          <option value="file-to-pdf">Office → PDF (server)</option>
+          <option value="file-to-pdf">Office → PDF (self-hosted)</option>
         </select>
       </div>
 
