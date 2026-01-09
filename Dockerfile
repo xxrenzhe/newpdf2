@@ -16,14 +16,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
-COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* bun.lock* ./
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  elif [ -f bun.lock ]; then npm install -g bun && bun install --frozen-lockfile; \
-  else echo "No lockfile found." && npm install; \
-  fi
+# 使用 npm install 保证兼容性，避免 lockfile 不一致问题
+COPY package.json ./
+RUN npm install
 
 # Copy source and build
 COPY . .
