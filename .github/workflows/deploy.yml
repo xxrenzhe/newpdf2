@@ -44,10 +44,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          # 不使用cache，因为项目使用bun.lock
 
       - name: 安装依赖
-        run: npm ci || npm install
+        run: npm install
 
       - name: 运行类型检查
         run: npx tsc --noEmit
