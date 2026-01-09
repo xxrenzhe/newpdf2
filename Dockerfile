@@ -28,7 +28,12 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # -----------------------------------------------------------------------------
-# Stage 2: Production runtime
+# Stage 2: Get Gotenberg binary from official image
+# -----------------------------------------------------------------------------
+FROM gotenberg/gotenberg:8.17.3 AS gotenberg
+
+# -----------------------------------------------------------------------------
+# Stage 3: Production runtime
 # -----------------------------------------------------------------------------
 FROM ubuntu:22.04 AS runtime
 
@@ -68,11 +73,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install Gotenberg
-ARG GOTENBERG_VERSION=8.13.0
-RUN curl -fsSL "https://github.com/gotenberg/gotenberg/releases/download/v${GOTENBERG_VERSION}/gotenberg_${GOTENBERG_VERSION}_linux_amd64.tar.gz" \
-    | tar -xzf - -C /usr/local/bin gotenberg \
-    && chmod +x /usr/local/bin/gotenberg
+# Copy Gotenberg binary from official image
+COPY --from=gotenberg /usr/bin/gotenberg /usr/local/bin/gotenberg
+RUN chmod +x /usr/local/bin/gotenberg
 
 # Create application user
 RUN useradd -m -s /bin/bash appuser
