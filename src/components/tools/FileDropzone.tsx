@@ -2,10 +2,34 @@
 
 import { useCallback, useRef, useState } from "react";
 
+// 文件大小限制常量
+const MAX_PDF_SIZE = 100 * 1024 * 1024; // 100MB for PDF
+const MAX_OTHER_SIZE = 20 * 1024 * 1024; // 20MB for other files
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function validateFileSize(file: File): { valid: boolean; error?: string } {
+  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  const maxSize = isPdf ? MAX_PDF_SIZE : MAX_OTHER_SIZE;
+
+  if (file.size > maxSize) {
+    return {
+      valid: false,
+      error: `File "${file.name}" (${formatFileSize(file.size)}) exceeds the ${isPdf ? "100MB" : "20MB"} limit.`,
+    };
+  }
+  return { valid: true };
+}
+
 type FileDropzoneProps = {
   accept?: string;
   multiple?: boolean;
   maxFiles?: number;
+  maxSize?: number; // 自定义最大文件大小（可选）
   onFiles: (files: File[]) => void;
   title?: string;
   subtitle?: string;
@@ -15,20 +39,53 @@ export default function FileDropzone({
   accept,
   multiple,
   maxFiles,
+  maxSize,
   onFiles,
   title = "Drop your file here",
   subtitle = "Or choose a file from your computer",
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const emitFiles = useCallback(
     (list: FileList | File[]) => {
       const files = Array.from(list);
       const limited = typeof maxFiles === "number" ? files.slice(0, maxFiles) : files;
-      if (limited.length > 0) onFiles(limited);
+
+      // 验证文件大小
+      const errors: string[] = [];
+      const validFiles: File[] = [];
+
+      for (const file of limited) {
+        // 如果提供了自定义 maxSize，使用它；否则使用默认验证
+        if (maxSize) {
+          if (file.size > maxSize) {
+            errors.push(`File "${file.name}" (${formatFileSize(file.size)}) exceeds the ${formatFileSize(maxSize)} limit.`);
+          } else {
+            validFiles.push(file);
+          }
+        } else {
+          const result = validateFileSize(file);
+          if (result.valid) {
+            validFiles.push(file);
+          } else if (result.error) {
+            errors.push(result.error);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        setError(errors.join(" "));
+        // 3秒后清除错误
+        setTimeout(() => setError(null), 5000);
+      } else {
+        setError(null);
+      }
+
+      if (validFiles.length > 0) onFiles(validFiles);
     },
-    [maxFiles, onFiles]
+    [maxFiles, maxSize, onFiles]
   );
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -61,6 +118,29 @@ export default function FileDropzone({
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* 错误提示 */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-fade-in">
+          <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M15 9l-6 6M9 9l6 6" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-red-800">File too large</p>
+            <p className="text-sm text-red-600 mt-1">{error}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="ml-auto text-red-400 hover:text-red-600"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div
         className={`bg-white rounded-2xl border-2 border-dashed transition-all duration-300 ${
           isDragging

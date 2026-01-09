@@ -1,0 +1,11 @@
+# PDF Tools - robots.txt
+# https://pdftools.app
+
+User-agent: *
+Allow: /
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://pdftools.app/sitemap.xml

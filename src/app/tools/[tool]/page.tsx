@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -21,7 +21,7 @@ const PdfUnlockTool = dynamic(() => import("@/components/tools/PdfUnlockTool"), 
 const PdfCropTool = dynamic(() => import("@/components/tools/PdfCropTool"), { ssr: false });
 const PdfRedactTool = dynamic(() => import("@/components/tools/PdfRedactTool"), { ssr: false });
 
-export default function ToolPage() {
+function ToolContent() {
   const params = useParams();
   const toolKey = params.tool as string;
   const tool = toolByKey[toolKey] ?? toolByKey.annotate;
@@ -207,5 +207,38 @@ export default function ToolPage() {
         </div>
       </footer>
     </main>
+  );
+}
+
+// Loading fallback component
+function ToolPageLoading() {
+  return (
+    <main className="min-h-screen bg-gradient-pink">
+      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+            <div className="h-5 w-20 bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+      </header>
+      <section className="py-12 md:py-20">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-gray-200 mx-auto mb-6 animate-pulse" />
+            <div className="h-10 w-48 bg-gray-200 rounded mx-auto mb-4 animate-pulse" />
+            <div className="h-6 w-64 bg-gray-200 rounded mx-auto animate-pulse" />
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default function ToolPage() {
+  return (
+    <Suspense fallback={<ToolPageLoading />}>
+      <ToolContent />
+    </Suspense>
   );
 }
