@@ -8,16 +8,29 @@ import bcrypt from "bcryptjs";
 const users: { id: string; email: string; password: string; name: string }[] = [];
 
 export const authOptions: NextAuthOptions = {
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID || "",
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
-    }),
-    CredentialsProvider({
+  providers: (() => {
+    const providers = [];
+
+    if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+      providers.push(
+        GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        })
+      );
+    }
+
+    if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
+      providers.push(
+        FacebookProvider({
+          clientId: process.env.FACEBOOK_CLIENT_ID,
+          clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+        })
+      );
+    }
+
+    providers.push(
+      CredentialsProvider({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -48,8 +61,11 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
         };
       },
-    }),
-  ],
+      })
+    );
+
+    return providers;
+  })(),
   session: {
     strategy: "jwt",
   },

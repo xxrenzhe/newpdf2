@@ -2,9 +2,26 @@
 
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { saveUpload } from "@/lib/uploadStore";
 
 export default function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
+  const router = useRouter();
+
+  const openWithFiles = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+    const id = await saveUpload(fileArray);
+
+    const first = fileArray[0];
+    const name = first.name.toLowerCase();
+    const isPdf = first.type === "application/pdf" || name.endsWith(".pdf");
+    const isImage = first.type.startsWith("image/") || /\.(png|jpg|jpeg|gif|bmp|webp)$/.test(name);
+    const tool = isPdf ? "edit" : isImage ? "convert" : "convert";
+
+    router.push(`/tools/${tool}?uploadId=${encodeURIComponent(id)}`);
+  }, [router]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -19,13 +36,17 @@ export default function HeroSection() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    // Handle file drop
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      console.log("Files dropped:", files);
-      // Handle file upload
-    }
-  }, []);
+    void openWithFiles(e.dataTransfer.files);
+  }, [openWithFiles]);
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files || e.target.files.length === 0) return;
+      void openWithFiles(e.target.files);
+      e.target.value = "";
+    },
+    [openWithFiles]
+  );
 
   return (
     <section className="relative overflow-hidden">
@@ -74,11 +95,17 @@ export default function HeroSection() {
               </h3>
 
               {/* Browse button */}
-              <Button
-                className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium px-10 py-3 h-12 rounded-lg text-base mb-4"
-              >
-                Browse files
-              </Button>
+              <label className="mb-4">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.bmp,.txt"
+                  onChange={handleFileSelect}
+                />
+                <Button className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium px-10 py-3 h-12 rounded-lg text-base">
+                  Browse files
+                </Button>
+              </label>
 
               {/* File size info */}
               <p className="text-sm text-gray-500 max-w-md">
@@ -89,7 +116,7 @@ export default function HeroSection() {
 
           {/* Cloud upload options */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-            <button className="cloud-btn justify-center">
+            <button className="cloud-btn justify-center" type="button" disabled title="Coming soon">
               <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C6.477 2 1.545 6.932 1.545 13s4.932 11 11 11c6.076 0 10.545-4.268 10.545-10.545 0-.707-.082-1.391-.235-2.055l-10.31-.161z" fill="#4285F4"/>
                 <path d="M3.545 7.59l3.167 2.323c.792-2.283 2.887-3.913 5.378-3.913 1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2c-3.79 0-7.08 2.137-8.74 5.271l-.26.319z" fill="#EA4335"/>
@@ -98,13 +125,13 @@ export default function HeroSection() {
               </svg>
               <span className="text-gray-700 font-medium text-sm">Upload from Google Drive</span>
             </button>
-            <button className="cloud-btn justify-center">
+            <button className="cloud-btn justify-center" type="button" disabled title="Coming soon">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#0061FF">
                 <path d="M12 2L6 6.5l6 4.5 6-4.5L12 2zM6 11.5L0 16l6 4.5 6-4.5-6-4.5zm12 0l-6 4.5 6 4.5 6-4.5-6-4.5zM12 14l-6 4.5L12 23l6-4.5L12 14z"/>
               </svg>
               <span className="text-gray-700 font-medium text-sm">Upload from Dropbox</span>
             </button>
-            <button className="cloud-btn justify-center">
+            <button className="cloud-btn justify-center" type="button" disabled title="Coming soon">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#0078D4">
                 <path d="M10.5 2.5H2.5v9h8v-9zm11 0h-8v9h8v-9zm-11 11h-8v9h8v-9zm11 0h-8v9h8v-9z"/>
               </svg>

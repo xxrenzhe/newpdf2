@@ -29,14 +29,23 @@ const subjects = [
   "Other",
 ];
 
-const faqItems = [
-  { question: "What is Files Editor?", answer: "Files Editor is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely." },
-  { question: "Do I need to download or install anything to use Files Editor?", answer: "No, Files Editor is completely web-based." },
-  { question: "Can I merge PDF files with Files Editor?", answer: "Yes, you can easily merge multiple PDF files into one document." },
-  { question: "Can I convert a Word document into a PDF?", answer: "Absolutely! Files Editor supports converting various file formats." },
-  { question: "Is Files Editor safe to use?", answer: "Yes, Files Editor uses industry-standard encryption and security measures." },
-  { question: "How can I cancel my subscription?", answer: "You can cancel your subscription from your account settings." },
-];
+const faqByTab = {
+  general: [
+    { question: "What is Files Editor?", answer: "Files Editor is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely." },
+    { question: "Do I need to download or install anything to use Files Editor?", answer: "No, Files Editor is completely web-based." },
+    { question: "Can I merge PDF files with Files Editor?", answer: "Yes, you can easily merge multiple PDF files into one document." },
+    { question: "Can I convert a Word document into a PDF?", answer: "Yes. Our Convert tool currently supports PDF ↔ images/text and images → PDF. Office-to-PDF can be added via a backend conversion service." },
+  ],
+  security: [
+    { question: "Is Files Editor safe to use?", answer: "Files Editor runs core PDF operations locally in your browser for many tools, so your files don't need to leave your device for basic edits, conversion, and compression." },
+    { question: "Do you store my documents?", answer: "This demo app does not store your documents server-side unless you explicitly upload them to an external service." },
+  ],
+  billing: [
+    { question: "How can I cancel my subscription?", answer: "You can cancel your subscription from your account settings." },
+  ],
+} as const;
+
+type FaqTab = keyof typeof faqByTab;
 
 export default function ContactUsPage() {
   const [formData, setFormData] = useState({
@@ -45,10 +54,31 @@ export default function ContactUsPage() {
     subject: "",
     description: "",
   });
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [activeTab, setActiveTab] = useState<FaqTab>("general");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+    setStatus("sending");
+    setErrorMessage("");
+    void (async () => {
+      try {
+        const res = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Failed to send");
+        }
+        setStatus("sent");
+      } catch (err) {
+        setStatus("error");
+        setErrorMessage(err instanceof Error ? err.message : "Failed to send");
+      }
+    })();
   };
 
   return (
@@ -70,6 +100,16 @@ export default function ContactUsPage() {
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {status === "sent" && (
+                  <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                    Thanks! We received your message and will get back to you soon.
+                  </div>
+                )}
+                {status === "error" && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                    {errorMessage || "Something went wrong. Please try again."}
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
                     Full Name <span className="text-red-500">*</span>
@@ -140,9 +180,10 @@ export default function ContactUsPage() {
 
                 <Button
                   type="submit"
+                  disabled={status === "sending"}
                   className="w-full bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium h-12 rounded-lg"
                 >
-                  Send
+                  {status === "sending" ? "Sending..." : "Send"}
                 </Button>
               </form>
             </div>
@@ -154,17 +195,34 @@ export default function ContactUsPage() {
               Frequently Asked Questions
             </h2>
 
-            <div className="flex justify-center gap-4 md:gap-8 mb-8">
-              <button className="text-gray-500 hover:text-gray-700 font-medium">General</button>
-              <button className="text-[#2d85de] border-b-2 border-[#2d85de] pb-1 font-medium">Security</button>
-              <button className="text-gray-500 hover:text-gray-700 font-medium">Account & Billing</button>
+            <div className="flex justify-center gap-4 md:gap-8 mb-8 border-b border-gray-200">
+              {(
+                [
+                  { key: "general", label: "General" },
+                  { key: "security", label: "Security" },
+                  { key: "billing", label: "Account & Billing" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`pb-3 px-2 font-medium transition-all ${
+                    activeTab === tab.key
+                      ? "text-[#2d85de] border-b-2 border-[#2d85de]"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             <Accordion type="single" collapsible className="space-y-3">
-              {faqItems.map((item, index) => (
+              {faqByTab[activeTab].map((item, index) => (
                 <AccordionItem
                   key={index}
-                  value={`item-${index}`}
+                  value={`${activeTab}-${index}`}
                   className="bg-white rounded-xl border-none px-6 shadow-sm"
                 >
                   <AccordionTrigger className="text-left font-medium text-gray-900 py-5 hover:no-underline">

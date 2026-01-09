@@ -20,6 +20,7 @@ interface PDFAnnotationCanvasProps {
   activeTool: AnnotationTool;
   activeColor: string;
   strokeWidth: number;
+  initialAnnotationsJson?: string;
   onAnnotationsChange?: (annotations: string) => void;
 }
 
@@ -29,6 +30,7 @@ export default function PDFAnnotationCanvas({
   activeTool,
   activeColor,
   strokeWidth,
+  initialAnnotationsJson,
   onAnnotationsChange,
 }: PDFAnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,6 +65,38 @@ export default function PDFAnnotationCanvas({
       canvas.dispose();
     };
   }, []);
+
+  // Load per-page annotations
+  useEffect(() => {
+    if (!fabricCanvasRef.current) return;
+    const canvas = fabricCanvasRef.current;
+
+    const load = async () => {
+      canvas.clear();
+      if (!initialAnnotationsJson) {
+        canvas.renderAll();
+        return;
+      }
+
+      const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(
+        initialAnnotationsJson,
+        () => {}
+      );
+      if (loadResult instanceof Promise) {
+        await loadResult;
+      } else {
+        await new Promise<void>((resolve) => {
+          (canvas as unknown as { loadFromJSON: (json: string, cb: () => void) => void }).loadFromJSON(
+            initialAnnotationsJson,
+            () => resolve()
+          );
+        });
+      }
+      canvas.renderAll();
+    };
+
+    void load();
+  }, [initialAnnotationsJson]);
 
   // Update canvas dimensions
   useEffect(() => {
@@ -134,7 +168,7 @@ export default function PDFAnnotationCanvas({
 
       if (activeTool === "eraser") {
         // Find and remove object at click position
-        const target = canvas.findTarget(opt.e);
+        const target = canvas.findTarget(opt.e) as unknown as fabric.Object | null;
         if (target) {
           canvas.remove(target);
           saveAnnotations();

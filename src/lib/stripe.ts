@@ -1,9 +1,17 @@
 import Stripe from "stripe";
 
-// Initialize Stripe with your secret key
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  typescript: true,
-});
+let stripeSingleton: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  if (!stripeSingleton) {
+    stripeSingleton = new Stripe(key, { typescript: true });
+  }
+  return stripeSingleton;
+}
 
 // Price IDs - replace with your actual Stripe price IDs
 export const PRICES = {
@@ -40,6 +48,7 @@ export async function createCheckoutSession({
   successUrl,
   cancelUrl,
 }: CreateCheckoutSessionParams) {
+  const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     payment_method_types: ["card"],
@@ -60,7 +69,7 @@ export async function createCheckoutSession({
 }
 
 export async function createCustomer(email: string, name?: string) {
-  const customer = await stripe.customers.create({
+  const customer = await getStripe().customers.create({
     email,
     name,
   });
@@ -69,17 +78,17 @@ export async function createCustomer(email: string, name?: string) {
 }
 
 export async function getSubscription(subscriptionId: string) {
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
   return subscription;
 }
 
 export async function cancelSubscription(subscriptionId: string) {
-  const subscription = await stripe.subscriptions.cancel(subscriptionId);
+  const subscription = await getStripe().subscriptions.cancel(subscriptionId);
   return subscription;
 }
 
 export async function createPortalSession(customerId: string, returnUrl: string) {
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await getStripe().billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
   });

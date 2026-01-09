@@ -23,10 +23,30 @@ const languages = [
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [language, setLanguage] = useState("en");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Reset password for:", email);
+    setStatus("sending");
+    setErrorMessage("");
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Failed to send");
+        }
+        setStatus("sent");
+      } catch (err) {
+        setStatus("error");
+        setErrorMessage(err instanceof Error ? err.message : "Failed to send");
+      }
+    })();
   };
 
   return (
@@ -79,6 +99,16 @@ export default function ForgotPasswordPage() {
 
           {/* Email Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {status === "sent" && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                If an account exists for this email, you will receive reset instructions shortly.
+              </div>
+            )}
+            {status === "error" && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {errorMessage || "Something went wrong. Please try again."}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
                 Email
@@ -102,10 +132,10 @@ export default function ForgotPasswordPage() {
 
             <Button
               type="submit"
-              disabled={!email}
+              disabled={!email || status === "sending"}
               className="w-full bg-[#7fbbf7] hover:bg-[#2d85de] disabled:bg-[#b8d9fb] text-white font-medium h-12 rounded-lg transition-colors"
             >
-              Send
+              {status === "sending" ? "Sending..." : "Send"}
             </Button>
           </form>
         </div>

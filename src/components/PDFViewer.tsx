@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { Document, Page } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-
-// Set worker source
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
 
 interface PDFViewerProps {
   file: File | string | null;
@@ -14,6 +12,7 @@ interface PDFViewerProps {
 }
 
 export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
+  configurePdfJsWorker();
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);

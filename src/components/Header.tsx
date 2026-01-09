@@ -11,81 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-
-const tools = [
-  {
-    name: "Annotate PDF",
-    description: "Add text, images, shapes, and more",
-    icon: "https://ext.same-assets.com/170935311/1101188712.svg",
-    href: "/tools/annotate",
-  },
-  {
-    name: "Edit PDF",
-    description: "Edit text, fonts, and colors",
-    icon: "https://ext.same-assets.com/170935311/4207141155.svg",
-    href: "/tools/edit",
-  },
-  {
-    name: "Sign PDF",
-    description: "Add signatures and initials",
-    icon: "https://ext.same-assets.com/170935311/1168656911.svg",
-    href: "/tools/sign",
-  },
-  {
-    name: "Convert Document",
-    description: "Convert to PDF, Word, Excel",
-    icon: "https://ext.same-assets.com/170935311/201416504.svg",
-    href: "/tools/convert",
-  },
-  {
-    name: "Merge Documents",
-    description: "Combine multiple PDFs",
-    icon: "https://ext.same-assets.com/170935311/2061392550.svg",
-    href: "/tools/merge",
-  },
-  {
-    name: "Compress PDF",
-    description: "Reduce file size",
-    icon: "https://ext.same-assets.com/170935311/3220459703.svg",
-    href: "/tools/compress",
-  },
-  {
-    name: "Redact PDF",
-    description: "Remove sensitive info",
-    icon: "https://ext.same-assets.com/170935311/611706699.svg",
-    href: "/tools/redact",
-  },
-  {
-    name: "Organize Pages",
-    description: "Sort, delete, add pages",
-    icon: "https://ext.same-assets.com/170935311/3060953847.svg",
-    href: "/tools/organize",
-  },
-  {
-    name: "Split & Extract",
-    description: "Split PDF pages",
-    icon: "https://ext.same-assets.com/170935311/1662545404.svg",
-    href: "/tools/split",
-  },
-  {
-    name: "Password Protect",
-    description: "Secure with password",
-    icon: "https://ext.same-assets.com/170935311/227026812.svg",
-    href: "/tools/password",
-  },
-  {
-    name: "Unlock PDF",
-    description: "Remove passwords",
-    icon: "https://ext.same-assets.com/170935311/458112585.svg",
-    href: "/tools/unlock",
-  },
-  {
-    name: "Add Watermark",
-    description: "Add watermarks to PDF",
-    icon: "https://ext.same-assets.com/170935311/3638955808.svg",
-    href: "/tools/watermark",
-  },
-];
+import { TOOLS } from "@/lib/tools";
 
 export default function Header() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -181,7 +107,7 @@ export default function Header() {
                 </SheetHeader>
                 <div className="px-4 py-4">
                   <div className="grid grid-cols-1 gap-2">
-                    {tools.map((tool) => (
+                    {TOOLS.map((tool) => (
                       <Link
                         key={tool.name}
                         href={tool.href}
@@ -193,7 +119,10 @@ export default function Header() {
                         </div>
                         <div>
                           <h3 className="font-medium text-gray-900">{tool.name}</h3>
-                          <p className="text-sm text-gray-500">{tool.description}</p>
+                          <p className="text-sm text-gray-500">
+                            {tool.description}
+                            {tool.status === "comingSoon" ? " · Coming soon" : ""}
+                          </p>
                         </div>
                       </Link>
                     ))}

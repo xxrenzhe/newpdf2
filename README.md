@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# newpdf2 - 一站式聚合式 PDF 工具平台（Next.js）
 
-## Getting Started
+目标：构建一个体验优秀、功能完整的在线 PDF 工具平台，覆盖编辑、签名、格式转换、压缩等高频场景。
 
-First, run the development server:
+## 本地开发
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+访问 `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 已实现功能（可用）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `Annotate / Edit`：基于 `react-pdf` + `fabric` 的标注/叠加式编辑（可导出到新 PDF）
+- `Sign`：签名板绘制签名（PNG），写入 PDF 指定页（可下载）
+- `Convert`
+  - PDF → 图片（PNG/JPG，打包 ZIP）
+  - PDF → 文本（TXT）
+  - 图片 → PDF
+- `Merge`：多 PDF 合并（可下载）
+- `Compress`：基于渲染重建的压缩（会栅格化页面，体积更小但文本不可选）
 
-## Learn More
+说明：上述 PDF 处理优先在浏览器本地完成（不需要上传到服务器），更利于隐私与部署简单性。
 
-To learn more about Next.js, take a look at the following resources:
+## 环境变量（可选）
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- NextAuth
+  - `NEXTAUTH_SECRET`
+  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`（可选，配置后才会显示 Google 登录）
+  - `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET`（可选，配置后才会显示 Facebook 登录）
+- Stripe（订阅/支付相关）
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_MONTHLY_PRICE_ID` / `STRIPE_ANNUAL_PRICE_ID`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 计划中的功能（Coming soon）
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 页面组织（排序/旋转/删除/拆分）
+- 水印、密码保护/解锁、打码/涂黑
+- Office 文档转换（需要后端转换服务/容器能力）

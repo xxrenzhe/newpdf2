@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { Document, Page } from "react-pdf";
 import dynamic from "next/dynamic";
 import AnnotationToolbar from "./AnnotationToolbar";
 import type { AnnotationTool } from "./PDFAnnotationCanvas";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-
-// Set worker source
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
+import { applyAnnotationOverlays, downloadBlob } from "@/lib/pdf/client";
 
 // Dynamically import annotation canvas
 const PDFAnnotationCanvas = dynamic(() => import("./PDFAnnotationCanvas"), {
@@ -24,6 +23,7 @@ interface PDFEditorProps {
 }
 
 export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditorProps) {
+  configurePdfJsWorker();
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -68,21 +68,29 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
     });
   }, [pageNumber]);
 
-  const handleDownload = useCallback(() => {
-    // For now, just download the original PDF
-    // In a production app, you'd use pdf-lib to merge annotations
-    if (file instanceof File) {
-      const url = URL.createObjectURL(file);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName || "document.pdf";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-  }, [file, fileName]);
+  const handleExport = useCallback(async () => {
+    if (!(file instanceof File)) return null;
+    const hasAny = Object.values(annotations).some((v) => v && v !== "{}");
+    if (!hasAny) return new Uint8Array(await file.arrayBuffer());
+    return applyAnnotationOverlays(file, annotations, pageDimensions);
+  }, [annotations, file, pageDimensions]);
 
-  const scaledWidth = pageDimensions.width * scale;
-  const scaledHeight = pageDimensions.height * scale;
+  const handleDownload = useCallback(async () => {
+    if (!(file instanceof File)) return;
+    const bytes = await handleExport();
+    if (!bytes) return;
+    downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), fileName || "document.pdf");
+  }, [file, fileName, handleExport]);
+
+  const handleSave = useCallback(async () => {
+    if (!(file instanceof File)) return;
+    const bytes = await handleExport();
+    if (!bytes) return;
+    onSave?.(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }));
+  }, [file, handleExport, onSave]);
+
+  const viewWidth = pageDimensions.width * scale;
+  const viewHeight = pageDimensions.height * scale;
 
   return (
     <div className="flex h-full bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -196,7 +204,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
               Download
             </button>
             <button
-              onClick={() => onSave?.(new Blob())}
+              onClick={handleSave}
               className="flex items-center gap-2 px-4 py-2 bg-[#2d85de] hover:bg-[#2473c4] text-white rounded-lg font-medium text-sm"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -220,38 +228,37 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
             </div>
           )}
 
-          <div
-            className="relative bg-white shadow-lg"
-            style={{ width: scaledWidth, height: scaledHeight }}
-          >
-            {/* PDF Page */}
-            <Document
-              file={file}
-              onLoadSuccess={onDocumentLoadSuccess}
-              loading={null}
-            >
-              <Page
-                pageNumber={pageNumber}
-                scale={scale}
-                onLoadSuccess={onPageLoadSuccess}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-            </Document>
-
-            {/* Annotation Canvas Overlay */}
+          <div className="bg-white shadow-lg" style={{ width: viewWidth, height: viewHeight }}>
             <div
-              className="absolute inset-0"
-              style={{ width: scaledWidth, height: scaledHeight }}
+              className="relative origin-top-left"
+              style={{
+                width: pageDimensions.width,
+                height: pageDimensions.height,
+                transform: `scale(${scale})`,
+              }}
             >
-              <PDFAnnotationCanvas
-                width={scaledWidth}
-                height={scaledHeight}
-                activeTool={activeTool}
-                activeColor={activeColor}
-                strokeWidth={strokeWidth}
-                onAnnotationsChange={handleAnnotationsChange}
-              />
+              <Document file={file} onLoadSuccess={onDocumentLoadSuccess} loading={null}>
+                <Page
+                  pageNumber={pageNumber}
+                  scale={1}
+                  onLoadSuccess={onPageLoadSuccess}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+              </Document>
+
+              <div className="absolute inset-0" style={{ width: pageDimensions.width, height: pageDimensions.height }}>
+                <PDFAnnotationCanvas
+                  key={pageNumber}
+                  width={pageDimensions.width}
+                  height={pageDimensions.height}
+                  activeTool={activeTool}
+                  activeColor={activeColor}
+                  strokeWidth={strokeWidth}
+                  initialAnnotationsJson={annotations[pageNumber]}
+                  onAnnotationsChange={handleAnnotationsChange}
+                />
+              </div>
             </div>
           </div>
         </div>
