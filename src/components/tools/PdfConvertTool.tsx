@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, extractPdfText, imagesToPdf, pdfToImagesZip } from "@/lib/pdf/client";
 
-type Mode = "auto" | "pdf-to-images" | "pdf-to-text" | "images-to-pdf";
+type Mode = "auto" | "pdf-to-images" | "pdf-to-text" | "images-to-pdf" | "file-to-pdf";
 
 export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[] }) {
   const [files, setFiles] = useState<File[]>(initialFiles ?? []);
@@ -20,7 +20,10 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
     const first = files[0];
     if (!first) return "auto";
     const isPdf = first.type === "application/pdf" || first.name.toLowerCase().endsWith(".pdf");
-    return isPdf ? "pdf-to-images" : "images-to-pdf";
+    if (isPdf) return "pdf-to-images";
+    const isImage = first.type.startsWith("image/") || /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(first.name);
+    if (isImage) return "images-to-pdf";
+    return "file-to-pdf";
   }, [files, mode]);
 
   const run = useCallback(async () => {
@@ -28,6 +31,21 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
     setBusy(true);
     setMessage("");
     try {
+      if (inferred === "file-to-pdf") {
+        if (files.length !== 1) throw new Error("Please upload a single file for conversion.");
+        const f = files[0]!;
+        const form = new FormData();
+        form.set("file", f, f.name);
+        const res = await fetch("/api/convert/to-pdf", { method: "POST", body: form });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Conversion service not available");
+        }
+        const blob = await res.blob();
+        downloadBlob(blob, f.name.replace(/\.[^.]+$/, "") + ".pdf");
+        return;
+      }
+
       if (inferred === "images-to-pdf") {
         const bytes = await imagesToPdf(files);
         downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), "images.pdf");
@@ -57,11 +75,11 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
   if (files.length === 0) {
     return (
       <FileDropzone
-        accept=".pdf,application/pdf,image/*"
+        accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
         multiple
         onFiles={setFiles}
         title="Drop files here to convert"
-        subtitle="PDF → images/text, or images → PDF"
+        subtitle="PDF → images/text, images → PDF, or Office → PDF (via server)"
       />
     );
   }
@@ -95,6 +113,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
           <option value="pdf-to-images">PDF → Images (.zip)</option>
           <option value="pdf-to-text">PDF → Text (.txt)</option>
           <option value="images-to-pdf">Images → PDF</option>
+          <option value="file-to-pdf">Office → PDF (server)</option>
         </select>
       </div>
 

@@ -93,6 +93,9 @@ web_modules/
 .next
 out
 
+# WASM binaries copied via postinstall
+public/wasm/qpdf.wasm
+
 # Nuxt.js build / generate output
 .nuxt
 dist

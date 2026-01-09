@@ -1,0 +1,329 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import FileDropzone from "./FileDropzone";
+import type { PageOpItem } from "@/lib/pdf/client";
+import { downloadBlob, rebuildPdfWithOps } from "@/lib/pdf/client";
+import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
+
+type PageItem = {
+  id: string;
+  sourcePageIndex: number; // 0-based
+  rotationDegrees: number; // 0/90/180/270
+};
+
+function clampRotation(deg: number) {
+  const v = ((deg % 360) + 360) % 360;
+  if (v === 90 || v === 180 || v === 270) return v;
+  return 0;
+}
+
+export default function PdfOrganizeTool({ initialFile }: { initialFile?: File }) {
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [items, setItems] = useState<PageItem[]>([]);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [thumbs, setThumbs] = useState<Record<number, string>>({});
+  const [numPages, setNumPages] = useState(0);
+
+  const isPdf = useMemo(
+    () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
+    [file]
+  );
+
+  const selectedIds = useMemo(() => new Set(Object.entries(selected).filter(([, v]) => v).map(([k]) => k)), [selected]);
+  const selectedCount = selectedIds.size;
+
+  useEffect(() => {
+    if (!file || !isPdf) return;
+    configurePdfJsWorker();
+    let cancelled = false;
+
+    const run = async () => {
+      setError("");
+      setThumbs({});
+      setNumPages(0);
+
+      const data = new Uint8Array(await file.arrayBuffer());
+      const doc = await pdfjs.getDocument({ data }).promise;
+      if (cancelled) return;
+      setNumPages(doc.numPages);
+
+      setItems(
+        Array.from({ length: doc.numPages }, (_, i) => ({
+          id: crypto.randomUUID(),
+          sourcePageIndex: i,
+          rotationDegrees: 0,
+        }))
+      );
+      setSelected({});
+
+      const nextThumbs: Record<number, string> = {};
+      const scale = 0.22;
+      for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+        const page = await doc.getPage(pageNum);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (!ctx) continue;
+        await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+        nextThumbs[pageNum - 1] = canvas.toDataURL("image/jpeg", 0.8);
+        if (cancelled) return;
+        setThumbs({ ...nextThumbs });
+      }
+    };
+
+    void run().catch((e) => setError(e instanceof Error ? e.message : "Failed to load PDF"));
+    return () => {
+      cancelled = true;
+    };
+  }, [file, isPdf]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelected(Object.fromEntries(items.map((i) => [i.id, true])));
+  }, [items]);
+
+  const clearSelection = useCallback(() => setSelected({}), []);
+
+  const move = useCallback((id: string, delta: number) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((p) => p.id === id);
+      if (idx === -1) return prev;
+      const nextIdx = idx + delta;
+      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+      const copy = [...prev];
+      const [item] = copy.splice(idx, 1);
+      copy.splice(nextIdx, 0, item);
+      return copy;
+    });
+  }, []);
+
+  const rotateIds = useCallback((ids: Set<string>, delta: number) => {
+    if (ids.size === 0) return;
+    setItems((prev) =>
+      prev.map((p) =>
+        ids.has(p.id)
+          ? { ...p, rotationDegrees: clampRotation(p.rotationDegrees + delta) }
+          : p
+      )
+    );
+  }, []);
+
+  const deleteIds = useCallback((ids: Set<string>) => {
+    if (ids.size === 0) return;
+    setItems((prev) => prev.filter((p) => !ids.has(p.id)));
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const id of ids) delete next[id];
+      return next;
+    });
+  }, []);
+
+  const exportPdf = useCallback(
+    async (onlySelected: boolean) => {
+      if (!file || !isPdf) return;
+      setBusy(true);
+      setError("");
+      try {
+        const list = onlySelected ? items.filter((i) => selectedIds.has(i.id)) : items;
+        if (list.length === 0) throw new Error("No pages selected.");
+        const ops: PageOpItem[] = list.map((i) => ({
+          sourcePageIndex: i.sourcePageIndex,
+          rotationDegrees: i.rotationDegrees,
+        }));
+        const bytes = await rebuildPdfWithOps(file, ops);
+        const suffix = onlySelected ? "-selected" : "-organized";
+        const outName = file.name.replace(/\.[^.]+$/, "") + `${suffix}.pdf`;
+        downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Export failed");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [file, isPdf, items, selectedIds]
+  );
+
+  if (!file) {
+    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to organize pages" />;
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900">Organize Pages</h3>
+            <p className="text-sm text-gray-500 truncate">
+              {file.name}
+              {numPages ? ` · ${numPages} pages` : ""}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              onClick={() => setFile(null)}
+            >
+              Change file
+            </button>
+            <button
+              type="button"
+              disabled={items.length === 0 || busy}
+              className="px-4 py-2 rounded-lg bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+              onClick={() => void exportPdf(false)}
+            >
+              {busy ? "Working..." : "Export PDF"}
+            </button>
+          </div>
+        </div>
+
+        {!isPdf && (
+          <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+            Please upload a PDF file.
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+            {error}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              onClick={selectAll}
+              disabled={items.length === 0}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              onClick={clearSelection}
+              disabled={selectedCount === 0}
+            >
+              Clear
+            </button>
+            <span className="text-sm text-gray-500">
+              {selectedCount > 0 ? `${selectedCount} selected` : `${items.length} pages`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              onClick={() => rotateIds(selectedIds, -90)}
+              disabled={selectedCount === 0}
+              title="Rotate left"
+            >
+              Rotate ⟲
+            </button>
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              onClick={() => rotateIds(selectedIds, 90)}
+              disabled={selectedCount === 0}
+              title="Rotate right"
+            >
+              Rotate ⟳
+            </button>
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              onClick={() => deleteIds(selectedIds)}
+              disabled={selectedCount === 0}
+              title="Delete selected pages"
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg bg-gray-900 hover:bg-black text-white font-medium disabled:opacity-50"
+              onClick={() => void exportPdf(true)}
+              disabled={selectedCount === 0 || busy}
+            >
+              Export selected
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {items.map((item, idx) => {
+            const thumb = thumbs[item.sourcePageIndex];
+            const isSelected = !!selected[item.id];
+            return (
+              <div key={item.id} className={`rounded-xl border ${isSelected ? "border-[#2d85de]" : "border-gray-200"} overflow-hidden`}>
+                <button
+                  type="button"
+                  className="w-full text-left"
+                  onClick={() => toggleSelect(item.id)}
+                  title="Select"
+                >
+                  <div className="bg-gray-50 p-2 flex items-center justify-between">
+                    <span className="text-xs text-gray-600">
+                      {idx + 1} / {items.length}
+                    </span>
+                    <span className="text-xs text-gray-600">
+                      p{item.sourcePageIndex + 1}
+                      {item.rotationDegrees ? ` · ${item.rotationDegrees}°` : ""}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2">
+                    {thumb ? (
+                      <img src={thumb} alt="" className="w-full rounded-lg border border-gray-100" />
+                    ) : (
+                      <div className="w-full aspect-[3/4] rounded-lg bg-gray-100" />
+                    )}
+                  </div>
+                </button>
+                <div className="flex items-center justify-between gap-1 px-2 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => move(item.id, -1)}
+                    disabled={idx === 0}
+                    className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    title="Move up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(item.id, 1)}
+                    disabled={idx === items.length - 1}
+                    className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    title="Move down"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => rotateIds(new Set([item.id]), 90)}
+                    className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    title="Rotate"
+                  >
+                    ⟳
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+

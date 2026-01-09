@@ -1,0 +1,381 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Document, Page } from "react-pdf";
+import * as fabric from "fabric";
+import FileDropzone from "./FileDropzone";
+import type { PdfRasterPreset } from "@/lib/pdf/client";
+import { downloadBlob, redactPdfRasterize } from "@/lib/pdf/client";
+import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
+
+type Mode = "select" | "redact";
+
+function RedactionCanvas({
+  width,
+  height,
+  mode,
+  initialJson,
+  onChange,
+}: {
+  width: number;
+  height: number;
+  mode: Mode;
+  initialJson?: string;
+  onChange: (json: string) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fabricRef = useRef<fabric.Canvas | null>(null);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const currentRef = useRef<fabric.Rect | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  const save = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    onChange(JSON.stringify(canvas.toJSON()));
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      width,
+      height,
+      selection: true,
+    });
+    fabricRef.current = canvas;
+
+    canvas.on("object:added", save);
+    canvas.on("object:modified", save);
+    canvas.on("object:removed", save);
+
+    return () => {
+      canvas.dispose();
+    };
+  }, [height, save, width]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    canvas.setDimensions({ width, height });
+  }, [width, height]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    canvas.selection = mode === "select";
+    canvas.defaultCursor = mode === "select" ? "default" : "crosshair";
+    canvas.forEachObject((obj) => {
+      obj.selectable = mode === "select";
+      obj.evented = mode === "select";
+    });
+    canvas.renderAll();
+  }, [mode]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    const load = async () => {
+      canvas.clear();
+      if (!initialJson) {
+        canvas.renderAll();
+        return;
+      }
+
+      const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(
+        initialJson,
+        () => {}
+      );
+      if (loadResult instanceof Promise) {
+        await loadResult;
+      } else {
+        await new Promise<void>((resolve) => {
+          (canvas as unknown as { loadFromJSON: (json: string, cb: () => void) => void }).loadFromJSON(
+            initialJson,
+            () => resolve()
+          );
+        });
+      }
+      canvas.renderAll();
+    };
+
+    void load();
+  }, [initialJson]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    const onMouseDown = (opt: fabric.TPointerEventInfo) => {
+      if (mode !== "redact") return;
+      const pointer = canvas.getViewportPoint(opt.e);
+      startRef.current = { x: pointer.x, y: pointer.y };
+      setIsDrawing(true);
+
+      const rect = new fabric.Rect({
+        left: pointer.x,
+        top: pointer.y,
+        width: 0,
+        height: 0,
+        fill: "#000000",
+        opacity: 1,
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(rect);
+      currentRef.current = rect;
+    };
+
+    const onMouseMove = (opt: fabric.TPointerEventInfo) => {
+      if (!isDrawing || mode !== "redact" || !startRef.current || !currentRef.current) return;
+      const pointer = canvas.getViewportPoint(opt.e);
+      const startX = startRef.current.x;
+      const startY = startRef.current.y;
+      const rect = currentRef.current;
+      rect.set({
+        left: Math.min(startX, pointer.x),
+        top: Math.min(startY, pointer.y),
+        width: Math.abs(pointer.x - startX),
+        height: Math.abs(pointer.y - startY),
+      });
+      canvas.renderAll();
+    };
+
+    const onMouseUp = () => {
+      if (!isDrawing || mode !== "redact") return;
+      setIsDrawing(false);
+      const rect = currentRef.current;
+      if (rect) {
+        rect.set({ selectable: true, evented: true });
+      }
+      startRef.current = null;
+      currentRef.current = null;
+      save();
+    };
+
+    canvas.on("mouse:down", onMouseDown);
+    canvas.on("mouse:move", onMouseMove);
+    canvas.on("mouse:up", onMouseUp);
+
+    return () => {
+      canvas.off("mouse:down", onMouseDown);
+      canvas.off("mouse:move", onMouseMove);
+      canvas.off("mouse:up", onMouseUp);
+    };
+  }, [isDrawing, mode, save]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 pointer-events-auto"
+      style={{ touchAction: "none" }}
+    />
+  );
+}
+
+export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+  const [numPages, setNumPages] = useState(0);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [scale, setScale] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [pageDimensions, setPageDimensions] = useState({ width: 612, height: 792 });
+  const [mode, setMode] = useState<Mode>("redact");
+  const [preset, setPreset] = useState<PdfRasterPreset>("balanced");
+  const [overlays, setOverlays] = useState<Record<number, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const isPdf = useMemo(
+    () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
+    [file]
+  );
+
+  const onDocumentLoadSuccess = useCallback(({ numPages: n }: { numPages: number }) => {
+    setNumPages(n);
+    setLoading(false);
+    setPageNumber(1);
+  }, []);
+
+  const onPageLoadSuccess = useCallback((page: { width: number; height: number }) => {
+    setPageDimensions({ width: page.width, height: page.height });
+  }, []);
+
+  const onOverlayChange = useCallback((json: string) => {
+    setOverlays((prev) => ({ ...prev, [pageNumber]: json }));
+  }, [pageNumber]);
+
+  const clearPage = useCallback(() => {
+    setOverlays((prev) => {
+      const next = { ...prev };
+      delete next[pageNumber];
+      return next;
+    });
+  }, [pageNumber]);
+
+  const exportRedacted = useCallback(async () => {
+    if (!file || !isPdf) return;
+    setBusy(true);
+    setError("");
+    try {
+      const bytes = await redactPdfRasterize(file, overlays, preset);
+      const outName = file.name.replace(/\.[^.]+$/, "") + "-redacted.pdf";
+      downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Redaction failed");
+    } finally {
+      setBusy(false);
+    }
+  }, [file, isPdf, overlays, preset]);
+
+  useEffect(() => {
+    configurePdfJsWorker();
+  }, []);
+
+  if (!file) {
+    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to redact" />;
+  }
+
+  const viewWidth = pageDimensions.width * scale;
+  const viewHeight = pageDimensions.height * scale;
+
+  return (
+    <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFile(null)}
+            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            title="Back"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <span className="font-medium text-gray-900 truncate max-w-[260px]">{file.name}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("redact")}
+            className={`px-3 py-2 rounded-lg border ${mode === "redact" ? "border-[#2d85de] bg-blue-50" : "border-gray-200 bg-white"} text-sm`}
+          >
+            Redact
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("select")}
+            className={`px-3 py-2 rounded-lg border ${mode === "select" ? "border-[#2d85de] bg-blue-50" : "border-gray-200 bg-white"} text-sm`}
+          >
+            Select
+          </button>
+          <button
+            type="button"
+            onClick={clearPage}
+            className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50"
+          >
+            Clear page
+          </button>
+          <select
+            className="h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm"
+            value={preset}
+            onChange={(e) => setPreset(e.target.value as PdfRasterPreset)}
+            title="Output quality"
+          >
+            <option value="balanced">Balanced</option>
+            <option value="small">Smaller</option>
+            <option value="smallest">Smallest</option>
+          </select>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={exportRedacted}
+            className="px-4 py-2 rounded-lg bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+          >
+            {busy ? "Exporting..." : "Export redacted PDF"}
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="m-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">{error}</div>}
+
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 text-sm text-gray-600">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+            disabled={pageNumber <= 1}
+            className="px-2 py-1 rounded border border-gray-200 bg-white disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span>
+            Page {pageNumber} / {numPages || "…"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
+            disabled={pageNumber >= numPages}
+            className="px-2 py-1 rounded border border-gray-200 bg-white disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" className="px-2 py-1 rounded border border-gray-200 bg-white" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}>
+            -
+          </button>
+          <span className="min-w-[52px] text-center">{Math.round(scale * 100)}%</span>
+          <button type="button" className="px-2 py-1 rounded border border-gray-200 bg-white" onClick={() => setScale((s) => Math.min(3, s + 0.25))}>
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-200 p-6 flex items-start justify-center min-h-[640px]">
+        {loading && (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2d85de]" />
+          </div>
+        )}
+
+        <div className="bg-white shadow-lg" style={{ width: viewWidth, height: viewHeight }}>
+          <div
+            className="relative origin-top-left"
+            style={{
+              width: pageDimensions.width,
+              height: pageDimensions.height,
+              transform: `scale(${scale})`,
+            }}
+          >
+            <Document file={file} onLoadSuccess={onDocumentLoadSuccess} loading={null}>
+              <Page
+                pageNumber={pageNumber}
+                scale={1}
+                onLoadSuccess={onPageLoadSuccess}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
+
+            <RedactionCanvas
+              key={pageNumber}
+              width={pageDimensions.width}
+              height={pageDimensions.height}
+              mode={mode}
+              initialJson={overlays[pageNumber]}
+              onChange={onOverlayChange}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-3 text-xs text-gray-500 bg-gray-50 border-t border-gray-200">
+        Redaction export rasterizes pages to permanently remove underlying text/vectors.
+      </div>
+    </div>
+  );
+}
+

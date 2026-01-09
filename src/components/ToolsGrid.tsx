@@ -4,21 +4,21 @@ import Link from "next/link";
 import { TOOLS } from "@/lib/tools";
 
 const colors = [
-  "bg-orange-50 text-orange-500",
-  "bg-blue-50 text-blue-500",
-  "bg-indigo-50 text-indigo-500",
-  "bg-green-50 text-green-500",
-  "bg-purple-50 text-purple-500",
-  "bg-teal-50 text-teal-500",
-  "bg-red-50 text-red-500",
-  "bg-cyan-50 text-cyan-500",
-  "bg-yellow-50 text-yellow-600",
-  "bg-emerald-50 text-emerald-500",
-  "bg-lime-50 text-lime-600",
-  "bg-sky-50 text-sky-500",
-  "bg-pink-50 text-pink-500",
-  "bg-rose-50 text-rose-500",
-  "bg-amber-50 text-amber-500",
+  "bg-orange-50",
+  "bg-blue-50",
+  "bg-indigo-50",
+  "bg-green-50",
+  "bg-purple-50",
+  "bg-teal-50",
+  "bg-red-50",
+  "bg-cyan-50",
+  "bg-yellow-50",
+  "bg-emerald-50",
+  "bg-lime-50",
+  "bg-sky-50",
+  "bg-pink-50",
+  "bg-rose-50",
+  "bg-amber-50",
 ];
 
 export default function ToolsGrid() {
@@ -27,7 +27,7 @@ export default function ToolsGrid() {
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {TOOLS.map((tool, index) => {
-            const [bgClass, iconClass] = (colors[index % colors.length] ?? colors[0]!).split(" ");
+            const bgClass = colors[index % colors.length] ?? colors[0]!;
             return (
             <Link
               key={index}
@@ -36,7 +36,7 @@ export default function ToolsGrid() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className={`w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center`}>
-                  <img src={tool.icon} alt="" className={`w-6 h-6 ${iconClass}`} />
+                  <img src={tool.icon} alt="" className="w-6 h-6" />
                 </div>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                   <svg className="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

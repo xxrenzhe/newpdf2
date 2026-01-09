@@ -9,6 +9,13 @@ import PdfCompressTool from "@/components/tools/PdfCompressTool";
 import PdfConvertTool from "@/components/tools/PdfConvertTool";
 import PdfMergeTool from "@/components/tools/PdfMergeTool";
 import PdfSignTool from "@/components/tools/PdfSignTool";
+import PdfSplitTool from "@/components/tools/PdfSplitTool";
+import PdfOrganizeTool from "@/components/tools/PdfOrganizeTool";
+import PdfWatermarkTool from "@/components/tools/PdfWatermarkTool";
+import PdfPasswordTool from "@/components/tools/PdfPasswordTool";
+import PdfUnlockTool from "@/components/tools/PdfUnlockTool";
+import PdfCropTool from "@/components/tools/PdfCropTool";
+import PdfRedactTool from "@/components/tools/PdfRedactTool";
 import { deleteUpload, loadUpload } from "@/lib/uploadStore";
 import { toolByKey } from "@/lib/tools";
 
@@ -36,7 +43,10 @@ export default function ToolPage() {
   const isMulti = toolKey === "merge" || toolKey === "convert";
   const accept = useMemo(() => {
     if (toolKey === "merge") return ".pdf,application/pdf";
-    if (toolKey === "convert") return ".pdf,application/pdf,image/*";
+    if (toolKey === "convert") return ".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt";
+    if (toolKey === "sign" || toolKey === "compress" || toolKey === "redact" || toolKey === "organize" || toolKey === "split" || toolKey === "password" || toolKey === "unlock" || toolKey === "watermark" || toolKey === "rotate" || toolKey === "delete" || toolKey === "crop") {
+      return ".pdf,application/pdf";
+    }
     return ".pdf,application/pdf";
   }, [toolKey]);
 
@@ -97,6 +107,20 @@ export default function ToolPage() {
                 <PdfMergeTool initialFiles={files} />
               ) : toolKey === "convert" ? (
                 <PdfConvertTool initialFiles={files} />
+              ) : toolKey === "split" ? (
+                <PdfSplitTool initialFile={files[0]!} />
+              ) : toolKey === "organize" || toolKey === "rotate" || toolKey === "delete" ? (
+                <PdfOrganizeTool initialFile={files[0]!} />
+              ) : toolKey === "watermark" ? (
+                <PdfWatermarkTool initialFile={files[0]!} />
+              ) : toolKey === "password" ? (
+                <PdfPasswordTool initialFile={files[0]!} />
+              ) : toolKey === "unlock" ? (
+                <PdfUnlockTool initialFile={files[0]!} />
+              ) : toolKey === "crop" ? (
+                <PdfCropTool initialFile={files[0]!} />
+              ) : toolKey === "redact" ? (
+                <PdfRedactTool initialFile={files[0]!} />
               ) : (
                 <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                   <div className="flex items-center justify-between gap-3">

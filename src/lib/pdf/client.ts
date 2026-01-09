@@ -1,11 +1,13 @@
 "use client";
 
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
 import JSZip from "jszip";
 import * as fabric from "fabric";
 import { configurePdfJsWorker, pdfjs } from "./pdfjs";
+import { decryptPdfBytes, encryptPdfBytes } from "./qpdf";
 
 export type PdfCompressPreset = "balanced" | "small" | "smallest";
+export type PdfRasterPreset = PdfCompressPreset;
 
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -38,6 +40,29 @@ export async function mergePdfs(files: File[]): Promise<Uint8Array> {
   return merged.save();
 }
 
+export async function splitPdfToZip(file: File, pageNumbers1Based?: number[]): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const source = await PDFDocument.load(bytes);
+  const zip = new JSZip();
+
+  const pageNumbers =
+    pageNumbers1Based && pageNumbers1Based.length > 0
+      ? pageNumbers1Based
+      : Array.from({ length: source.getPageCount() }, (_, i) => i + 1);
+
+  for (const n of pageNumbers) {
+    const idx = n - 1;
+    if (idx < 0 || idx >= source.getPageCount()) continue;
+    const out = await PDFDocument.create();
+    const [page] = await out.copyPages(source, [idx]);
+    out.addPage(page);
+    const outBytes = await out.save();
+    zip.file(`${n}.pdf`, outBytes);
+  }
+
+  return zip.generateAsync({ type: "blob" });
+}
+
 export async function extractPdfPages(file: File, pageNumbers1Based: number[]): Promise<Uint8Array> {
   const bytes = await file.arrayBuffer();
   const source = await PDFDocument.load(bytes);
@@ -49,6 +74,89 @@ export async function extractPdfPages(file: File, pageNumbers1Based: number[]): 
   const pages = await out.copyPages(source, indices);
   for (const page of pages) out.addPage(page);
   return out.save();
+}
+
+export type PageOpItem = {
+  sourcePageIndex: number; // 0-based
+  rotationDegrees: number; // 0/90/180/270
+};
+
+export async function rebuildPdfWithOps(file: File, items: PageOpItem[]): Promise<Uint8Array> {
+  const bytes = await file.arrayBuffer();
+  const source = await PDFDocument.load(bytes);
+  const out = await PDFDocument.create();
+
+  const max = source.getPageCount();
+  for (const item of items) {
+    if (!Number.isInteger(item.sourcePageIndex)) continue;
+    if (item.sourcePageIndex < 0 || item.sourcePageIndex >= max) continue;
+
+    const [page] = await out.copyPages(source, [item.sourcePageIndex]);
+    const added = out.addPage(page);
+    const rot = ((item.rotationDegrees % 360) + 360) % 360;
+    if (rot !== 0) {
+      added.setRotation(degrees(rot));
+    }
+  }
+
+  return out.save();
+}
+
+export async function addTextWatermark(
+  file: File,
+  opts: { text: string; opacity: number; fontSize: number; rotationDegrees: number }
+): Promise<Uint8Array> {
+  if (!opts.text) throw new Error("Watermark text is required");
+  const bytes = await file.arrayBuffer();
+  const pdf = await PDFDocument.load(bytes);
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  const opacity = Math.max(0, Math.min(1, opts.opacity));
+  const fontSize = Math.max(8, Math.min(160, opts.fontSize));
+  const rotation = degrees(opts.rotationDegrees);
+
+  for (const page of pdf.getPages()) {
+    const { width, height } = page.getSize();
+    const textWidth = font.widthOfTextAtSize(opts.text, fontSize);
+    const x = (width - textWidth) / 2;
+    const y = height / 2;
+
+    page.drawText(opts.text, {
+      x,
+      y,
+      size: fontSize,
+      font,
+      color: rgb(0.55, 0.55, 0.55),
+      rotate: rotation,
+      opacity,
+    });
+  }
+
+  return pdf.save();
+}
+
+export async function cropPdf(
+  file: File,
+  opts: { marginLeft: number; marginRight: number; marginTop: number; marginBottom: number }
+): Promise<Uint8Array> {
+  const bytes = await file.arrayBuffer();
+  const pdf = await PDFDocument.load(bytes);
+  const pages = pdf.getPages();
+
+  for (const page of pages) {
+    const { width, height } = page.getSize();
+    const left = Math.max(0, opts.marginLeft);
+    const right = Math.max(0, opts.marginRight);
+    const top = Math.max(0, opts.marginTop);
+    const bottom = Math.max(0, opts.marginBottom);
+
+    const newWidth = Math.max(1, width - left - right);
+    const newHeight = Math.max(1, height - top - bottom);
+
+    page.setCropBox(left, bottom, newWidth, newHeight);
+  }
+
+  return pdf.save();
 }
 
 export async function imagesToPdf(images: File[]): Promise<Uint8Array> {
@@ -162,6 +270,89 @@ export async function compressPdfRasterize(
   return output.save();
 }
 
+function createCanvas(width: number, height: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(width);
+  canvas.height = Math.ceil(height);
+  return canvas;
+}
+
+async function renderFabricJsonToCanvasElement(json: string, size: { width: number; height: number }) {
+  const canvasEl = createCanvas(size.width, size.height);
+  const canvas = new fabric.StaticCanvas(canvasEl, { width: size.width, height: size.height });
+
+  const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(
+    json,
+    () => {}
+  );
+  if (loadResult instanceof Promise) {
+    await loadResult;
+  } else {
+    await new Promise<void>((resolve) => {
+      (canvas as unknown as { loadFromJSON: (json: string, cb: () => void) => void }).loadFromJSON(json, () => resolve());
+    });
+  }
+
+  canvas.renderAll();
+  canvas.dispose();
+  return canvasEl;
+}
+
+export async function redactPdfRasterize(
+  file: File,
+  overlays: Record<number, string>,
+  preset: PdfRasterPreset
+): Promise<Uint8Array> {
+  const presets: Record<PdfRasterPreset, { dpi: number; quality: number }> = {
+    balanced: { dpi: 150, quality: 0.85 },
+    small: { dpi: 120, quality: 0.75 },
+    smallest: { dpi: 96, quality: 0.65 },
+  };
+  const { dpi, quality } = presets[preset];
+
+  configurePdfJsWorker();
+  const data = new Uint8Array(await file.arrayBuffer());
+  const input = await pdfjs.getDocument({ data }).promise;
+  const output = await PDFDocument.create();
+
+  const renderScale = dpi / 72;
+
+  for (let pageNum = 1; pageNum <= input.numPages; pageNum++) {
+    const page = await input.getPage(pageNum);
+    const viewport1 = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: renderScale });
+
+    const baseCanvas = createCanvas(viewport.width, viewport.height);
+    const ctx = baseCanvas.getContext("2d", { alpha: false });
+    if (!ctx) throw new Error("Canvas 2D context unavailable");
+
+    await page.render({ canvasContext: ctx, canvas: baseCanvas, viewport }).promise;
+
+    const overlayJson = overlays[pageNum];
+    if (overlayJson) {
+      const overlayCanvas = await renderFabricJsonToCanvasElement(overlayJson, {
+        width: viewport1.width,
+        height: viewport1.height,
+      });
+      ctx.drawImage(overlayCanvas, 0, 0, baseCanvas.width, baseCanvas.height);
+    }
+
+    const jpgDataUrl = baseCanvas.toDataURL("image/jpeg", quality);
+    const jpgBytes = dataUrlToUint8Array(jpgDataUrl);
+    const embedded = await output.embedJpg(jpgBytes);
+
+    const outPage = output.addPage([viewport1.width, viewport1.height]);
+    outPage.drawImage(embedded, {
+      x: 0,
+      y: 0,
+      width: viewport1.width,
+      height: viewport1.height,
+    });
+  }
+
+  return output.save();
+}
+
 export async function signPdfWithPng(
   file: File,
   signaturePng: Uint8Array,
@@ -189,9 +380,7 @@ export async function renderFabricJsonToPngDataUrl(
   json: string,
   size: { width: number; height: number }
 ): Promise<string> {
-  const canvasEl = document.createElement("canvas");
-  canvasEl.width = size.width;
-  canvasEl.height = size.height;
+  const canvasEl = createCanvas(size.width, size.height);
   const canvas = new fabric.StaticCanvas(canvasEl, { width: size.width, height: size.height });
 
   const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(json, () => {});
@@ -232,4 +421,14 @@ export async function applyAnnotationOverlays(
   }
 
   return pdf.save();
+}
+
+export async function protectPdfWithPassword(file: File, password: string): Promise<Uint8Array> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return encryptPdfBytes(bytes, password);
+}
+
+export async function unlockPdfWithPassword(file: File, password: string): Promise<Uint8Array> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return decryptPdfBytes(bytes, password);
 }
