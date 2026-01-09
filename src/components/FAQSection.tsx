@@ -40,26 +40,29 @@ const faqItems = [
 
 export default function FAQSection() {
   return (
-    <section className="py-16 md:py-20 bg-white">
+    <section className="py-20 md:py-28 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+        <div className="text-center max-w-3xl mx-auto mb-14 md:mb-16">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
             Frequently Asked Questions
           </h2>
+          <p className="text-lg text-gray-600">
+            Find answers to common questions about our PDF tools
+          </p>
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          <Accordion type="single" collapsible className="space-y-3">
+        <div className="max-w-4xl mx-auto">
+          <Accordion type="single" collapsible className="space-y-4">
             {faqItems.map((item, index) => (
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="bg-[#f8fafb] rounded-xl border-none px-6"
+                className="bg-white rounded-2xl border-2 border-gray-100 px-7 shadow-sm hover:shadow-md transition-shadow"
               >
-                <AccordionTrigger className="text-left font-medium text-gray-900 py-5 hover:no-underline">
+                <AccordionTrigger className="text-left font-semibold text-gray-900 py-6 hover:no-underline text-lg">
                   {item.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-gray-600 pb-5">
+                <AccordionContent className="text-gray-600 pb-6 text-base leading-relaxed">
                   {item.answer}
                 </AccordionContent>
               </AccordionItem>
