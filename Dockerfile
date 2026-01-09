@@ -16,8 +16,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
-# 使用 npm install 保证兼容性，避免 lockfile 不一致问题
+# 先复制必要文件，然后安装依赖
 COPY package.json ./
+COPY scripts ./scripts
 RUN npm install
 
 # Copy source and build
