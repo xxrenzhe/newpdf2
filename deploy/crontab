@@ -1,0 +1,23 @@
+# =============================================================================
+# Crontab - Scheduled Tasks
+# =============================================================================
+# This file defines scheduled tasks managed by cron within the container.
+# The cron daemon is started by supervisord.
+#
+# Format: minute hour day month weekday command
+# =============================================================================
+
+# Clean up old temporary files every day at 2:00 AM
+0 2 * * * find /tmp -type f -mtime +1 -delete 2>/dev/null
+
+# Clean up old log files every day at 3:00 AM (keep last 7 days)
+0 3 * * * find /var/log -name "*.log" -mtime +7 -delete 2>/dev/null
+
+# Clean up Gotenberg temporary files every hour
+0 * * * * find /tmp/gotenberg -type f -mmin +60 -delete 2>/dev/null
+
+# Health check and restart unhealthy services every 5 minutes
+*/5 * * * * supervisorctl status | grep -v RUNNING | grep -E '^(nextjs|gotenberg|nginx)' && supervisorctl restart all 2>/dev/null || true
+
+# Optional: Database backup (uncomment and configure if using a database)
+# 0 4 * * * /app/scripts/backup.sh >> /var/log/backup.log 2>&1

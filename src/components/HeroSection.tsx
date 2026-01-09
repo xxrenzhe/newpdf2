@@ -80,13 +80,12 @@ export default function HeroSection() {
           >
             <div className="flex flex-col items-center text-center">
               {/* Upload Icon */}
-              <div className="mb-6">
-                <svg className="w-16 h-16 md:w-20 md:h-20 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 2v6h6" />
-                  <circle cx="17" cy="7" r="3" fill="#2d85de" stroke="#2d85de" />
-                  <path d="M17 5.5v3M15.5 7h3" stroke="white" strokeWidth={1.5} strokeLinecap="round" />
-                </svg>
+              <div className="mb-6 relative">
+                <img
+                  src="https://ext.same-assets.com/170935311/3566732435.svg"
+                  alt="Upload"
+                  className="w-16 h-16 md:w-20 md:h-20"
+                />
               </div>
 
               {/* Drop text */}

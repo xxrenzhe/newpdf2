@@ -27,12 +27,11 @@ export default function Header() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 md:w-9 md:h-9 bg-[#d53b3b] rounded-lg flex items-center justify-center">
-                <span className="text-white text-xs font-bold">PDF</span>
-              </div>
-              <span className="text-xl md:text-2xl font-semibold text-gray-900">Files Editor</span>
-            </div>
+            <img
+              src="https://ext.same-assets.com/170935311/3497447819.svg"
+              alt="Files Editor"
+              className="h-8 md:h-9"
+            />
           </Link>
 
           {/* Right side buttons */}

@@ -1,0 +1,128 @@
+# =============================================================================
+# PDF Tools - Build and Test
+# =============================================================================
+#
+# 触发条件:
+#   - 推送到 main 分支
+#   - 版本标签 (v*.*.*)
+#   - 手动触发
+#
+# 功能:
+#   - 代码检查 (TypeScript, ESLint)
+#   - 构建 Next.js 项目
+#   - 构建 Docker 镜像 (本地验证，不推送)
+#
+# 部署方式:
+#   - 本地构建镜像后手动部署
+#
+# =============================================================================
+
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  # ============================================
+  # Job 1: 构建和测试
+  # ============================================
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci || npm install
+
+      - name: 运行类型检查
+        run: npx tsc --noEmit
+        continue-on-error: true
+
+      - name: 运行ESLint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: 构建项目
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+  # ============================================
+  # Job 2: 构建Docker镜像 (验证Dockerfile，不推送)
+  # ============================================
+  build-docker:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 设置Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 构建Docker镜像 (不推送)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: pdftools:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: 输出构建信息
+        run: |
+          echo "============================================"
+          echo "✅ Docker 镜像构建成功!"
+          echo "============================================"
+          echo ""
+          echo "🚀 本地构建和部署:"
+          echo ""
+          echo "   # 构建镜像"
+          echo "   docker build -t pdftools:latest ."
+          echo ""
+          echo "   # 运行容器"
+          echo "   docker run -d -p 80:80 pdftools:latest"
+          echo ""
+          echo "============================================"
+
+# =============================================================================
+# 部署说明
+# =============================================================================
+#
+# 📋 此工作流会:
+#    1. 运行代码检查 (TypeScript, ESLint)
+#    2. 构建 Next.js 项目
+#    3. 验证 Docker 镜像可以正常构建
+#
+# 🚀 本地部署步骤:
+#    1. 克隆代码: git clone <repo>
+#    2. 构建镜像: docker build -t pdftools:latest .
+#    3. 运行容器: docker run -d -p 80:80 pdftools:latest
+#
+# 📁 容器架构:
+#    - Port 80: Nginx (反向代理)
+#    - Port 3000: Next.js (内部)
+#    - Port 3001: Gotenberg (内部, Office转PDF)
+#    - Supervisord: 进程管理
+#

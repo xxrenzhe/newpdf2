@@ -39,86 +39,167 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
   }, [file, fontSize, isPdf, opacity, rotation, text]);
 
   if (!file) {
-    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to watermark" />;
+    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to watermark" subtitle="Add text watermark to your PDF documents" />;
   }
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900">Add Watermark</h3>
-          <p className="text-sm text-gray-500 truncate">{file.name}</p>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-indigo-50 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg className="w-7 h-7 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900">Add Watermark</h3>
+            <p className="text-sm text-gray-500 truncate">{file.name}</p>
+          </div>
         </div>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+          className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm flex items-center gap-2 transition-colors"
           onClick={() => setFile(null)}
         >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
           Change file
         </button>
       </div>
 
       {!isPdf && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2">
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M15 9l-6 6M9 9l6 6" />
+          </svg>
           Please upload a PDF file.
         </div>
       )}
 
-      <label className="block text-sm text-gray-600 mb-3">
-        Watermark text
+      {/* Watermark Preview */}
+      <div className="mb-6 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 relative overflow-hidden">
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{
+            transform: `rotate(${rotation}deg)`,
+          }}
+        >
+          <span
+            className="text-gray-400 font-bold whitespace-nowrap"
+            style={{
+              fontSize: `${Math.min(fontSize, 48)}px`,
+              opacity: Math.max(opacity, 0.3),
+            }}
+          >
+            {text || "WATERMARK"}
+          </span>
+        </div>
+        <div className="relative z-10 text-center py-8">
+          <p className="text-sm text-gray-500">Watermark Preview</p>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Watermark Text</label>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+          placeholder="Enter watermark text..."
+          className="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#2d85de] focus:ring-2 focus:ring-blue-100 transition-all text-lg"
         />
-      </label>
+      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <label className="text-sm text-gray-600">
-          Opacity
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <label className="block">
+          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            Opacity
+          </span>
           <input
-            type="number"
-            min={0}
-            max={1}
-            step={0.02}
+            type="range"
+            min={0.05}
+            max={0.5}
+            step={0.01}
             value={opacity}
-            onChange={(e) => setOpacity(Number(e.target.value || 0))}
-            className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+            onChange={(e) => setOpacity(Number(e.target.value))}
+            className="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2d85de]"
           />
+          <span className="text-xs text-gray-500 mt-1 block">{Math.round(opacity * 100)}%</span>
         </label>
-        <label className="text-sm text-gray-600">
-          Font size
+        <label className="block">
+          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+            </svg>
+            Font Size
+          </span>
           <input
-            type="number"
-            min={12}
-            max={160}
+            type="range"
+            min={24}
+            max={120}
+            step={4}
             value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value || 64))}
-            className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+            onChange={(e) => setFontSize(Number(e.target.value))}
+            className="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2d85de]"
           />
+          <span className="text-xs text-gray-500 mt-1 block">{fontSize}pt</span>
         </label>
-        <label className="text-sm text-gray-600">
-          Rotation (deg)
+        <label className="block">
+          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+            </svg>
+            Rotation
+          </span>
           <input
-            type="number"
-            min={-90}
-            max={90}
+            type="range"
+            min={-60}
+            max={60}
+            step={5}
             value={rotation}
-            onChange={(e) => setRotation(Number(e.target.value || 0))}
-            className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+            onChange={(e) => setRotation(Number(e.target.value))}
+            className="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2d85de]"
           />
+          <span className="text-xs text-gray-500 mt-1 block">{rotation}°</span>
         </label>
       </div>
 
-      {error && <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">{error}</div>}
+      {error && (
+        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2">
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M15 9l-6 6M9 9l6 6" />
+          </svg>
+          {error}
+        </div>
+      )}
 
       <button
         type="button"
         disabled={!isPdf || busy}
         onClick={run}
-        className="w-full h-12 rounded-xl bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+        className="w-full h-12 rounded-xl bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50 transition-all flex items-center justify-center gap-2"
       >
-        {busy ? "Working..." : "Apply & Download"}
+        {busy ? (
+          <>
+            <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
+            </svg>
+            Applying watermark...
+          </>
+        ) : (
+          <>
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+            Apply & Download
+          </>
+        )}
       </button>
     </div>
   );

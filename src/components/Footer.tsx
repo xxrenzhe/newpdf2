@@ -40,10 +40,11 @@ export default function Footer() {
           {/* Logo and tagline */}
           <div className="lg:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-[#d53b3b] rounded-lg flex items-center justify-center">
-                <span className="text-white text-xs font-bold">PDF</span>
-              </div>
-              <span className="text-xl font-semibold text-gray-900">Files Editor</span>
+              <img
+                src="https://ext.same-assets.com/170935311/3497447819.svg"
+                alt="Files Editor"
+                className="h-8"
+              />
             </Link>
             <p className="text-gray-600 font-medium">All-in-one PDF solutions</p>
           </div>

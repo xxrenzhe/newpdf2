@@ -13,6 +13,7 @@ const advantages = [
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
       </svg>
     ),
+    preview: "https://ext.same-assets.com/170935311/414827711.png",
   },
   {
     id: 1,
@@ -24,6 +25,7 @@ const advantages = [
         <path d="M9 12l2 2 4-4" />
       </svg>
     ),
+    preview: "https://ext.same-assets.com/170935311/2898045088.png",
   },
   {
     id: 2,
@@ -37,6 +39,7 @@ const advantages = [
         <path d="M9 15l3 3 3-3" />
       </svg>
     ),
+    preview: "https://ext.same-assets.com/170935311/414827711.png",
   },
   {
     id: 3,
@@ -49,6 +52,7 @@ const advantages = [
         <line x1="12" y1="17" x2="12" y2="21" />
       </svg>
     ),
+    preview: "https://ext.same-assets.com/170935311/2898045088.png",
   },
 ];
 
@@ -72,8 +76,13 @@ export default function AdvantagesSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
           {/* Left side - Preview Image */}
           <div className="order-2 lg:order-1">
-            <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-8 flex items-center justify-center min-h-[400px]">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-8 flex items-center justify-center min-h-[400px] overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-4 left-4 w-20 h-20 bg-blue-100/50 rounded-full blur-xl" />
+              <div className="absolute bottom-4 right-4 w-32 h-32 bg-purple-100/50 rounded-full blur-xl" />
+
+              {/* Main preview card */}
+              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative z-10 transform transition-all duration-500">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-[#d53b3b] rounded-lg flex items-center justify-center">
                     <span className="text-white text-xs font-bold">PDF</span>
@@ -82,38 +91,58 @@ export default function AdvantagesSection() {
                     <p className="font-medium text-gray-900">Document.pdf</p>
                     <p className="text-xs text-gray-500">2.4 MB</p>
                   </div>
+                  <div className="ml-auto">
+                    <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-3">
-                  <div className="h-3 bg-gray-100 rounded-full w-full" />
+                  <div className="h-3 bg-gray-100 rounded-full w-full animate-pulse" />
                   <div className="h-3 bg-gray-100 rounded-full w-4/5" />
                   <div className="h-3 bg-gray-100 rounded-full w-3/5" />
                   <div className="h-3 bg-gray-100 rounded-full w-full" />
                   <div className="h-3 bg-gray-100 rounded-full w-2/3" />
                 </div>
                 <div className="mt-6 flex gap-2">
-                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
                     <svg className="w-4 h-4 text-[#2d85de]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                   </div>
-                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
                     <svg className="w-4 h-4 text-[#2d85de]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                     </svg>
                   </div>
-                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
                     <svg className="w-4 h-4 text-[#2d85de]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     </svg>
                   </div>
+                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
+                    <svg className="w-4 h-4 text-[#2d85de]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                  </div>
                 </div>
+              </div>
+
+              {/* Floating badge */}
+              <div className="absolute bottom-6 right-6 bg-white rounded-xl shadow-lg px-4 py-2 flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-gray-700">Processing complete</span>
               </div>
             </div>
           </div>
 
           {/* Right side - Features list */}
-          <div className="order-1 lg:order-2 space-y-4">
+          <div className="order-1 lg:order-2 space-y-3">
             {advantages.map((advantage, index) => (
               <button
                 key={advantage.id}
@@ -125,22 +154,24 @@ export default function AdvantagesSection() {
                 }`}
               >
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    activeIndex === index ? "bg-blue-50" : "bg-gray-100"
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                    activeIndex === index ? "bg-blue-50 scale-110" : "bg-gray-100"
                   }`}>
                     {advantage.icon}
                   </div>
                   <div>
-                    <h3 className={`font-semibold mb-2 ${
+                    <h3 className={`font-semibold mb-2 transition-colors ${
                       activeIndex === index ? "text-gray-900" : "text-gray-700"
                     }`}>
                       {advantage.title}
                     </h3>
-                    {activeIndex === index && (
+                    <div className={`overflow-hidden transition-all duration-300 ${
+                      activeIndex === index ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+                    }`}>
                       <p className="text-gray-500 text-sm leading-relaxed">
                         {advantage.description}
                       </p>
-                    )}
+                    </div>
                   </div>
                 </div>
               </button>

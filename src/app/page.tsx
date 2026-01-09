@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import StatsSection from "@/components/StatsSection";
+import BrandsMarquee from "@/components/BrandsMarquee";
 import ToolsGrid from "@/components/ToolsGrid";
 import AdvantagesSection from "@/components/AdvantagesSection";
 import FAQSection from "@/components/FAQSection";
@@ -13,6 +14,7 @@ export default function Home() {
       <Header />
       <HeroSection />
       <StatsSection />
+      <BrandsMarquee />
       <ToolsGrid />
       <AdvantagesSection />
       <FAQSection />

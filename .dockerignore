@@ -1,0 +1,72 @@
+# =============================================================================
+# Docker Ignore File
+# 排除不需要打包进镜像的文件
+# =============================================================================
+
+# Git
+.git
+.gitignore
+
+# 敏感目录 (MustKnowV1.md #10: 不能打包进镜像)
+docs/
+oldcode/
+secrets/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 开发配置
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 构建缓存
+.next/
+out/
+dist/
+.cache/
+.parcel-cache/
+
+# 测试相关
+tests/
+test-results/
+playwright-report/
+playwright.config.ts
+coverage/
+*.lcov
+.nyc_output/
+
+# 文档和示例
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.log
+
+# 开发依赖
+biome.json
+eslint.config.mjs
+tsconfig.tsbuildinfo
+
+# Docker相关 (避免递归)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# GitHub
+.github/
+
+# 其他开发文件
+netlify.toml
+*.tgz

@@ -103,14 +103,22 @@ export default function SignUpPage() {
       <header className="py-4 px-6">
         <div className="container mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#d53b3b] rounded-lg flex items-center justify-center">
-              <span className="text-white text-xs font-bold">PDF</span>
-            </div>
-            <span className="text-xl font-semibold text-gray-900">Files Editor</span>
+            <img
+              src="https://ext.same-assets.com/170935311/3497447819.svg"
+              alt="Files Editor"
+              className="h-8"
+            />
           </Link>
           <Select value={language} onValueChange={setLanguage}>
             <SelectTrigger className="w-[140px] bg-transparent border-none">
-              <SelectValue />
+              <div className="flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                <SelectValue />
+              </div>
             </SelectTrigger>
             <SelectContent>
               {languages.map((lang) => (

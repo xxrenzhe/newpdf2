@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
+
 const stats = [
   {
     icon: (
@@ -12,6 +14,7 @@ const stats = [
     ),
     value: "1.9 Million",
     label: "Documents edited",
+    suffix: "+",
   },
   {
     icon: (
@@ -24,6 +27,7 @@ const stats = [
     ),
     value: "50+ Tools",
     label: "Editing Essentials",
+    suffix: "",
   },
   {
     icon: (
@@ -33,22 +37,54 @@ const stats = [
     ),
     value: "232k",
     label: "Documents signed",
+    suffix: "+",
   },
 ];
 
 export default function StatsSection() {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="py-12 md:py-16 bg-white">
+    <section ref={sectionRef} className="py-12 md:py-16 bg-white">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex flex-wrap justify-center gap-8 md:gap-16 lg:gap-24">
           {stats.map((stat, index) => (
-            <div key={index} className="flex items-center gap-4">
+            <div
+              key={index}
+              className={`flex items-center gap-4 transition-all duration-700 ${
+                isVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-4"
+              }`}
+              style={{ transitionDelay: `${index * 150}ms` }}
+            >
               <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
                 {stat.icon}
               </div>
               <div>
-                <div className="text-2xl md:text-3xl font-bold text-gray-900">
-                  {stat.value}
+                <div className="text-2xl md:text-3xl font-bold text-gray-900 flex items-baseline gap-1">
+                  <span className={isVisible ? "stat-number" : ""}>{stat.value}</span>
+                  {stat.suffix && (
+                    <span className="text-[#2d85de] text-lg">{stat.suffix}</span>
+                  )}
                 </div>
                 <div className="text-sm text-gray-500">{stat.label}</div>
               </div>
