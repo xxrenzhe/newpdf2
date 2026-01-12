@@ -3,6 +3,10 @@ import { expect, test } from "playwright/test";
 import { TOOLS } from "../../src/lib/tools";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function makePdfBytes(label: string): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([595.28, 841.89]); // A4
@@ -32,12 +36,25 @@ test("static pages render", async ({ page }) => {
   }
 });
 
-for (const tool of TOOLS) {
-  test(`tool page renders: ${tool.key}`, async ({ page }) => {
-    await page.goto(tool.href);
-    await expect(page.getByRole("heading", { name: tool.name })).toBeVisible();
+test('home "Browse files" opens file chooser', async ({ page }) => {
+  test.setTimeout(120_000);
+  const pdfBytes = await makePdfBytes("home-upload");
+
+  await page.goto("/");
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: "Browse files" }).click(),
+  ]);
+
+  await chooser.setFiles({
+    name: "home.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(pdfBytes),
   });
-}
+
+  await expect(page).toHaveURL(/\/tools\/edit\?uploadId=/);
+  await expect(page.getByRole("heading", { name: "Edit PDF" })).toBeVisible();
+});
 
 test("watermark tool downloads a PDF", async ({ page }) => {
   test.setTimeout(120_000);
@@ -84,3 +101,63 @@ test("merge tool downloads a PDF", async ({ page }) => {
   const bytes = fs.readFileSync(downloadPath!);
   expect(bytes.subarray(0, 4).toString("utf8")).toBe("%PDF");
 });
+
+for (const tool of TOOLS) {
+  test(`home tool card works: ${tool.key}`, async ({ page }) => {
+    test.setTimeout(120_000);
+    const pdfBytes = await makePdfBytes(`home-${tool.key}`);
+
+    await page.goto("/");
+    const toolsSection = page.locator("#tools");
+    await toolsSection.scrollIntoViewIfNeeded();
+
+    const card = toolsSection.locator("a.tool-card", { hasText: tool.name }).first();
+    await expect(card).toBeVisible();
+
+    const toolUrl = new RegExp(`${escapeRegExp(tool.href)}(\\?.*)?$`);
+    await Promise.all([page.waitForURL(toolUrl), card.click()]);
+    await expect(page.getByRole("heading", { name: tool.name })).toBeVisible();
+
+    const fileInput = page.locator('main input[type="file"]').first();
+    if (tool.key === "merge") {
+      await fileInput.setInputFiles([
+        { name: "a.pdf", mimeType: "application/pdf", buffer: Buffer.from(pdfBytes) },
+        { name: "b.pdf", mimeType: "application/pdf", buffer: Buffer.from(pdfBytes) },
+      ]);
+    } else {
+      await fileInput.setInputFiles({ name: `${tool.key}.pdf`, mimeType: "application/pdf", buffer: Buffer.from(pdfBytes) });
+    }
+
+    if (tool.key === "password") {
+      await page.getByPlaceholder("Enter password...").fill("Abc123!!");
+      await page.getByPlaceholder("Confirm password...").fill("Abc123!!");
+    }
+
+    if (tool.key === "annotate" || tool.key === "edit") {
+      await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+      return;
+    }
+
+    if (tool.key === "organize" || tool.key === "rotate" || tool.key === "delete") {
+      await expect(page.getByRole("button", { name: "Export PDF" })).toBeEnabled({ timeout: 20_000 });
+      return;
+    }
+
+    const primaryActionName: Record<string, string> = {
+      sign: "Apply Signature & Download",
+      compress: "Compress & Download",
+      merge: "Merge & Download",
+      convert: "Convert & Download",
+      split: "Extract & Download",
+      watermark: "Apply & Download",
+      password: "Protect & Download",
+      unlock: "Unlock & Download",
+      crop: "Crop & Download",
+      redact: "Export redacted PDF",
+    };
+
+    const expected = primaryActionName[tool.key];
+    if (!expected) throw new Error(`Missing primary action assertion for tool: ${tool.key}`);
+    await expect(page.getByRole("button", { name: expected })).toBeEnabled({ timeout: 20_000 });
+  });
+}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { saveUpload } from "@/lib/uploadStore";
 
 export default function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const openWithFiles = useCallback(async (files: FileList | File[]) => {
@@ -101,17 +102,22 @@ export default function HeroSection() {
               </p>
 
               {/* Browse button */}
-              <label className="mb-6 cursor-pointer">
+              <div className="mb-6">
                 <input
                   type="file"
-                  className="hidden"
+                  className="sr-only"
                   accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.bmp,.txt"
                   onChange={handleFileSelect}
+                  ref={fileInputRef}
                 />
-                <Button className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 transition-all duration-300">
+                <Button
+                  type="button"
+                  className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 transition-all duration-300"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   Browse files
                 </Button>
-              </label>
+              </div>
 
               {/* File size info */}
               <p className="text-base text-gray-500 max-w-lg">
