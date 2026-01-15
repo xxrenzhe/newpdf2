@@ -156,7 +156,7 @@ export default function PdfEditorTool({
 
   const shellClassName =
     variant === "shell"
-      ? "bg-white overflow-hidden flex flex-col h-[100dvh]"
+      ? "bg-white overflow-hidden flex flex-col h-screen h-[100dvh]"
       : "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden";
 
   const headerClassName =
