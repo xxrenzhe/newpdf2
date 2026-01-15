@@ -1,8 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pdftools.app";
+
+const poppins = Poppins({
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -92,12 +99,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Preconnect to external resources for better performance */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body className="antialiased" suppressHydrationWarning>
+      <body className={`${poppins.className} antialiased`} suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

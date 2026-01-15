@@ -2,6 +2,30 @@ import { expect, test } from "playwright/test";
 import { PDFDocument } from "pdf-lib";
 import { readDownloadBytes, makePdfBytes, expectPdfHeader, loadPdfPageCount, repoPath, unzip } from "./utils";
 
+test("COEP tools are crossOriginIsolated and avoid cross-origin requests", async ({ page }) => {
+  const baseURL = test.info().project.use.baseURL;
+  if (typeof baseURL !== "string" || !baseURL) throw new Error("Missing Playwright baseURL");
+  const baseOrigin = new URL(baseURL).origin;
+
+  const crossOrigin: string[] = [];
+  page.on("request", (req) => {
+    const url = req.url();
+    if (!url.startsWith("http")) return;
+    if (new URL(url).origin !== baseOrigin) crossOrigin.push(url);
+  });
+
+  await page.goto("/tools/password");
+  await page.waitForLoadState("networkidle");
+  expect(await page.evaluate(() => window.crossOriginIsolated)).toBe(true);
+  expect(crossOrigin).toEqual([]);
+
+  crossOrigin.length = 0;
+  await page.goto("/tools/unlock");
+  await page.waitForLoadState("networkidle");
+  expect(await page.evaluate(() => window.crossOriginIsolated)).toBe(true);
+  expect(crossOrigin).toEqual([]);
+});
+
 test("header tools drawer navigates to a tool", async ({ page }) => {
   await page.goto("/");
   await page.locator("header").getByRole("button", { name: "Tools" }).click();

@@ -86,7 +86,7 @@ export default function SignInPage() {
         <div className="container mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <img
-              src="https://ext.same-assets.com/170935311/3497447819.svg"
+              src="/assets/brand/logo.svg"
               alt="Files Editor"
               className="h-8"
             />

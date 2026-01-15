@@ -155,7 +155,7 @@ export default function FileDropzone({
           {/* Upload Icon */}
           <div className={`mb-6 transition-transform duration-300 ${isDragging ? "scale-110" : ""}`}>
             <img
-              src="https://ext.same-assets.com/170935311/3566732435.svg"
+              src="/assets/icons/upload.svg"
               alt="Upload"
               className="w-16 h-16 md:w-20 md:h-20"
             />
@@ -211,4 +211,3 @@ export default function FileDropzone({
     </div>
   );
 }
-
