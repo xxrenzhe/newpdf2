@@ -3,7 +3,6 @@
 import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
 import JSZip from "jszip";
 import * as fabric from "fabric";
-import { configurePdfJsWorker, pdfjs } from "./pdfjs";
 import { decryptPdfBytes, encryptPdfBytes } from "./qpdf";
 
 export type PdfCompressPreset = "balanced" | "small" | "smallest";
@@ -180,6 +179,7 @@ export async function pdfToImagesZip(
   file: File,
   opts: { format: "png" | "jpg"; quality?: number; dpi: number }
 ): Promise<Blob> {
+  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
   configurePdfJsWorker();
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjs.getDocument({ data }).promise;
@@ -209,6 +209,7 @@ export async function pdfToImagesZip(
 }
 
 export async function extractPdfText(file: File): Promise<string> {
+  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
   configurePdfJsWorker();
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjs.getDocument({ data }).promise;
@@ -235,6 +236,7 @@ export async function compressPdfRasterize(
   };
 
   const { dpi, quality } = presets[preset];
+  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
   configurePdfJsWorker();
 
   const data = new Uint8Array(await file.arrayBuffer());
@@ -312,6 +314,7 @@ export async function redactPdfRasterize(
   };
   const { dpi, quality } = presets[preset];
 
+  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
   configurePdfJsWorker();
   const data = new Uint8Array(await file.arrayBuffer());
   const input = await pdfjs.getDocument({ data }).promise;

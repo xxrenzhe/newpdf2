@@ -86,10 +86,7 @@ html.embed .pdf-header .tab-item {
     padding-right: 18px;
 }
 
-/* Embedded mode (inside an iframe): let the host app own the outer chrome. */
-html.embed .pdf-header {
-    display: none;
-}
+/* Embedded mode (inside an iframe): keep tabs visible so all editor tools remain accessible. */
 
 html.embed .btn-download {
     display: none !important;

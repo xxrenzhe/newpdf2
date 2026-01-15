@@ -223,7 +223,7 @@ export default function PdfEditorTool({
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
           >
-            {busy ? "Working..." : "Done"}
+            {busy ? "Working..." : "Save & Download"}
           </button>
           {showChangeFile && (
             <button

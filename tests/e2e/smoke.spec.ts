@@ -52,8 +52,8 @@ test('home "Browse files" opens file chooser', async ({ page }) => {
     buffer: Buffer.from(pdfBytes),
   });
 
-  await expect(page).toHaveURL(/\/tools\/edit\?uploadId=/);
-  await expect(page.getByRole("heading", { name: "Edit PDF" })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/guest\/document\?chosenTool=edit-pdf&documentId=/);
+  await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
 });
 
 test("watermark tool downloads a PDF", async ({ page }) => {
@@ -134,7 +134,7 @@ for (const tool of TOOLS) {
     }
 
     if (tool.key === "annotate" || tool.key === "edit") {
-      await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
       return;
     }
 
