@@ -33,6 +33,7 @@ export default function PdfEditorTool({
   initialTool,
   showBrand = false,
   toolSwitcher,
+  actionsPosition = "inline",
 }: {
   file: File;
   onBack: () => void;
@@ -43,6 +44,7 @@ export default function PdfEditorTool({
   initialTool?: string | null;
   showBrand?: boolean;
   toolSwitcher?: React.ReactNode;
+  actionsPosition?: "inline" | "top-right";
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -157,10 +159,25 @@ export default function PdfEditorTool({
       ? "bg-white overflow-hidden"
       : "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden";
 
+  const headerClassName =
+    actionsPosition === "top-right"
+      ? "relative flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-white/80 backdrop-blur"
+      : "flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 bg-white/80 backdrop-blur";
+
+  const titleClassName =
+    actionsPosition === "top-right"
+      ? "min-w-0 flex items-center gap-3 pr-80"
+      : "min-w-0 flex items-center gap-3";
+
+  const actionsClassName =
+    actionsPosition === "top-right"
+      ? "absolute top-3 right-5 flex items-center gap-2"
+      : "flex items-center gap-2";
+
   return (
     <div className={shellClassName}>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 bg-white/80 backdrop-blur">
-        <div className="min-w-0 flex items-center gap-3">
+      <div className={headerClassName}>
+        <div className={titleClassName}>
           {showBrand ? (
             <Link href="/en" className="flex items-center">
               <img src="/assets/brand/logo.svg" alt="Files Editor" className="h-7" />
@@ -176,7 +193,7 @@ export default function PdfEditorTool({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className={actionsClassName}>
           <input
             ref={fileInputRef}
             type="file"

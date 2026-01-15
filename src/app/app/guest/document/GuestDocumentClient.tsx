@@ -174,7 +174,7 @@ export default function GuestDocumentClient() {
         </header>
       ) : null}
 
-      <div className={showEditor ? "py-4 px-2 md:px-4 lg:px-6" : "py-12 px-4"}>
+      <div className={showEditor && isPdfEditor ? "p-0" : showEditor ? "py-4 px-2 md:px-4 lg:px-6" : "py-12 px-4"}>
         {!documentId && (
           <div className="max-w-2xl mx-auto text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{toolDef.name}</h1>
@@ -215,6 +215,7 @@ export default function GuestDocumentClient() {
                 initialTool={pdfEditorInitialTool(chosenTool)}
                 showBrand
                 toolSwitcher={switcher}
+                actionsPosition="top-right"
               />
             ) : toolKey === "compress" ? (
               <PdfCompressTool initialFile={files[0]!} />
@@ -248,4 +249,3 @@ export default function GuestDocumentClient() {
     </main>
   );
 }
-
