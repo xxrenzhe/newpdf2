@@ -1,0 +1,105 @@
+@import url('./theme.css');
+
+.textLayer {
+    opacity: 1 !important;
+}
+
+span[role=presentation]::selection {
+    opacity: var(--selection-opacity) !important;
+    background-color: var(--selection-color);
+}
+
+.__cursor_text span[role=presentation] {
+    outline: var(--element-border-width) var(--element-border-style) var(--element-border-color);
+}
+
+
+.__cursor_text span[role=presentation]:hover.text-border, 
+.__resizable-border:hover,
+.__pdf_el_textbox.active,
+.__pdf_el_textbox:hover {
+    /* outline: var(--element-border-width) var(--element-border-style) var(--element-border-color); */
+    outline: var(--element-border-width) var(--element-border-style2) var(--element-border-color2);
+}
+
+.text-hide {
+    outline: none !important;
+}
+
+.__resizable-border:hover {
+    border: none !important;
+    outline: var(--element-border-width) var(--element-border-style2) var(--element-border-color2) !important;
+}
+
+/* .__cursor_text span[role=presentation]:hover.text-border,
+.__pdf_el_text,
+.__pdf_el_textbox {
+    outline-offset: var(--element-outline-offset);
+} */
+
+div[contenteditable] {
+    outline: none;
+    word-wrap: break-word;
+    word-break: break-all;
+}
+
+._loadingv2 {
+    width: 200px;
+    height: 200px;
+    background-color: #fff;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+._loadingv2 img,
+._loadingv2 svg {
+    /* width: 100px;
+    height: 100px;
+    animation: turn 4s linear infinite; */
+}
+
+._loadingv2 .progress {
+    width: 80px;
+    height: 80px;
+    margin: 16px auto 0 !important;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+._loadingv2 .progress::before {
+    content: "";
+    width: 100px;
+    height: 100px;
+    background-image: url(../assets/img/up_loading.png);
+    background-size: 100%;
+    background-repeat: no-repeat;
+    background-position: top;
+    animation: turn 4s linear infinite;
+    position: absolute;
+}
+
+._loadingv2 h3 {
+    margin-top: 18px;
+    font-size: 18px;
+}
+
+._loadingv2 span {
+    margin-top: 2px !important;
+    font-size: 14px;
+    color: #aaa;
+}
+
+
+
+@keyframes turn{
+    0%{-webkit-transform:rotate(0deg);}
+    25%{-webkit-transform:rotate(90deg);}
+    50%{-webkit-transform:rotate(180deg);}
+    75%{-webkit-transform:rotate(270deg);}
+    100%{-webkit-transform:rotate(360deg);}
+}

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { toolByKey, TOOLS } from "@/lib/tools";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pdftools.app";
 
@@ -64,5 +66,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default function ToolLayout({ children }: Props) {
-  return children;
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <div className="flex-1 bg-gradient-pink">{children}</div>
+      <Footer />
+    </div>
+  );
 }

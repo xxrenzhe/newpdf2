@@ -4,6 +4,31 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: __dirname,
   allowedDevOrigins: ["*.preview.same-app.com"],
+  async headers() {
+    return [
+      {
+        source: "/tools/password",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+        ],
+      },
+      {
+        source: "/tools/unlock",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+        ],
+      },
+      {
+        source: "/wasm/:path*",
+        headers: [
+          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+        ],
+      },
+    ];
+  },
   images: {
     unoptimized: true,
     domains: [

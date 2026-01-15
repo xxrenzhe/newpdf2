@@ -1,0 +1,260 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import FileDropzone from "@/components/tools/FileDropzone";
+import { downloadBlob, extractPdfPages } from "@/lib/pdf/client";
+import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
+
+type ThumbState = Record<number, string>;
+
+function isPdfFile(file: File | null): file is File {
+  return !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"));
+}
+
+export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File }) {
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [numPages, setNumPages] = useState(0);
+  const [thumbs, setThumbs] = useState<ThumbState>({});
+  const [deleted, setDeleted] = useState<Record<number, boolean>>({});
+
+  const docRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
+  const thumbsRef = useRef<ThumbState>({});
+  const renderChainRef = useRef(Promise.resolve());
+  const createdObjectUrlsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    thumbsRef.current = thumbs;
+  }, [thumbs]);
+
+  const pageIndices = useMemo(() => Array.from({ length: numPages }, (_, i) => i), [numPages]);
+  const deletedCount = useMemo(() => Object.values(deleted).filter(Boolean).length, [deleted]);
+
+  const resetFileState = useCallback(() => {
+    docRef.current = null;
+    setNumPages(0);
+    setThumbs({});
+    setDeleted({});
+    for (const url of createdObjectUrlsRef.current) URL.revokeObjectURL(url);
+    createdObjectUrlsRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    if (!isPdfFile(file)) return;
+    configurePdfJsWorker();
+    let cancelled = false;
+
+    const run = async () => {
+      setError("");
+      resetFileState();
+      const data = new Uint8Array(await file.arrayBuffer());
+      const doc = await pdfjs.getDocument({ data }).promise;
+      if (cancelled) return;
+      docRef.current = doc;
+      setNumPages(doc.numPages);
+    };
+
+    void run().catch((e) => setError(e instanceof Error ? e.message : "Failed to load PDF"));
+    return () => {
+      cancelled = true;
+    };
+  }, [file, resetFileState]);
+
+  useEffect(() => {
+    return () => {
+      for (const url of createdObjectUrlsRef.current) URL.revokeObjectURL(url);
+      createdObjectUrlsRef.current = [];
+    };
+  }, []);
+
+  const renderThumb = useCallback(async (pageIndex: number) => {
+    const doc = docRef.current;
+    if (!doc) return;
+    if (thumbsRef.current[pageIndex]) return;
+
+    renderChainRef.current = renderChainRef.current.then(async () => {
+      if (thumbsRef.current[pageIndex]) return;
+      const page = await doc.getPage(pageIndex + 1);
+      const targetWidth = 240;
+      const viewport0 = page.getViewport({ scale: 1 });
+      const scale = targetWidth / Math.max(1, viewport0.width);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) return;
+      await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.78)
+      );
+
+      const url = blob ? URL.createObjectURL(blob) : canvas.toDataURL("image/jpeg", 0.78);
+      if (blob) createdObjectUrlsRef.current.push(url);
+      setThumbs((prev) => ({ ...prev, [pageIndex]: url }));
+    });
+  }, []);
+
+  const toggleDelete = useCallback((pageIndex: number) => {
+    setDeleted((prev) => ({ ...prev, [pageIndex]: !prev[pageIndex] }));
+  }, []);
+
+  const exportPdf = useCallback(async () => {
+    if (!isPdfFile(file)) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (numPages === 0) throw new Error("PDF not loaded.");
+      const keepPages = Array.from({ length: numPages }, (_, i) => i + 1).filter((n) => !deleted[n - 1]);
+      if (keepPages.length === 0) throw new Error("You cannot delete all pages.");
+
+      const bytes = await extractPdfPages(file, keepPages);
+      const outName = file.name.replace(/\.[^.]+$/, "") + "-deleted.pdf";
+      downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setBusy(false);
+    }
+  }, [deleted, file, numPages]);
+
+  if (!file) {
+    return (
+      <FileDropzone
+        accept=".pdf,application/pdf"
+        onFiles={(files) => setFile(files[0] ?? null)}
+        title="Drop a PDF here to delete pages"
+      />
+    );
+  }
+
+  const pdfOk = isPdfFile(file);
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900">Delete Pages</h3>
+            <p className="text-sm text-gray-500 truncate">
+              {file.name}
+              {numPages ? ` · ${numPages} pages` : ""}
+              {deletedCount ? ` · ${deletedCount} marked for deletion` : ""}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              onClick={() => setFile(null)}
+              disabled={busy}
+            >
+              Change file
+            </button>
+            <button
+              type="button"
+              disabled={!pdfOk || numPages === 0 || busy}
+              className="px-4 py-2 rounded-lg bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+              onClick={() => void exportPdf()}
+            >
+              {busy ? "Working..." : "Export PDF"}
+            </button>
+          </div>
+        </div>
+
+        {!pdfOk && (
+          <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+            Please upload a PDF file.
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+            {error}
+          </div>
+        )}
+      </div>
+
+      {numPages > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {pageIndices.map((pageIndex) => (
+              <DeletePageCard
+                key={pageIndex}
+                pageIndex={pageIndex}
+                thumbUrl={thumbs[pageIndex]}
+                marked={!!deleted[pageIndex]}
+                onToggle={() => toggleDelete(pageIndex)}
+                onNeedThumb={() => void renderThumb(pageIndex)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DeletePageCard({
+  pageIndex,
+  thumbUrl,
+  marked,
+  onToggle,
+  onNeedThumb,
+}: {
+  pageIndex: number;
+  thumbUrl?: string;
+  marked: boolean;
+  onToggle: () => void;
+  onNeedThumb: () => void;
+}) {
+  const ref = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || thumbUrl) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          onNeedThumb();
+          observer.disconnect();
+          return;
+        }
+      },
+      { root: null, rootMargin: "900px", threshold: 0.01 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onNeedThumb, thumbUrl]);
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={`rounded-xl border overflow-hidden text-left ${
+        marked ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white hover:bg-gray-50"
+      }`}
+      onClick={onToggle}
+      title={marked ? "Click to keep this page" : "Click to delete this page"}
+    >
+      <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50">
+        <span className="text-xs text-gray-600">Page {pageIndex + 1}</span>
+        {marked && (
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+            Delete
+          </span>
+        )}
+      </div>
+      <div className="p-2">
+        {thumbUrl ? (
+          <img src={thumbUrl} alt="" className={`w-full rounded-lg border border-gray-100 ${marked ? "opacity-60" : ""}`} />
+        ) : (
+          <div className="w-full aspect-[3/4] rounded-lg bg-gray-100" />
+        )}
+      </div>
+    </button>
+  );
+}

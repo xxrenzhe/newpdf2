@@ -128,7 +128,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "delete",
     name: "Delete Pages",
-    description: "Delete pages from PDFs (uses Organize Pages).",
+    description: "Delete pages from PDFs by page order.",
     href: "/tools/delete",
     icon: "https://ext.same-assets.com/170935311/4053557687.svg",
     status: "ready",

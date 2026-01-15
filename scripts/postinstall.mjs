@@ -11,6 +11,8 @@ function copyFileIfExists(from, to) {
 const root = process.cwd();
 const qpdfWasmFrom = path.join(root, "node_modules", "qpdf-wasm", "qpdf.wasm");
 const qpdfWasmTo = path.join(root, "public", "wasm", "qpdf.wasm");
+const qpdfJsFrom = path.join(root, "node_modules", "qpdf-wasm", "qpdf.js");
+const qpdfJsTo = path.join(root, "public", "wasm", "qpdf.js");
 
 copyFileIfExists(qpdfWasmFrom, qpdfWasmTo);
-
+copyFileIfExists(qpdfJsFrom, qpdfJsTo);

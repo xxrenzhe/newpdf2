@@ -13,10 +13,34 @@ let modulePromise: Promise<QpdfModule> | null = null;
 
 async function getQpdfModule(): Promise<QpdfModule> {
   if (!modulePromise) {
-    modulePromise = import("qpdf-wasm").then(async (mod) => {
-      const init = mod.default as (opts?: { locateFile?: (path: string) => string }) => Promise<QpdfModule>;
+    const qpdfJsUrl = "/wasm/qpdf.js";
+    modulePromise = import(/* webpackIgnore: true */ qpdfJsUrl).then(async (mod) => {
+      const init = mod.default as (opts?: {
+        locateFile?: (path: string) => string;
+        instantiateWasm?: (
+          imports: WebAssembly.Imports,
+          successCallback: (instance: WebAssembly.Instance, module: WebAssembly.Module) => void
+        ) => unknown;
+      }) => Promise<QpdfModule>;
       return init({
-        locateFile: (p) => (p.endsWith(".wasm") ? "/wasm/qpdf.wasm" : p),
+        locateFile: (p) => {
+          if (p === "qpdf.js") return "/wasm/qpdf.js";
+          if (p === "qpdf.wasm") return "/wasm/qpdf.wasm";
+          return p;
+        },
+        instantiateWasm: (imports: WebAssembly.Imports, successCallback: (instance: WebAssembly.Instance, module: WebAssembly.Module) => void) => {
+          const wasmUrl = "/wasm/qpdf.wasm";
+          return fetch(wasmUrl, { credentials: "same-origin" })
+            .then((res) => {
+              if (!res.ok) throw new Error(`Failed to load ${wasmUrl} (${res.status})`);
+              return res.arrayBuffer();
+            })
+            .then((bytes) => WebAssembly.instantiate(bytes, imports))
+            .then(({ instance, module }) => {
+              successCallback(instance, module);
+              return instance;
+            });
+        },
       });
     });
   }

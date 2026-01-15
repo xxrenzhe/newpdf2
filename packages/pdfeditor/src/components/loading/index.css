@@ -1,0 +1,48 @@
+@keyframes loading {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+._loading {
+    animation: loading 1s linear infinite;
+    transition: all 350ms;
+    opacity: 0;
+}
+
+._loading.on {
+    opacity: 1;
+}
+
+.__l_overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.4);
+    transition: all 350ms;
+    opacity: 0;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.__l_overlay span {
+    margin-top: 10px;
+    opacity: 0;
+}
+
+.__l_overlay.on span {
+    opacity: 1;
+}
+
+.__l_overlay.on {
+    opacity: 1;
+}

@@ -1,0 +1,180 @@
+<div class="popup_main">
+    <div class="popup_table">
+        <div class="table_btn table_btn_active hf_table" data-type="text"> 
+            <svg t="1660558161471" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6413" width="15" height="15"><path d="M127.744 99.136l-25.856 206.976h25.856c0-72.448 56.896-129.344 129.344-129.344h181.12v659.648c0 36.224-28.48 64.704-64.704 64.704h-64.64v25.92h413.824v-25.92h-64.64a64 64 0 0 1-64.704-64.704V176.704h181.12c72.384 0 129.344 56.96 129.344 129.344h25.792l-25.792-206.976H127.744v0.064z" p-id="6414"></path></svg>
+            <span data-locale="place_text">${LANG_MESSAGES.place_text}</span>
+        </div>
+        <div class="table_btn hf_table" data-type="img">
+            <svg t="1660546424587" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5369" width="15" height="15"><path d="M821.106 93.209h-618.214c-60.479 0-109.684 49.204-109.684 109.684v618.214c0 60.479 49.204 109.684 109.684 109.684h618.214c60.479 0 109.684-49.204 109.684-109.684v-618.214c0-60.479-49.203-109.684-109.684-109.684zM202.893 133.094h618.214c38.486 0 69.799 31.312 69.799 69.799v128.022c-140.713 4.933-272.222 61.954-372.167 161.899-46.838 46.839-84.226 100.624-111.276 159.023-78.278-66.408-191.6-70.666-274.367-12.766v-436.178c0-38.487 31.312-69.799 69.799-69.799zM133.094 821.106v-130.393c71.758-69.667 186.407-69.595 258.067 0.23-22.785 61.217-34.712 126.667-34.712 193.979 0 2.085 0.322 4.093 0.916 5.982h-154.474c-38.487 0-69.799-31.312-69.799-69.799zM821.106 890.905h-425.688c0.593-1.889 0.916-3.898 0.916-5.982 0-137.548 53.487-266.786 150.608-363.907 92.41-92.41 213.907-145.278 343.963-150.192v450.282c-0.001 38.487-31.313 69.799-69.8 69.799zM324.873 419.618c57.036 0 103.437-46.401 103.437-103.437s-46.401-103.437-103.437-103.437-103.437 46.401-103.437 103.437 46.401 103.437 103.437 103.437zM324.873 252.629c35.042 0 63.552 28.509 63.552 63.552s-28.509 63.552-63.552 63.552-63.552-28.509-63.552-63.552 28.509-63.552 63.552-63.552z" p-id="5370" fill="#333333"></path></svg>
+            <span data-locale="image">${LANG_MESSAGES.image}</span>
+        </div>
+    </div>
+    <div class="popup_item">
+        <div class="popup_c">
+            <div class="popup_subtitle popup_c" data-locale="add_header">
+                ${LANG_MESSAGES.add_header}
+            </div>
+            <div class=" popup_redia">
+                <label for="leftPos">
+                    <input type="radio" id="leftPos" name="pos" value="left" data-type="header" class="__text_align" checked>
+                    <span data-locale="left">${LANG_MESSAGES.left}</span>
+                </label>
+                <label for="centerPos">
+                    <input type="radio" id="centerPos" name="pos" value="center" data-type="header" class="__text_align">
+                    <span data-locale="center">${LANG_MESSAGES.center}</span>
+                </label>
+                <label for="rightPos">
+                    <input type="radio" id="rightPos" name="pos" value="right" data-type="header" class="__text_align">
+                    <span data-locale="right">${LANG_MESSAGES.right}</span>
+                </label>
+            </div>
+            <div class="text_box popup_editText">
+                <textarea id="header_text" data-locale="please_add_heeader_content" data-locale-attrs="placeholder" placeholder="${LANG_MESSAGES.please_add_heeader_content}"></textarea>
+               
+            </div>
+            <div class="popup_item popup_uploadimg">
+                <input type="file" id="upload_img_h" accept=".jpg,.jpeg,.png">
+                <label class="uploadLabelBox" for="upload_img_h">
+                    <span id="upload_img_view" class="uploadLabel">
+
+                    </span>
+                    <span class="upload_btn" data-locale="browse">
+                        ${LANG_MESSAGES.browse}
+                    </span>
+                </label>
+               
+            </div>
+        </div>
+        <div class="popup_c">
+            <div class="popup_subtitle popup_c" data-locale="add_footer">
+                ${LANG_MESSAGES.add_footer}
+            </div>
+            <div class=" popup_redia">
+                <label for="leftPos_f">
+                    <input type="radio" id="leftPos_f" name="posF" value="left" data-type="footer" class="__text_align" checked>
+                    <span data-locale="left">${LANG_MESSAGES.left}</span>
+                </label>
+                <label for="centerPos_f">
+                    <input type="radio" id="centerPos_f" name="posF" value="center" data-type="footer" class="__text_align">
+                    <span data-locale="center">${LANG_MESSAGES.center}</span>
+                </label>
+                <label for="rightPos_f">
+                    <input type="radio" id="rightPos_f" name="posF" value="right" data-type="footer" class="__text_align">
+                    <span data-locale="right">${LANG_MESSAGES.right}</span>
+                </label>
+            </div>
+            <div class="popup_editText text_box">
+                <textarea id="footer_text" data-locale="please_add_footer_content" data-locale-attrs="placeholder" placeholder="${LANG_MESSAGES.please_add_footer_content}"></textarea>
+            </div>
+            <div class="popup_item popup_uploadimg">
+                <input type="file" id="upload_img_f" accept=".jpg,.jpeg,.png">
+                <label class="uploadLabelBox" for="upload_img_f">
+                    <span id="img_f_view" class="uploadLabel">
+                        
+                    </span>
+                    <span class="upload_btn" data-locale="browse">
+                        ${LANG_MESSAGES.browse}
+                    </span>
+                </label>
+             
+            </div>
+        </div>
+    </div>
+    
+    <div class="popup_item">
+        <div class="popup_c select_popup_i">
+            <span data-locale="font">${LANG_MESSAGES.font}</span>
+            <select class="font_family">
+            </select>
+        </div>
+        <div class="popup_c select_popup_auto">
+            <span data-locale="font_size">${LANG_MESSAGES.font_size}</span>
+            <select class="font_size">
+                <option value="4">4</option>
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="10">10</option>
+                <option value="12" selected="selected">12</option>
+                <option value="14">14</option>
+                <option value="16">16</option>
+                <option value="18">18</option>
+                <option value="24">24</option>
+                <option value="36">36</option>
+                <option value="48">48</option>
+                <option value="64">64</option>
+                <option value="72">72</option>
+                <option value="96">96</option>
+            </select>
+        </div>
+    </div>
+    <div class="popup_item">
+        <div class="popup_left_c">
+            <div class="popup_subtitle_b" data-locale="pages_from">
+                ${LANG_MESSAGES.pages_from}:
+            </div>
+            <div class="popup_select">
+                <input type="number" id="page_start" value="1" min="1">
+            </div>
+        </div>
+        <div class="popup_left_c">
+            <div class="popup_subtitle_b" data-locale="to">
+                ${LANG_MESSAGES.to}:
+            </div>
+            <div class="popup_select">
+                <input type="number" id="page_end" value="20" min="1">
+            </div>
+        </div>
+    </div>
+    <div class="popup_item">
+        <div class="popup_subtitle" data-locale="preview">
+            ${LANG_MESSAGES.preview}
+        </div>
+     
+    </div>
+    <div class="popup_item ">
+        <div class="preview_item popup_preview_top">
+            <div class="preview_line_left">
+                
+            </div>
+            <div class="preview_line_top">
+                
+            </div>
+            <div class="preview_line_right">
+                
+            </div>
+            <div class="perview_dom">
+                <span data-locale="header_footer_demo_text">${LANG_MESSAGES.header_footer_demo_text}</span>
+                <img>
+            </div>
+        </div>
+    </div>
+    <div class="popup_item ">
+        <div class="preview_item popup_preview_bottom">
+            <div class="preview_line_left">
+                
+            </div>
+            <div class="preview_line_bottom">
+                
+            </div>
+            <div class="preview_line_right">
+                
+            </div>
+            <div class="perview_dom_bottom">
+                <span data-locale="header_footer_demo_text">${LANG_MESSAGES.header_footer_demo_text}</span>
+                <img>
+            </div>
+        </div>
+    </div>
+    <div class="popup_item">
+        <div class="popup_btn">
+        </div>
+        <div class="popup_btn">
+            <button class="bgg_btn btn_itme btn_ok" data-locale="ok">
+                ${LANG_MESSAGES.ok}
+            </button>
+            <button class="btn_itme btn_cancel" data-locale="cancel">
+                ${LANG_MESSAGES.cancel}
+            </button>
+        </div>
+    </div>
+</div>

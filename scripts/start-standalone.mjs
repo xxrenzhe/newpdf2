@@ -14,10 +14,15 @@ const port = portArg ?? process.env.PORT ?? "3000";
 const projectRoot = process.cwd();
 const srcStatic = path.join(projectRoot, ".next", "static");
 const dstStatic = path.join(projectRoot, ".next", "standalone", ".next", "static");
+const srcPublic = path.join(projectRoot, "public");
+const dstPublic = path.join(projectRoot, ".next", "standalone", "public");
 const standaloneServer = path.join(projectRoot, ".next", "standalone", "server.js");
 
 await rm(dstStatic, { recursive: true, force: true });
 await cp(srcStatic, dstStatic, { recursive: true });
+
+await rm(dstPublic, { recursive: true, force: true });
+await cp(srcPublic, dstPublic, { recursive: true });
 
 const child = spawn(process.execPath, [standaloneServer], {
   stdio: "inherit",

@@ -1,0 +1,37 @@
+<div class="popup_main">
+    <div class="popup_item" data-locale="insert_to">
+        ${LANG_MESSAGES.insert_to}
+    </div>
+    <div class="popup_item">
+        <label>
+            <input type="radio"  name="page" value="first" class="__text_align">
+            <span data-locale="first_page">${LANG_MESSAGES.first_page}</span>
+        </label>
+    </div>
+    <div class="popup_item">
+        <label>
+            <input type="radio" name="page" value="last"  class="__text_align">
+            <span data-locale="last_page">${LANG_MESSAGES.last_page}</span>
+        </label>
+    </div>
+    <div class="popup_item">
+        <label>
+            <input type="radio" name="page" value="custom" class="__text_align" checked="">
+            <input type="text" id="page_num" value="1" class="input_text">
+            <span class="page_total"></span>
+        </label>
+    </div>
+    
+    <div class="popup_item">
+        <div class="popup_btn">
+        </div>
+        <div class="popup_btn">
+            <button class="bgg_btn btn_itme btn-ok" data-locale="ok">
+                ${LANG_MESSAGES.ok}
+            </button>
+            <button class="btn_itme btn-cancel" data-locale="cancel">
+                ${LANG_MESSAGES.cancel}
+            </button>
+        </div>
+    </div>
+</div>

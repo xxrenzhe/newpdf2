@@ -1,0 +1,37 @@
+{
+  "name": "pdfeditor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "pdfeditor/pdfeditor.js",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development BASE_URL=/ webpack serve --config webpack.dev.js",
+    "build": "webpack --config webpack.build.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@simonwep/pickr": "^1.8.2",
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.7.1",
+    "css-minimizer-webpack-plugin": "^3.4.1",
+    "d3-path": "^3.0.1",
+    "ejs-loader": "^0.5.0",
+    "file-saver": "^2.0.5",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.6.0",
+    "opentype.js": "^1.3.4",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^2.14.305",
+    "postcss": "^8.4.14",
+    "postcss-loader": "^7.0.1",
+    "rangy": "^1.3.1",
+    "webpack": "^5.72.1",
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.9.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
+  }
+}

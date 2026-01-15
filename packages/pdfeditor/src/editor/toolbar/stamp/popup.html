@@ -1,0 +1,118 @@
+<div class="popup_main">
+    <div class="custom_box">
+        <div class="custom_option">
+            <div class="custom_type">
+                <div class="custom_type_item">
+                    <input type="radio" name="custom_type" id="roundType" value="1" checked hidden/>
+                    <label for="roundType" class="advice" data-locale="seal_round">${LANG_MESSAGES.seal_round}</label>
+                </div>
+                <div class="custom_type_item">
+                    <input type="radio" name="custom_type" id="rectangularType" value="1" hidden/>
+                    <label for="rectangularType" class="advice" data-locale="seal_ractangular">${LANG_MESSAGES.seal_ractangular}</label>
+                </div>
+            </div>
+            <div class="custom_option_ipt">
+                <div class="option_ipt_item">
+                    <div data-locale="seal_content1">${LANG_MESSAGES.seal_content1}</div>
+                    <input type="text" placeholder="6843912321" id="custom_ipt1">
+                </div>
+                <div class="option_ipt_item">
+                    <div data-locale="seal_content2">${LANG_MESSAGES.seal_content2}</div>
+                    <input type="text" placeholder="TEXT" id="custom_ipt2">
+                </div>
+                <div class="option_ipt_item">
+                    <div data-locale="seal_content3">${LANG_MESSAGES.seal_content3}</div>
+                    <input type="text" placeholder="QWERPDF.COM" id="custom_ipt3">
+                </div>
+               
+            </div>
+            <div class="custom_option_setting">
+                <div class="option_sett_item">
+                    <div class="sett_item_s">
+                        <div class="item_s_s" data-locale="seal_width">
+                            ${LANG_MESSAGES.seal_width}
+                        </div>
+                        <div class="item_s_c">
+                            <input id="rangeWidth"  type="range" value="130" max="200" min="50" step="1">
+                        </div>
+                    </div>
+                    <div class="sett_item_s">
+                        <div class="item_s_s" data-locale="seal_height">
+                            ${LANG_MESSAGES.seal_height}
+                        </div>
+                        <div class="item_s_c">
+                            <input id="rangeHeight"  type="range" value="130" max="200" min="50" step="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="option_sett_item">
+                    <div class="sett_item_s">
+                        <div class="item_s_s" data-locale="seal_color">
+                            ${LANG_MESSAGES.seal_color}
+                        </div>
+                        <div class="item_s_c seal_color_box">
+                            <span class="color-item" data-name="red" data-color="#E23C40"></span>
+                            <span class="color-item" data-name="green" data-color="#1DB509"></span>
+                            <span class="color-item" data-name="blue" data-color="#4076F5"></span>
+                            <span class="color-picker"><img src="<%= ASSETS_URL %>img/picker-1.png" /></span>
+                        </div>
+                    </div>
+                    <div class="sett_item_s">
+                        <div class="item_s_s" data-locale="seal_font_size">
+                            ${LANG_MESSAGES.seal_font_size}
+                        </div>
+                        <div class="item_s_c">
+                            <input id="rangeFontSize"  type="range" value="12" max="48" min="12" step="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="option_sett_item">
+                    <div class="sett_item_s">
+                        <div class="item_s_s" data-locale="middle_font_size">
+                            ${LANG_MESSAGES.middle_font_size}
+                        </div>
+                        <div class="item_s_c">
+                            <input id="rangeContentFontSize"  type="range" value="40" max="48" min="12" step="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="custom_view">
+            <div class="popup_item">
+                <div class="popup_subtitle" data-locale="preview">${LANG_MESSAGES.preview}</div>
+           </div>
+           <div class="custom_view_box">
+                <div class="custom_demo">
+                    <div class="custom_demo_box">
+                       <div class="custom_demo_item">
+                            <div class="custom_text1 custom_text">
+                                6843912321
+                            </div>
+                            <div class="custom_text2 custom_text">
+                                TEXT
+                            </div>
+                            <div class="custom_text3 custom_text">
+                                QWERPDF.COM
+                            </div>
+                       </div>
+                    </div>
+                </div>
+           </div>
+        </div>
+    </div>
+    <div class="popup_item">
+        <div class="popup_btn">
+          
+        </div>
+        <div class="popup_btn">
+            <button class="bgg_btn btn_itme btn-ok" data-locale="ok">
+                ${LANG_MESSAGES.ok}
+            </button>
+            <button class="btn_itme btn-cancel" data-locale="cancel">
+                ${LANG_MESSAGES.cancel}
+            </button>
+        </div>
+   </div>
+   
+</div>

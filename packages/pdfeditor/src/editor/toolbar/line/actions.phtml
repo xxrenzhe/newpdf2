@@ -1,0 +1,24 @@
+<div class="__act_item __act_colors">
+    <span class="color-item" data-name="orange" data-color="#ffcd45"></span>
+    <span class="color-item" data-name="blue" data-color="#25d2d1"></span>
+    <span class="color-item" data-name="green" data-color="#00cc63"></span>
+    <span class="color-item" data-name="lilac" data-color="#e2a1e6"></span>
+    <span class="color-picker"><img src="<%= ASSETS_URL %>img/picker-1.png" /></span>
+</div>
+<div class="__act_item">
+    <span data-locale="opacity" class="width-max-content">${LANG_MESSAGES.opacity}: </span>
+    <div class="__act_range_reduce __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomreduce.svg"></div>
+    <input class="__act_opacity" type="range" value="0" max="10" min="0" step="0.1">
+    <div class="__act_range_plus __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomadd.svg"></div>
+    <span class="__act_opacity_text"></span>
+</div>
+
+<div class="__act_item">
+    <span data-locale="stroke">${LANG_MESSAGES.stroke}: </span>
+    <div class="__act_range_reduce __act_draw_range_reduce __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomreduce.svg"></div>
+    <input class="__act_draw" type="range" value="0" max="10" min="1" step="1">
+    <div class="__act_range_plus __act_draw_range_plus __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomadd.svg"></div>
+    <span class="__act_draw_text"></span>
+</div>
+
+<div class="__act_item __act_draw_preview"></div>

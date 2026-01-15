@@ -1,0 +1,182 @@
+.resizable-handle {
+    display: block;
+    font-size: .1px;
+    position: absolute;
+}
+
+.resizable-n {
+    cursor: n-resize;
+    height: 12px;
+    left: 10px;
+    top: -5px;
+    width: calc(100% - 20px);
+}
+
+.resizable-e {
+    cursor: e-resize;
+    height: calc(100% - 20px);
+    right: -10px;
+    top: 10px;
+    width: 12px;
+}
+
+.resizable-s {
+    bottom: -10px;
+    cursor: s-resize;
+    height: 12px;
+    left: 10px;
+    width: calc(100% - 20px);
+}
+
+.resizable-w {
+    cursor: w-resize;
+    height: calc(100% - 20px);
+    left: -10px;
+    top: 10px;
+    width: 12px;
+}
+
+.resizable-ne {
+    cursor: ne-resize;
+    height: 20px;
+    right: -10px;
+    top: -10px;
+    width: 20px;
+}
+
+.resizable-se {
+    bottom: -10px;
+    cursor: se-resize;
+    height: 20px;
+    right: -10px;
+    width: 20px;
+}
+
+.resizable-sw {
+    bottom: -10px;
+    cursor: sw-resize;
+    height: 20px;
+    left: -10px;
+    width: 20px;
+}
+
+.resizable-nw {
+    cursor: nw-resize;
+    height: 20px;
+    left: -10px;
+    top: -10px;
+    width: 20px;
+}
+
+.__resizable {
+    position: relative;
+    /* border: 1px solid transparent; */
+}
+
+.__resizable-border:hover {
+    outline: 2px dashed #0078D5;
+    outline-offset: 2px;
+}
+
+.__resizable-border:hover .resizable-wr,
+.__resizable-border:hover .resizable-er,
+.__resizable-border:hover .resizable-nr,
+.__resizable-border:hover .resizable-sr,
+.__resizable-border:hover .resizable-ner,
+.__resizable-border:hover .resizable-ser,
+.__resizable-border:hover .resizable-swr,
+.__resizable-border:hover .resizable-nwr
+{
+    background: #0078D5;
+    outline: 1px solid #fff;
+    border-radius: 2px;
+}
+
+.resizable-wr {
+    cursor: w-resize;
+    height: 10px;
+    left: -7.5px;
+    top: calc(50% - 5px);
+    width: 10px;
+}
+
+.resizable-er {
+    cursor: e-resize;
+    width: 10px;
+    height: 10px;
+    right: -7.5px;
+    top: calc(50% - 5px);
+}
+
+.resizable-nr {
+    cursor: n-resize;
+    width: 10px;
+    height: 10px;
+    right: calc(50% - 5px);
+    top: -7.5px;
+}
+
+.resizable-sr {
+    cursor: s-resize;
+    width: 10px;
+    height: 10px;
+    bottom: -7.5px;
+    right: calc(50% - 5px);
+}
+
+.resizable-ner {
+    cursor: ne-resize;
+    width: 10px;
+    height: 10px;
+    right: -7.5px;
+    top: -7.5px;
+}
+
+.resizable-ser {
+    cursor: se-resize;
+    width: 10px;
+    height: 10px;
+    bottom: -7.5px;
+    right: -7.5px;
+}
+
+.resizable-swr {
+    cursor: sw-resize;
+    width: 10px;
+    height: 10px;
+    bottom: -7.5px;
+    left: -7.5px;
+}
+
+.resizable-nwr {
+    cursor: nw-resize;
+    width: 10px;
+    height: 10px;
+    left: -7.5px;
+    top: -7.5px;
+}
+
+.resizable-rotation {
+    cursor: default;
+    width: 1px;
+    height: 60px;
+    left: calc(50% - 1px);
+    top: -60px;
+    border-right: 2px dashed #0078D5;
+}
+
+.resizable-rotation-handle {
+    cursor: crosshair;
+    width: 10px;
+    height: 10px;
+    left: -4px;
+    top: -5px;
+    position: absolute;
+    background: #0078D5;
+    outline: 1px solid #fff;
+    border-radius: 2px;
+}
+
+.resizable-disabled {
+    cursor: initial;
+}

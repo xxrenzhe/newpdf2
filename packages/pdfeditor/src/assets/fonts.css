@@ -1,0 +1,14 @@
+@font-face {
+    font-family: 'Arial';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(../assets/fonts/Lato-Regular.ttf) format('truetype');
+}
+@font-face {
+    font-family: 'SimSun';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(../assets/fonts/NotoSansCJKsc-Regular.otf) format('opentype');
+}

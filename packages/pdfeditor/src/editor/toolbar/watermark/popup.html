@@ -1,0 +1,133 @@
+<div class="popup_main">
+    <div class="popup_item lr_structure">
+        <div class="popup_left">
+            <div class="popup_table">
+                <div class="table_btn watermark_table table_btn_active" data-type="text"> 
+                    <svg t="1660558161471" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6413" width="15" height="15"><path d="M127.744 99.136l-25.856 206.976h25.856c0-72.448 56.896-129.344 129.344-129.344h181.12v659.648c0 36.224-28.48 64.704-64.704 64.704h-64.64v25.92h413.824v-25.92h-64.64a64 64 0 0 1-64.704-64.704V176.704h181.12c72.384 0 129.344 56.96 129.344 129.344h25.792l-25.792-206.976H127.744v0.064z" p-id="6414"></path></svg>
+                    <span data-locale="place_text">${LANG_MESSAGES.place_text}</span>
+                </div>
+                <div class="table_btn watermark_table" data-type="img">
+                    <svg t="1660546424587" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5369" width="15" height="15"><path d="M821.106 93.209h-618.214c-60.479 0-109.684 49.204-109.684 109.684v618.214c0 60.479 49.204 109.684 109.684 109.684h618.214c60.479 0 109.684-49.204 109.684-109.684v-618.214c0-60.479-49.203-109.684-109.684-109.684zM202.893 133.094h618.214c38.486 0 69.799 31.312 69.799 69.799v128.022c-140.713 4.933-272.222 61.954-372.167 161.899-46.838 46.839-84.226 100.624-111.276 159.023-78.278-66.408-191.6-70.666-274.367-12.766v-436.178c0-38.487 31.312-69.799 69.799-69.799zM133.094 821.106v-130.393c71.758-69.667 186.407-69.595 258.067 0.23-22.785 61.217-34.712 126.667-34.712 193.979 0 2.085 0.322 4.093 0.916 5.982h-154.474c-38.487 0-69.799-31.312-69.799-69.799zM821.106 890.905h-425.688c0.593-1.889 0.916-3.898 0.916-5.982 0-137.548 53.487-266.786 150.608-363.907 92.41-92.41 213.907-145.278 343.963-150.192v450.282c-0.001 38.487-31.313 69.799-69.8 69.799zM324.873 419.618c57.036 0 103.437-46.401 103.437-103.437s-46.401-103.437-103.437-103.437-103.437 46.401-103.437 103.437 46.401 103.437 103.437 103.437zM324.873 252.629c35.042 0 63.552 28.509 63.552 63.552s-28.509 63.552-63.552 63.552-63.552-28.509-63.552-63.552 28.509-63.552 63.552-63.552z" p-id="5370" fill="#333333"></path></svg>
+                    <span data-locale="image">${LANG_MESSAGES.image}</span>
+                </div>
+            </div> 
+            <div class="popup_item text_box watermark_text">
+                <div class="popup_subtitle_b">
+                    <span data-locale="text">${LANG_MESSAGES.text}</span>
+                </div>
+                <textarea id="watermark_text" data-locale="enter_text_here" data-locale-attrs="placeholder" placeholder="${LANG_MESSAGES.enter_text_here}"></textarea>
+                <div class="popup_item popup_c select_popup_i">
+                    <span class="color-item" data-name="orange" data-color="#ffcd45"></span>
+                    <span class="color-item" data-name="blue" data-color="#25d2d1"></span>
+                    <span class="color-item" data-name="green" data-color="#00cc63"></span>
+                    <span class="color-item" data-name="lilac" data-color="#e2a1e6"></span>
+                    <span class="color-picker"><img src="<%= ASSETS_URL %>img/picker-1.png" /></span>
+                </div>
+            </div>
+            <div class="popup_item watermark_uploadimg">
+                <input type="file" id="upload_img_w" accept=".jpg,.jpeg,.png">
+                <label class="uploadLabelBox" for="upload_img_w">
+                    <span class="uploadLabel">
+                        
+                    </span>
+                    <span class="upload_btn" data-locale="browse">
+                        ${LANG_MESSAGES.browse}
+                    </span>
+                </label>
+            </div>
+            <div class="popup_item">
+                <div class="popup_subtitle" data-locale="position" data-locale="position">
+                    ${LANG_MESSAGES.position}:
+                </div>
+            </div>
+            <div class="popup_item popup_pos_box">
+                <div class="popup_pos">
+                    <div class="popup_pos_item notTop_border option-active"  data-pos="1"></div>
+                    <div class="popup_pos_item notTop_border" data-pos="2"></div>
+                    <div class="popup_pos_item notTop_border notRight_border" data-pos="3"></div>
+                    <div class="popup_pos_item" data-pos="4"></div>
+                    <div class="popup_pos_item" data-pos="5"></div>
+                    <div class="popup_pos_item notRight_border" data-pos="6"></div>
+                    <div class="popup_pos_item" data-pos="7"></div>
+                    <div class="popup_pos_item" data-pos="8"></div>
+                    <div class="popup_pos_item notRight_border" data-pos="9"></div>
+                </div>
+                <div class="popup_checkbox checkbox">
+                    <input id="mosaic" class="checkbox" name="mosaic" type="checkbox">
+                    <label for="mosaic" data-locale="mosaic">
+                        ${LANG_MESSAGES.mosaic}
+                    </label>
+                </div>
+            </div>
+            <div class="popup_item">
+                <div class="popup_left_c">
+                    <div class="popup_subtitle_b" data-locale="opacity">
+                        ${LANG_MESSAGES.opacity}:
+                    </div>
+                    <div class="select_popup_i">
+                        <select id="watermark_opacity">
+                            <option value="1">100%</option>
+                            <option value="0.75">75%</option>
+                            <option value="0.5" selected="selected">50%</option>
+                            <option value="0.25">25%</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="popup_left_c">
+                    <div class="popup_subtitle_b" data-locale="rotation">
+                        ${LANG_MESSAGES.rotation}:
+                    </div>
+                    <div class="select_popup_i">
+                        <select id="watermark_rotate">
+                            <option value="0">0</option>
+                            <option value="45">45</option>
+                            <option value="90">90</option>
+                            <option value="135">135</option>
+                            <option value="180">180</option>
+                            <option value="225">225</option>
+                            <option value="270">270</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="popup_item">
+                <div class="popup_left_c">
+                    <div class="popup_subtitle_b" data-locale="pages_from">
+                        ${LANG_MESSAGES.pages_from}:
+                    </div>
+                    <div class="popup_select">
+                        <input type="number" id="page_start" value="1" min="1">
+                    </div>
+                </div>
+                <div class="popup_left_c">
+                    <div class="popup_subtitle_b" data-locale="to">
+                        ${LANG_MESSAGES.to}:
+                    </div>
+                    <div class="popup_select">
+                        <input type="number" id="page_end" value="20" min="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="popup_right">
+           <div class="popup_item">
+                <div class="popup_subtitle" data-locale="preview">
+                    ${LANG_MESSAGES.preview}:
+                </div>
+           </div>
+           <div class="popup_item popup_preview_box">
+                <img id="pdfview_img">
+           </div>
+           <div class="popup_item">
+                <div class="popup_btn">
+                    <button class="bgg_btn btn_itme btn-ok" data-locale="ok">
+                        ${LANG_MESSAGES.ok}
+                    </button>
+                    <button class="btn_itme btn-cancel" data-locale="cancel">
+                        ${LANG_MESSAGES.cancel}
+                    </button>
+                </div>
+           </div>
+        </div>
+    </div>
+</div>

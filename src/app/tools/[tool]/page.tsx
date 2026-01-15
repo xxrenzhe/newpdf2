@@ -7,14 +7,16 @@ import dynamic from "next/dynamic";
 import FileDropzone from "@/components/tools/FileDropzone";
 import { deleteUpload, loadUpload } from "@/lib/uploadStore";
 import { toolByKey, TOOLS } from "@/lib/tools";
+import { clearPdfEditorCache, loadPdfEditorInput, loadPdfEditorOutput } from "@/lib/pdfEditorCache";
 
-const PdfAnnotateEditTool = dynamic(() => import("@/components/tools/PdfAnnotateEditTool"), { ssr: false });
+const PdfEditorTool = dynamic(() => import("@/features/pdf-editor/PdfEditorTool"), { ssr: false });
 const PdfCompressTool = dynamic(() => import("@/components/tools/PdfCompressTool"), { ssr: false });
 const PdfConvertTool = dynamic(() => import("@/components/tools/PdfConvertTool"), { ssr: false });
 const PdfMergeTool = dynamic(() => import("@/components/tools/PdfMergeTool"), { ssr: false });
 const PdfSignTool = dynamic(() => import("@/components/tools/PdfSignTool"), { ssr: false });
 const PdfSplitTool = dynamic(() => import("@/components/tools/PdfSplitTool"), { ssr: false });
 const PdfOrganizeTool = dynamic(() => import("@/components/tools/PdfOrganizeTool"), { ssr: false });
+const PdfDeletePagesTool = dynamic(() => import("@/features/delete-pages/PdfDeletePagesTool"), { ssr: false });
 const PdfWatermarkTool = dynamic(() => import("@/components/tools/PdfWatermarkTool"), { ssr: false });
 const PdfPasswordTool = dynamic(() => import("@/components/tools/PdfPasswordTool"), { ssr: false });
 const PdfUnlockTool = dynamic(() => import("@/components/tools/PdfUnlockTool"), { ssr: false });
@@ -28,6 +30,9 @@ function ToolContent() {
   const searchParams = useSearchParams();
 
   const [files, setFiles] = useState<File[]>([]);
+  const [resumeInput, setResumeInput] = useState<File | null>(null);
+  const [resumeOutput, setResumeOutput] = useState<File | null>(null);
+  const [resumeBusy, setResumeBusy] = useState(false);
   const uploadId = searchParams.get("uploadId");
 
   useEffect(() => {
@@ -41,6 +46,40 @@ function ToolContent() {
   }, [uploadId]);
 
   const reset = useCallback(() => setFiles([]), []);
+  const clearResume = useCallback(async () => {
+    try {
+      await clearPdfEditorCache();
+    } finally {
+      setResumeInput(null);
+      setResumeOutput(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (toolKey !== "annotate" && toolKey !== "edit") {
+      setResumeInput(null);
+      setResumeOutput(null);
+      return;
+    }
+
+    let cancelled = false;
+    setResumeBusy(true);
+    void (async () => {
+      const [input, output] = await Promise.all([
+        loadPdfEditorInput().catch(() => null),
+        loadPdfEditorOutput().catch(() => null),
+      ]);
+      if (cancelled) return;
+      setResumeInput(input);
+      setResumeOutput(output);
+    })().finally(() => {
+      if (!cancelled) setResumeBusy(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [toolKey]);
 
   const isMulti = toolKey === "merge" || toolKey === "convert";
   const accept = useMemo(() => {
@@ -58,35 +97,7 @@ function ToolContent() {
   }, [toolKey]);
 
   return (
-    <main className="min-h-screen bg-gradient-pink">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <img
-                src="https://ext.same-assets.com/170935311/3497447819.svg"
-                alt="Files Editor"
-                className="h-8"
-              />
-            </Link>
-            <Link
-              href="/"
-              className="text-sm text-gray-600 hover:text-[#2d85de] transition-colors flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-              </svg>
-              All Tools
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <section className="py-12 md:py-20">
+    <main className="py-12 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Tool Header */}
           <div className="text-center max-w-2xl mx-auto mb-10">
@@ -104,20 +115,80 @@ function ToolContent() {
                 Coming soon
               </div>
             )}
+            <div className="mt-6">
+              <Link href="/" className="text-sm text-gray-600 hover:text-[#2d85de] transition-colors inline-flex items-center gap-1">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+                All Tools
+              </Link>
+            </div>
           </div>
 
           {files.length === 0 ? (
-            <FileDropzone
-              accept={accept}
-              multiple={isMulti}
-              onFiles={setFiles}
-              title={isMulti ? "Drop files here" : "Drop your file here"}
-              subtitle={toolKey === "merge" ? "Select 2 or more PDFs" : "Supported: PDF and common formats"}
-            />
+            <>
+              {(toolKey === "annotate" || toolKey === "edit") && (resumeBusy || resumeInput || resumeOutput) && (
+                <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900">Continue where you left off</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {resumeBusy
+                          ? "Checking your browser cache..."
+                          : "Your PDF stays on your device. You can resume from the last file you opened or saved."}
+                      </p>
+                    </div>
+                    {(resumeInput || resumeOutput) && (
+                      <button
+                        type="button"
+                        className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                        onClick={() => void clearResume()}
+                      >
+                        Clear cache
+                      </button>
+                    )}
+                  </div>
+
+                  {!resumeBusy && (resumeInput || resumeOutput) && (
+                    <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                      {resumeOutput && (
+                        <button
+                          type="button"
+                          className="h-11 px-4 rounded-xl bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium"
+                          onClick={() => setFiles([resumeOutput])}
+                        >
+                          Resume last saved PDF
+                        </button>
+                      )}
+                      {resumeInput && (
+                        <button
+                          type="button"
+                          className="h-11 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium"
+                          onClick={() => setFiles([resumeInput])}
+                        >
+                          Resume last opened PDF
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <FileDropzone
+                accept={accept}
+                multiple={isMulti}
+                onFiles={setFiles}
+                title={isMulti ? "Drop files here" : "Drop your file here"}
+                subtitle={toolKey === "merge" ? "Select 2 or more PDFs" : "Supported: PDF and common formats"}
+              />
+            </>
           ) : (
             <div className="max-w-6xl mx-auto">
               {toolKey === "annotate" || toolKey === "edit" ? (
-                <PdfAnnotateEditTool file={files[0]!} onBack={reset} />
+                <PdfEditorTool file={files[0]!} onBack={reset} />
               ) : toolKey === "sign" ? (
                 <PdfSignTool initialFile={files[0]!} />
               ) : toolKey === "compress" ? (
@@ -128,8 +199,10 @@ function ToolContent() {
                 <PdfConvertTool initialFiles={files} />
               ) : toolKey === "split" ? (
                 <PdfSplitTool initialFile={files[0]!} />
-              ) : toolKey === "organize" || toolKey === "rotate" || toolKey === "delete" ? (
+              ) : toolKey === "organize" || toolKey === "rotate" ? (
                 <PdfOrganizeTool initialFile={files[0]!} />
+              ) : toolKey === "delete" ? (
+                <PdfDeletePagesTool initialFile={files[0]!} />
               ) : toolKey === "watermark" ? (
                 <PdfWatermarkTool initialFile={files[0]!} />
               ) : toolKey === "password" ? (
@@ -187,25 +260,6 @@ function ToolContent() {
             </div>
           )}
         </div>
-      </section>
-
-      {/* Simple Footer */}
-      <footer className="py-8 border-t border-gray-100 bg-white/50">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-2">
-              <img
-                src="https://ext.same-assets.com/170935311/3497447819.svg"
-                alt="Files Editor"
-                className="h-6"
-              />
-            </Link>
-            <p className="text-sm text-gray-500">
-              All-in-one PDF solutions
-            </p>
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }
@@ -213,24 +267,14 @@ function ToolContent() {
 // Loading fallback component
 function ToolPageLoading() {
   return (
-    <main className="min-h-screen bg-gradient-pink">
-      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
-            <div className="h-5 w-20 bg-gray-200 rounded animate-pulse" />
-          </div>
+    <main className="py-12 md:py-20">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-gray-200 mx-auto mb-6 animate-pulse" />
+          <div className="h-10 w-48 bg-gray-200 rounded mx-auto mb-4 animate-pulse" />
+          <div className="h-6 w-64 bg-gray-200 rounded mx-auto animate-pulse" />
         </div>
-      </header>
-      <section className="py-12 md:py-20">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-gray-200 mx-auto mb-6 animate-pulse" />
-            <div className="h-10 w-48 bg-gray-200 rounded mx-auto mb-4 animate-pulse" />
-            <div className="h-6 w-64 bg-gray-200 rounded mx-auto animate-pulse" />
-          </div>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }

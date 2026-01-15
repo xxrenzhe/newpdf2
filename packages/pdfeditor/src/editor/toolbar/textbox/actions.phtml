@@ -1,0 +1,68 @@
+<div class="__act_item">
+    <div class="fontlist child-item child-item-title">
+        <!-- <svg xmlns="http://www.w3.org/2000/svg" width="9" height="11"><path fill="#383e45" fill-rule="evenodd" d="M4.79 11.076c.302 0 .543-.09.725-.273s.273-.424.273-.725V1.654h2.84c.624 0 .936-.276.936-.827S9.25 0 8.627 0H.936C.312 0 0 .276 0 .827s.312.827.936.827h2.84v8.424c0 .302.09.543.273.725s.43.273.74.273z"></path></svg> -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="11" fill="#383e45" fill-rule="evenodd"><path d="M9.63 11.076c.302 0 .543-.1.725-.273s.273-.424.273-.725V1.654h2.84c.624 0 .936-.276.936-.827S14.093 0 13.47 0h-7.7c-.624 0-.936.276-.936.827s.312.827.936.827h2.84v8.424c0 .302.1.543.273.725s.43.273.74.273zm-6.934-.036c.235 0 .424-.07.567-.206s.214-.32.214-.55V6.328H4.66c.246 0 .43-.052.55-.155s.18-.262.18-.475-.06-.37-.18-.47-.304-.15-.55-.15H.73c-.246 0-.43.05-.55.15s-.18.258-.18.47.06.37.18.475.304.155.55.155h1.184v3.956c0 .23.07.413.214.55s.332.206.567.206z"></path></svg>
+        <img width="15" height="15" src="<%= ASSETS_URL %>img/down.svg">
+        <div class="font-dropdown">
+            
+        </div>
+    </div>
+</div>
+
+<div class="__act_item">
+    <div class="fontsize child-item">
+        <div class="fontsize-left">
+            <img width="15" height="15" src="<%= ASSETS_URL %>img/fontsize.svg">
+        </div>
+        <div class="fontsize-right">
+            <img width="12" height="12" src="<%= ASSETS_URL %>img/up.svg" class="fontsize_plus">
+            <img width="12" height="12" src="<%= ASSETS_URL %>img/down.svg" class="fontsize_reduce">
+        </div>
+    </div>
+
+    <div class="font_bold child-item child-item-btn">
+        <img width="13" height="13" src="<%= ASSETS_URL %>img/fontBlob.svg">
+    </div>
+
+    <div class="font_italic child-item child-item-btn">
+        <img width="13" height="13" src="<%= ASSETS_URL %>img/fontItalic.svg">
+    </div>
+
+    <div class="font_underline child-item child-item-btn">
+        <img width="13" height="13" src="<%= ASSETS_URL %>img/fontunderscore.svg">
+    </div>
+
+    <div class="font_strike child-item child-item-btn">
+        <img width="13" height="13" src="<%= ASSETS_URL %>img/fontstrikethrough.svg">
+    </div>
+</div>
+
+<div class="__act_item">
+    <div class="child-item child-item-btn font_bg colors-dropdown">
+        <div class="color-icon">
+            <img width="12" height="12" src="<%= ASSETS_URL %>img/fontbg.svg" />
+            <div class="color_preview" style="background-color:#ff0000;"></div>
+        </div>
+        <div class="arrow">
+            <img width="15" height="15" src="<%= ASSETS_URL %>img/down.svg" />
+        </div>
+    </div>
+
+    <div class="child-item child-item-btn font_color colors-dropdown">
+        <div class="color-icon">
+            <img width="12" height="12" src="<%= ASSETS_URL %>img/fontColor.svg" />
+            <div class="color_preview"></div>
+        </div>
+        <div class="arrow">
+            <img width="15" height="15" src="<%= ASSETS_URL %>img/down.svg" />
+        </div>
+    </div>
+</div>
+
+<div class="__act_item">
+    <span data-locale="opacity" class="width-max-content">${LANG_MESSAGES.opacity}: </span>
+    <div class="__act_range_reduce __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomreduce.svg"></div>
+    <input class="__act_bg_opacity" type="range" value="0" max="10" min="0" step="0.1">
+    <div class="__act_range_plus __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomadd.svg"></div>
+    <span class="__act_bg_opacity_text"></span>
+</div>
