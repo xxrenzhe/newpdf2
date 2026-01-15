@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { downloadBlob } from "@/lib/pdf/client";
 import { savePdfEditorInput, savePdfEditorOutput } from "@/lib/pdfEditorCache";
+import { saveUpload } from "@/lib/uploadStore";
 
 type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
 type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number };
@@ -23,15 +26,32 @@ function hasMessageType<T extends string>(value: unknown, type: T): value is { t
 export default function PdfEditorTool({
   file,
   onBack,
+  onReplaceFile,
+  onConvert,
+  variant = "card",
+  showChangeFile = true,
+  initialTool,
+  showBrand = false,
+  toolSwitcher,
 }: {
   file: File;
   onBack: () => void;
+  onReplaceFile: (file: File) => void;
+  onConvert?: () => void;
+  variant?: "card" | "shell";
+  showChangeFile?: boolean;
+  initialTool?: string | null;
+  showBrand?: boolean;
+  toolSwitcher?: React.ReactNode;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const [iframeReady, setIframeReady] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const appliedToolRef = useRef<string | null>(null);
 
   const outName = useMemo(() => file.name.replace(/\.[^.]+$/, "") + "-edited.pdf", [file.name]);
 
@@ -50,12 +70,14 @@ export default function PdfEditorTool({
     setError("");
     setPdfLoaded(false);
     setBusy(true);
+    appliedToolRef.current = null;
     postToEditor({ type: "load-pdf", blob: file });
     return;
   }, [file, iframeReady, postToEditor]);
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
+      if (evt.source !== iframeRef.current?.contentWindow) return;
       if (!isPdfDownloadMessage(evt.data)) return;
       setBusy(false);
       downloadBlob(evt.data.blob, outName);
@@ -67,6 +89,7 @@ export default function PdfEditorTool({
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
+      if (evt.source !== iframeRef.current?.contentWindow) return;
       if (hasMessageType<PdfLoadedMessage["type"]>(evt.data, "pdf-loaded")) {
         setPdfLoaded(true);
         setBusy(false);
@@ -80,29 +103,102 @@ export default function PdfEditorTool({
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
+  useEffect(() => {
+    if (!pdfLoaded) return;
+    if (!initialTool) return;
+    if (appliedToolRef.current === initialTool) return;
+    postToEditor({ type: "set-tool", tool: initialTool });
+    appliedToolRef.current = initialTool;
+  }, [initialTool, pdfLoaded, postToEditor]);
+
   const requestDownload = useCallback(() => {
     if (!pdfLoaded) return;
     setError("");
     setBusy(true);
     postToEditor({ type: "download" });
-    window.setTimeout(() => setBusy(false), 2_000);
   }, [pdfLoaded, postToEditor]);
 
+  const goToConvert = useCallback(async () => {
+    if (onConvert) {
+      onConvert();
+      return;
+    }
+    setError("");
+    setBusy(true);
+    try {
+      const uploadId = await saveUpload([file]);
+      router.push(`/tools/convert?uploadId=${encodeURIComponent(uploadId)}`);
+    } catch {
+      setBusy(false);
+      setError("Could not open the Convert tool. Please try again.");
+    }
+  }, [file, onConvert, router]);
+
+  const onUploadNew = useCallback(() => {
+    if (busy) return;
+    fileInputRef.current?.click();
+  }, [busy]);
+
+  const onFileChange = useCallback(
+    (evt: React.ChangeEvent<HTMLInputElement>) => {
+      const next = evt.target.files?.[0] ?? null;
+      evt.target.value = "";
+      if (!next) return;
+      setError("");
+      setPdfLoaded(false);
+      setBusy(true);
+      onReplaceFile(next);
+    },
+    [onReplaceFile]
+  );
+
+  const shellClassName =
+    variant === "shell"
+      ? "bg-white overflow-hidden"
+      : "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden";
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 bg-white/70 backdrop-blur">
-        <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900">PDF Editor</h3>
-          <p className="text-sm text-gray-500 truncate">{file.name}</p>
+    <div className={shellClassName}>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 bg-white/80 backdrop-blur">
+        <div className="min-w-0 flex items-center gap-3">
+          {showBrand ? (
+            <Link href="/en" className="flex items-center">
+              <img src="/assets/brand/logo.svg" alt="Files Editor" className="h-7" />
+            </Link>
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-semibold text-red-700">PDF</span>
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+            <p className="text-xs text-gray-500">{busy ? "Working…" : pdfLoaded ? "Ready" : "Loading…"}</p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            className="hidden"
+            onChange={onFileChange}
+          />
           <button
             type="button"
-            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
-            onClick={onBack}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            onClick={onUploadNew}
             disabled={busy}
           >
-            Back
+            Upload New
+          </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            onClick={() => void goToConvert()}
+            disabled={busy}
+          >
+            Convert
           </button>
           <button
             type="button"
@@ -110,8 +206,18 @@ export default function PdfEditorTool({
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
           >
-            {busy ? "Working..." : "Save"}
+            {busy ? "Working..." : "Done"}
           </button>
+          {showChangeFile && (
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              onClick={onBack}
+              disabled={busy}
+            >
+              Change file
+            </button>
+          )}
         </div>
       </div>
 
@@ -120,6 +226,12 @@ export default function PdfEditorTool({
           {error}
         </div>
       )}
+
+      {toolSwitcher ? (
+        <div className="px-5 py-2 border-b border-gray-100 bg-white">
+          {toolSwitcher}
+        </div>
+      ) : null}
 
       <div className="h-[75vh] min-h-[560px] bg-white">
         <iframe

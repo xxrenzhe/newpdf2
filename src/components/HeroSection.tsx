@@ -3,7 +3,8 @@
 import { useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { saveUpload } from "@/lib/uploadStore";
+import { createGuestDocument } from "@/lib/guestDocumentStore";
+import { toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
 
 export default function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
@@ -13,15 +14,16 @@ export default function HeroSection() {
   const openWithFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
-    const id = await saveUpload(fileArray);
 
     const first = fileArray[0];
     const name = first.name.toLowerCase();
     const isPdf = first.type === "application/pdf" || name.endsWith(".pdf");
     const isImage = first.type.startsWith("image/") || /\.(png|jpg|jpeg|gif|bmp|webp)$/.test(name);
-    const tool = isPdf ? "edit" : isImage ? "convert" : "convert";
+    const chosenTool = isPdf ? "edit-pdf" : isImage ? "convert" : "convert";
+    const toolKey = toolKeyFromChosenTool(chosenTool);
+    const documentId = await createGuestDocument(toolKey, fileArray);
 
-    router.push(`/tools/${tool}?uploadId=${encodeURIComponent(id)}`);
+    router.push(`/app/guest/document?chosenTool=${encodeURIComponent(chosenTool)}&documentId=${encodeURIComponent(documentId)}`);
   }, [router]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {

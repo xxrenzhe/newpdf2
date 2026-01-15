@@ -28,6 +28,7 @@ function ToolContent() {
   const toolKey = params.tool as string;
   const tool = toolByKey[toolKey] ?? toolByKey.annotate;
   const searchParams = useSearchParams();
+  const isPdfEditor = toolKey === "annotate" || toolKey === "edit";
 
   const [files, setFiles] = useState<File[]>([]);
   const [resumeInput, setResumeInput] = useState<File | null>(null);
@@ -97,9 +98,10 @@ function ToolContent() {
   }, [toolKey]);
 
   return (
-    <main className="py-12 md:py-20">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+    <main className={isPdfEditor && files.length > 0 ? "py-4 md:py-6" : "py-12 md:py-20"}>
+        <div className={isPdfEditor && files.length > 0 ? "w-full px-2 md:px-4 lg:px-6" : "container mx-auto px-4 md:px-6 lg:px-8"}>
           {/* Tool Header */}
+          {!(isPdfEditor && files.length > 0) && (
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-6 shadow-sm">
               <img src={tool.icon} alt="" className="w-8 h-8" />
@@ -127,6 +129,7 @@ function ToolContent() {
               </Link>
             </div>
           </div>
+          )}
 
           {files.length === 0 ? (
             <>
@@ -186,9 +189,9 @@ function ToolContent() {
               />
             </>
           ) : (
-            <div className="max-w-6xl mx-auto">
+            <div className={isPdfEditor ? "w-full" : "max-w-6xl mx-auto"}>
               {toolKey === "annotate" || toolKey === "edit" ? (
-                <PdfEditorTool file={files[0]!} onBack={reset} />
+                <PdfEditorTool file={files[0]!} onBack={reset} onReplaceFile={(next) => setFiles([next])} />
               ) : toolKey === "sign" ? (
                 <PdfSignTool initialFile={files[0]!} />
               ) : toolKey === "compress" ? (

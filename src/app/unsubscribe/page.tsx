@@ -35,7 +35,7 @@ export default function UnsubscribePage() {
                   1. Log into your Files Editor account
                 </h3>
                 <p className="text-gray-600">
-                  <Link href="/sign-in" className="text-[#2d85de] hover:underline">
+                  <Link href="/app/sign-in" className="text-[#2d85de] hover:underline">
                     Click here
                   </Link>{" "}
                   to access the Sign In page.
@@ -70,13 +70,13 @@ export default function UnsubscribePage() {
               </h2>
               <p className="text-gray-600 mb-4">
                 If you have any trouble logging in, we suggest you reset your account password by{" "}
-                <Link href="/forgot-password" className="text-[#2d85de] hover:underline">
+                <Link href="/app/forgot-password" className="text-[#2d85de] hover:underline">
                   clicking here.
                 </Link>
               </p>
               <p className="text-gray-600">
                 If you still have issues, please{" "}
-                <Link href="/contact-us" className="text-[#2d85de] hover:underline">
+                <Link href="/en/contact-us" className="text-[#2d85de] hover:underline">
                   Contact Us
                 </Link>{" "}
                 to confirm that your account is still active.

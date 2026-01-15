@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { toolByKey, TOOLS } from "@/lib/tools";
+import { toolByKey } from "@/lib/tools";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -65,12 +65,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function ToolLayout({ children }: Props) {
+export default async function ToolLayout({ children, params }: Props) {
+  const { tool: toolKey } = await params;
+  const isEditorTool = toolKey === "annotate" || toolKey === "edit";
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <div className="flex-1 bg-gradient-pink">{children}</div>
-      <Footer />
+      <div className={isEditorTool ? "flex-1 bg-white" : "flex-1 bg-gradient-pink"}>{children}</div>
+      {isEditorTool ? null : <Footer />}
     </div>
   );
 }

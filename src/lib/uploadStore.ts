@@ -14,7 +14,7 @@ type StoredUpload = {
 };
 
 const DB_NAME = "files-editor";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "uploads";
 
 function openDb(): Promise<IDBDatabase> {
@@ -24,6 +24,9 @@ function openDb(): Promise<IDBDatabase> {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains("guest-documents")) {
+        db.createObjectStore("guest-documents", { keyPath: "id" });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -83,4 +86,3 @@ export async function deleteUpload(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
 }
-

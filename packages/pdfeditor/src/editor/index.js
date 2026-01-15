@@ -128,7 +128,8 @@ export class PDFEditor {
 
         PDFEvent.on(Events.READER_INIT, () => {
             this.initToolbar();
-            this.toolbar.get('text').click();
+            // Match common PDF editor UX: default to selection tool, not edit mode.
+            this.toolbar.get('mouse').click();
             PDFEvent.dispatch(Events.TOOLBAR_INIT);
         });
 

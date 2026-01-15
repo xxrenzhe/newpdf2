@@ -54,17 +54,17 @@ export default function Footer() {
             <h3 className="font-bold text-gray-900 mb-5 text-base">Help</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/contact-us" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/en/contact-us" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   Contact us
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/en/faq" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link href="/plan" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/en/plan" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   Pricing
                 </Link>
               </li>
@@ -76,17 +76,17 @@ export default function Footer() {
             <h3 className="font-bold text-gray-900 mb-5 text-base">Account</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/sign-in" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/app/sign-in" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   Sign In
                 </Link>
               </li>
               <li>
-                <Link href="/sign-up" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/app/sign-up" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   Register
                 </Link>
               </li>
               <li>
-                <Link href="/unsubscribe" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/en/unsubscribe" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   Unsubscribe
                 </Link>
               </li>
@@ -98,12 +98,12 @@ export default function Footer() {
             <h3 className="font-bold text-gray-900 mb-5 text-base">Legal</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/terms-and-conditions" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/en/terms-and-conditions" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   Terms & Conditions
                 </Link>
               </li>
               <li>
-                <Link href="/privacy-policy" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                <Link href="/en/privacy-policy" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
                   Privacy Policy
                 </Link>
               </li>

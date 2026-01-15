@@ -236,6 +236,13 @@ window.addEventListener('message', e => {
     if (e.data.type == 'download') {
         elDownload.click();
     }
+    if (e.data.type === 'set-tool' && typeof e.data.tool === 'string') {
+        try {
+            editor.toolbar?.get(e.data.tool)?.click?.();
+        } catch {
+            // ignore
+        }
+    }
 });
 
 window.reader = reader;
