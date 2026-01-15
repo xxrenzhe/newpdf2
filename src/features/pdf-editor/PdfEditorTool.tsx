@@ -156,7 +156,7 @@ export default function PdfEditorTool({
 
   const shellClassName =
     variant === "shell"
-      ? "bg-white overflow-hidden"
+      ? "bg-white overflow-hidden flex flex-col h-[100dvh]"
       : "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden";
 
   const headerClassName =
@@ -250,7 +250,7 @@ export default function PdfEditorTool({
         </div>
       ) : null}
 
-      <div className="h-[75vh] min-h-[560px] bg-white">
+      <div className={variant === "shell" ? "flex-1 min-h-0 bg-white" : "h-[75vh] min-h-[560px] bg-white"}>
         <iframe
           ref={iframeRef}
           title="PDF Editor"
