@@ -83,16 +83,26 @@ export class PDFEditor {
         }
 
         PDFEvent.on(Events.CONVERT_TO_ELEMENT, (e, sendResponse) => {
-            if (!this.toolbar.toolActive || this.toolbar.toolActive.name != 'text') return;
-            sendResponse(true);
+            if (!this.toolbar) return;
+            if (!this.pdfDocument) return;
+            const textTool = this.toolbar.get('text');
+            if (!textTool) return;
+
+            // When user clicks original PDF text, switch to Text mode automatically.
+            if (!this.toolbar.toolActive || this.toolbar.toolActive.name !== 'text') {
+                this.toolbar.setActive(textTool);
+                textTool.setActive(true);
+            }
             const page = this.pdfDocument.getPage(e.data.pageNum);
+            if (!page) return;
             e.data.options.oriText = e.data.attrs.text;
             const element = page.elements.add(
                 e.data.type,
                 e.data.attrs,
                 e.data.options
             );
-            this.toolbar.tools.text.setActions(element);
+            textTool.setActions(element);
+            sendResponse(true);
             
             const elFontList = element.elActions.querySelector('.font-dropdown');
             let elOption = document.createElement('div');
