@@ -1,128 +1,194 @@
 # =============================================================================
-# PDF Tools - Build and Test
+# CI/CD - Build, E2E, Docker (GHCR) + 可选 Cloud Run
 # =============================================================================
 #
-# 触发条件:
-#   - 推送到 main 分支
-#   - 版本标签 (v*.*.*)
-#   - 手动触发
+# MustKnowV1 部署约束（关键）：
+# - push main：构建镜像并推送 tag：prod-latest、prod-{commitid}
+# - tag v*.*.*：构建镜像并推送 tag：prod-{version}、prod-{commitid}
+# - 单容器部署：supervisord 管理 Nginx(80)/Next.js(3000)/Gotenberg(3001)
 #
-# 功能:
-#   - 代码检查 (TypeScript, ESLint)
-#   - 构建 Next.js 项目
-#   - 构建 Docker 镜像 (本地验证，不推送)
-#
-# 部署方式:
-#   - 本地构建镜像后手动部署
+# 注意：
+# - docs/ oldcode/ secrets/ 不能上传 GitHub，也不能打包进镜像（靠 .gitignore/.dockerignore 保证）
 #
 # =============================================================================
 
-name: Build and Test
+name: CI/CD
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+    tags: ["v*.*.*"]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  BUN_VERSION: "latest"
+  IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
   # ============================================
-  # Job 1: 构建和测试
+  # Job 1: CI（Lint + E2E）
   # ============================================
-  build-and-test:
+  ci:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
-      - name: Checkout代码
+      - name: Checkout 代码
         uses: actions/checkout@v4
 
-      - name: 设置Node.js
+      - name: 安全检查：禁止跟踪敏感目录
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '^(docs/|oldcode/|secrets/)' >/dev/null; then
+            echo "❌ 检测到 docs/oldcode/secrets 被 Git 跟踪，请移除后再提交。"
+            git ls-files | grep -E '^(docs/|oldcode/|secrets/)' || true
+            exit 1
+          fi
+          echo "✅ 未检测到敏感目录被跟踪"
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          # 不使用cache，因为项目使用bun.lock
+          node-version: ${{ env.NODE_VERSION }}
 
-      - name: 安装依赖
-        run: npm install
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
 
-      - name: 运行类型检查
-        run: npx tsc --noEmit
-        continue-on-error: true
+      - name: 安装依赖（Bun）
+        run: bun install --frozen-lockfile
 
-      - name: 运行ESLint
-        run: npm run lint
-        continue-on-error: true
+      - name: 安装 Playwright 浏览器与系统依赖（Chromium）
+        run: bun x playwright install --with-deps chromium
 
-      - name: 构建项目
-        run: npm run build
-        env:
-          NODE_ENV: production
+      - name: 代码检查（TypeScript + ESLint）
+        run: bun run lint
+
+      - name: E2E 浏览器测试（Playwright）
+        run: bun run test:e2e
 
   # ============================================
-  # Job 2: 构建Docker镜像 (验证Dockerfile，不推送)
+  # Job 2: 构建并推送镜像到 GHCR（prod-* tags）
   # ============================================
-  build-docker:
-    needs: build-and-test
+  docker-ghcr:
+    needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
+      packages: write
     steps:
-      - name: Checkout代码
+      - name: Checkout 代码
         uses: actions/checkout@v4
 
-      - name: 设置Docker Buildx
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 构建Docker镜像 (不推送)
-        uses: docker/build-push-action@v5
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成镜像标签与元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=prod-latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=prod-
+            type=semver,pattern={{version}},prefix=prod-
+
+      - name: 构建并推送（GHCR）
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          push: false
-          tags: pdftools:local
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=production
 
-      - name: 输出构建信息
+  # ============================================
+  # Job 3（可选）：部署到 GCP Cloud Run（自动）
+  # ============================================
+  deploy-cloud-run:
+    needs: docker-ghcr
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    if: ${{ secrets.GCP_SA_KEY != '' && vars.GCP_REGION != '' && vars.GCP_CLOUD_RUN_SERVICE != '' && vars.GCP_ARTIFACT_REPOSITORY != '' }}
+    env:
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      CLOUD_RUN_SERVICE: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
+      ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 认证到 GCP（Service Account Key）
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 准备 Artifact Registry 镜像名
+        id: ar
         run: |
-          echo "============================================"
-          echo "✅ Docker 镜像构建成功!"
-          echo "============================================"
-          echo ""
-          echo "🚀 本地构建和部署:"
-          echo ""
-          echo "   # 构建镜像"
-          echo "   docker build -t pdftools:latest ."
-          echo ""
-          echo "   # 运行容器"
-          echo "   docker run -d -p 80:80 pdftools:latest"
-          echo ""
-          echo "============================================"
+          set -euo pipefail
+          PROJECT_ID="${{ steps.auth.outputs.project_id }}"
+          if [ -z "$PROJECT_ID" ]; then
+            echo "❌ 无法从 GCP_SA_KEY 推断 project_id"
+            exit 1
+          fi
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+          echo "host=${{ env.GCP_REGION }}-docker.pkg.dev" >> "$GITHUB_OUTPUT"
+          echo "image=${{ env.GCP_REGION }}-docker.pkg.dev/$PROJECT_ID/${{ env.ARTIFACT_REPOSITORY }}/${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
 
-# =============================================================================
-# 部署说明
-# =============================================================================
-#
-# 📋 此工作流会:
-#    1. 运行代码检查 (TypeScript, ESLint)
-#    2. 构建 Next.js 项目
-#    3. 验证 Docker 镜像可以正常构建
-#
-# 🚀 本地部署步骤:
-#    1. 克隆代码: git clone <repo>
-#    2. 构建镜像: docker build -t pdftools:latest .
-#    3. 运行容器: docker run -d -p 80:80 pdftools:latest
-#
-# 📁 容器架构:
-#    - Port 80: Nginx (反向代理)
-#    - Port 3000: Next.js (内部)
-#    - Port 3001: Gotenberg (内部, Office转PDF)
-#    - Supervisord: 进程管理
-#
+      - name: 配置 Docker 登录到 Artifact Registry
+        run: gcloud auth configure-docker ${{ steps.ar.outputs.host }} --quiet
+
+      - name: 生成 Cloud Run 镜像标签（与 GHCR 同步）
+        id: meta-ar
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.ar.outputs.image }}
+          tags: |
+            type=raw,value=prod-latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=prod-
+            type=semver,pattern={{version}},prefix=prod-
+
+      - name: 构建并推送（Artifact Registry）
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta-ar.outputs.tags }}
+          labels: ${{ steps.meta-ar.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 部署到 Cloud Run（仅更新镜像；环境变量建议由 Secret Manager 注入）
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="$(echo '${{ steps.meta-ar.outputs.tags }}' | tr ' ' '\n' | head -n 1)"
+          echo "Deploying image: $IMAGE_TAG"
+          gcloud run deploy "${{ env.CLOUD_RUN_SERVICE }}" \
+            --image "$IMAGE_TAG" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform managed \
+            --port 80 \
+            --quiet

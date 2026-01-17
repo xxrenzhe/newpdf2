@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # =============================================================================
 # PDF Tools - Single Container Deployment
 #
@@ -11,15 +13,18 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Build Next.js application
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
+
+# Docker build 不需要 Playwright 浏览器，避免在依赖安装阶段下载，显著加速构建
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Install dependencies
 # 先复制必要文件，然后安装依赖
 COPY package.json ./
 COPY scripts ./scripts
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm npm install --no-audit --no-fund
 
 # Copy source and build
 COPY . .
@@ -50,6 +55,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     # Supervisord
     supervisor \
+    # Cron (scheduled tasks)
+    cron \
     # LibreOffice for document conversion
     libreoffice-core \
     libreoffice-writer \
@@ -89,6 +96,9 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app/.next/standalone ./
 COPY --from=builder --chown=appuser:appuser /app/.next/static ./.next/static
 COPY --from=builder --chown=appuser:appuser /app/public ./public
+
+# Copy cron definitions for entrypoint bootstrap
+COPY deploy/crontab /app/deploy/crontab
 
 # Copy deployment configurations
 COPY deploy/nginx.conf /etc/nginx/nginx.conf
