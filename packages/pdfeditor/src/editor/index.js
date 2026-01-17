@@ -140,17 +140,26 @@ export class PDFEditor {
         PDFEvent.on(Events.DOWNLOAD, () => {
             //检查字体是否加载完成
             if (!this.pdfDocument.checkFonts()) return;
-            this.pdfDocument.save(true).then(async blob => {
-                // if (this.options.debug) {
-                //     // window.open(URL.createObjectURL(blob));
-                //     location = URL.createObjectURL(blob);
-                // } else {
-                //     saveAs(blob, 'edited.pdf');
-                // }
+            this.pdfDocument
+                .save(true)
+                .then(async blob => {
+                    // if (this.options.debug) {
+                    //     // window.open(URL.createObjectURL(blob));
+                    //     location = URL.createObjectURL(blob);
+                    // } else {
+                    //     saveAs(blob, 'edited.pdf');
+                    // }
 
-                parent.postMessage({ type: 'pdf-download', blob }, '*');
-                this.reset();
-            });
+                    parent.postMessage({ type: 'pdf-download', blob }, '*');
+                    await this.reset();
+                })
+                .catch(err => {
+                    console.log(err);
+                    PDFEvent.dispatch(Events.ERROR, err);
+                })
+                .finally(() => {
+                    PDFEvent.dispatch(Events.DOWNLOAD_AFTER);
+                });
         });
 
         this.fontWorker.addEventListener('message', e => {

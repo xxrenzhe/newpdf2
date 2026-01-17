@@ -54,7 +54,8 @@ export const Events = {
     SAVE_BEFORE: 'save_before',
     SAVE: 'save',
     SAVE_AFTER: 'save_after',
-    DOWNLOAD: 'download'
+    DOWNLOAD: 'download',
+    DOWNLOAD_AFTER: 'download_after'
 };
 
 const _ONCE = '_#once#_';

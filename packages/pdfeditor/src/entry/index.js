@@ -167,6 +167,11 @@ let elDownload = document.querySelector('.btn-download');
 elDownload.addEventListener('click', () => {
     
     let elDiv = document.querySelector('._loadingv2');
+    if (!elDiv) {
+        editor.download();
+        return;
+    }
+    const elDivParent = elDiv.parentElement;
     loading.setIcon(elDiv);
     var loadItme = 0
     var intervalItem = setInterval(()=>{
@@ -180,6 +185,27 @@ elDownload.addEventListener('click', () => {
     },100)
     elDiv.classList.remove('_loading');
     loading.start();
+
+    let cleaned = false;
+    const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        clearInterval(intervalItem);
+        downloadLoad(100);
+        loading.end(() => {
+            downloadLoad(0);
+            if (elDivParent && !elDivParent.contains(elDiv)) {
+                elDivParent.appendChild(elDiv);
+            }
+        });
+        PDFEvent.unbind(Events.DOWNLOAD_AFTER, cleanup);
+        PDFEvent.unbind(Events.ERROR, onError);
+    };
+
+    const onError = () => cleanup();
+
+    PDFEvent.on(Events.DOWNLOAD_AFTER, cleanup);
+    PDFEvent.on(Events.ERROR, onError);
     editor.download();
 });
 
