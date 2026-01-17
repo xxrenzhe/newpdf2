@@ -1,0 +1,269 @@
+import { expect, test, type Frame, type FrameLocator, type Page } from "playwright/test";
+import { loadPdfPageCount, makePdfBytes, readDownloadBytes, repoPath } from "./utils";
+
+async function openEditor(page: Page, pdfBytes: Uint8Array, filename: string) {
+  await page.goto("/tools/edit");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: filename,
+    mimeType: "application/pdf",
+    buffer: Buffer.from(pdfBytes),
+  });
+
+  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  await expect(exportButton).toBeEnabled({ timeout: 120_000 });
+
+  const frameLocator = page.frameLocator('iframe[title="PDF Editor"]');
+  await expect(frameLocator.locator("#pdf-main .__pdf_page_preview").first()).toBeVisible({ timeout: 120_000 });
+
+  const frame = page.frame({ url: /\/pdfeditor\/index\.html/ }) as Frame | null;
+  if (!frame) throw new Error("Missing pdfeditor iframe");
+
+  return { frame, frameLocator, exportButton };
+}
+
+async function dragOnFirstPage(page: Page, frameLocator: FrameLocator) {
+  const firstPage = frameLocator.locator("#pdf-main .__pdf_page_preview").first();
+  const box = await firstPage.boundingBox();
+  if (!box) throw new Error("Missing PDF page bounding box");
+
+  const start = { x: box.x + box.width * 0.2, y: box.y + box.height * 0.25 };
+  const end = { x: box.x + box.width * 0.55, y: box.y + box.height * 0.4 };
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y);
+  await page.mouse.up();
+}
+
+test("pdfeditor toolbar: draw tool adds a stroke", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-draw", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-draw.pdf");
+
+  const images = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_image");
+  const before = await images.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+  await frameLocator.locator("#tool_draw").click();
+  await dragOnFirstPage(page, frameLocator);
+
+  await expect.poll(async () => images.count()).toBeGreaterThan(before);
+});
+
+test("pdfeditor toolbar: highlight and eraser create overlay rects", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-highlight", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-highlight.pdf");
+
+  const rects = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_rect");
+  const before = await rects.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+
+  await frameLocator.locator("#tool_highlight").click();
+  await dragOnFirstPage(page, frameLocator);
+  await expect.poll(async () => rects.count()).toBeGreaterThan(before);
+
+  const afterHighlight = await rects.count();
+  await frameLocator.locator("#tool_eraser").click();
+  await dragOnFirstPage(page, frameLocator);
+  await expect.poll(async () => rects.count()).toBeGreaterThan(afterHighlight);
+});
+
+test("pdfeditor toolbar: highlight text, underline, and strikethrough apply to selected text", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-text-marks", 1);
+  const { frame, frameLocator } = await openEditor(page, pdfBytes, "toolbar-text-marks.pdf");
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+
+  const selectFirstText = async () => {
+    await frame.evaluate(() => {
+      const el = document.querySelector("#pdf-main .textLayer .text-border");
+      if (!el) throw new Error("Missing PDF text layer element");
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      if (!sel) throw new Error("Missing window selection");
+      sel.removeAllRanges();
+      sel.addRange(range);
+    });
+  };
+
+  await frameLocator.locator("#tool_text_highlight").click();
+  await selectFirstText();
+  await frame.evaluate(() => document.querySelector("#pdf-main")?.dispatchEvent(new MouseEvent("mouseup", { bubbles: true })));
+  await expect(frameLocator.locator("highlight.text_highlight").first()).toBeVisible();
+
+  await frameLocator.locator("#tool_underline").click();
+  await selectFirstText();
+  await frame.evaluate(() => document.querySelector("#pdf-main")?.dispatchEvent(new MouseEvent("mouseup", { bubbles: true })));
+  await expect(frameLocator.locator("underline.text_underline").first()).toBeVisible();
+
+  await frameLocator.locator("#tool_strikethrough").click();
+  await selectFirstText();
+  await frame.evaluate(() => document.querySelector("#pdf-main")?.dispatchEvent(new MouseEvent("mouseup", { bubbles: true })));
+  await expect(frameLocator.locator("strikethrough.text_strike").first()).toBeVisible();
+});
+
+test("pdfeditor toolbar: image tool can place an image", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-image", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-image.pdf");
+
+  const images = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_image");
+  const before = await images.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), frameLocator.locator("#tool_image").click()]);
+  await chooser.setFiles(repoPath("public/pdfeditor/assets/img/approved.png"));
+
+  await frameLocator.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 180, y: 180 } });
+  await expect.poll(async () => images.count()).toBeGreaterThan(before);
+});
+
+test("pdfeditor toolbar: shapes tool can draw a rectangle stroke", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-shapes", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-shapes.pdf");
+
+  const rects = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_rect");
+  const before = await rects.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+  await frameLocator.locator("#tool_shapes").click();
+  await frameLocator.locator("#pdf-el-actions .draw_rect").click();
+  await dragOnFirstPage(page, frameLocator);
+
+  await expect.poll(async () => rects.count()).toBeGreaterThan(before);
+});
+
+test("pdfeditor toolbar: textbox tool creates a textbox", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-textbox", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-textbox.pdf");
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+  await frameLocator.locator("#tool_textbox").click();
+  await dragOnFirstPage(page, frameLocator);
+
+  await expect(frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_textbox").first()).toBeVisible();
+  await expect(frameLocator.locator('#pdf-main .__pdf_el_textbox [contenteditable="true"]').first()).toBeVisible();
+});
+
+test("pdfeditor toolbar: signature tool can add a signature", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-signature", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-signature.pdf");
+
+  const images = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_image");
+  const before = await images.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+  await frameLocator.locator("#tool_signature").click();
+
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(1);
+  await frameLocator.locator("#btn-sign-ok").click();
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(0);
+
+  await frameLocator.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 220, y: 220 } });
+  await expect.poll(async () => images.count()).toBeGreaterThan(before);
+});
+
+test("pdfeditor toolbar: forms tool can place a checkbox", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-forms", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-forms.pdf");
+
+  const checkboxes = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_checkbox");
+  const before = await checkboxes.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Edit" }).click();
+  await frameLocator.locator("#tool_forms").click();
+  await expect(frameLocator.locator("#forms_wrapper")).toBeVisible();
+  await frameLocator.locator("#forms_wrapper .forms_checkbox").first().click();
+
+  await frameLocator.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 120, y: 240 } });
+  await expect.poll(async () => checkboxes.count()).toBeGreaterThan(before);
+});
+
+test("pdfeditor toolbar: delete pages removes a page and export reflects it", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-delete-pages", 2);
+  const { frameLocator, exportButton } = await openEditor(page, pdfBytes, "toolbar-delete-pages.pdf");
+
+  await frameLocator.locator(".tab-item", { hasText: "Insert" }).click();
+  await frameLocator.locator("#tool_delete_pages").click();
+  await expect(frameLocator.locator("#pdf-main.view_page_2")).toBeVisible();
+
+  await frameLocator.locator('#pdf-main .__pdf_page_preview[data-page="2"] .remove_page').first().click();
+  await expect(frameLocator.locator('.__pdf_page_preview[data-page="2"]')).toHaveCount(0, { timeout: 120_000 });
+
+  const downloadPromise = page.waitForEvent("download");
+  await exportButton.click();
+  const download = await downloadPromise;
+  const outBytes = await readDownloadBytes(download);
+  await expect.poll(() => loadPdfPageCount(outBytes)).toBe(1);
+});
+
+test("pdfeditor toolbar: watermark can add text watermark", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-watermark", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-watermark.pdf");
+
+  const textCanvas = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_textCanvas");
+  const before = await textCanvas.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Insert" }).click();
+  await frameLocator.locator("#tool_watermark").click();
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(1);
+  await frameLocator.locator(".__dialog.__dialog_open #watermark_text").fill("WM");
+  await frameLocator.locator(".__dialog.__dialog_open .btn-ok").click();
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(0);
+
+  await expect.poll(async () => textCanvas.count()).toBeGreaterThan(before);
+});
+
+test("pdfeditor toolbar: page number and header/footer can apply elements", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-page-number", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-page-number.pdf");
+
+  await frameLocator.locator(".tab-item", { hasText: "Insert" }).click();
+
+  await frameLocator.locator("#tool_page_number").click();
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(1);
+  await frameLocator.locator(".__dialog.__dialog_open .btn_ok").click();
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(0);
+  await expect(frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_text").first()).toBeVisible();
+
+  await frameLocator.locator("#tool_header_footer").click();
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(1);
+  await frameLocator.locator(".__dialog.__dialog_open .btn_ok").click();
+  await expect(frameLocator.locator(".__dialog.__dialog_open")).toHaveCount(0);
+  await expect(frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_textCanvas").first()).toBeVisible();
+});
+
+test("pdfeditor toolbar: stamp preset and text art can be placed", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-stamp-textart", 1);
+  const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-stamp-textart.pdf");
+
+  const images = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_image");
+  const beforeImages = await images.count();
+
+  await frameLocator.locator(".tab-item", { hasText: "Insert" }).click();
+  await frameLocator.locator("#tool_seal").click();
+  await expect(frameLocator.locator("#dropdown_stamp")).toBeVisible();
+  await frameLocator.locator("#dropdown_stamp .preset_item").first().click();
+  await frameLocator.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 140, y: 160 } });
+  await expect.poll(async () => images.count()).toBeGreaterThan(beforeImages);
+
+  const textArt = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_textArt");
+  const beforeTextArt = await textArt.count();
+  await frameLocator.locator("#tool_textArt").click();
+  await expect(frameLocator.locator("#dropdown_textArt")).toBeVisible();
+  await frameLocator.locator("#dropdown_textArt .text_art").first().click();
+  await frameLocator.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 240, y: 140 } });
+  await expect.poll(async () => textArt.count()).toBeGreaterThan(beforeTextArt);
+});

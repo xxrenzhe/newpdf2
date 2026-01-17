@@ -97,10 +97,18 @@ html.embed body {
 }
 
 html.embed .pdf-toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
     background: #ffffff;
+}
+
+html.embed .pdf-el-actions-wrapper {
+    /* Prevent the actions bar slide-in animation from moving under the toolbar
+       where it can be clipped and become unclickable in embedded mode. */
+    transform: translateY(0);
+    transition: none;
+}
+
+html.embed .pdf-el-actions-wrapper.show {
+    z-index: 20;
 }
 
 html.embed .pdf-main-wrapper {
