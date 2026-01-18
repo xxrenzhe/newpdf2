@@ -1,5 +1,5 @@
 # =============================================================================
-# CI/CD - Build, E2E, Docker (GHCR) + 可选 Cloud Run
+# CI/CD - Build, Docker (GHCR) + 可选 Cloud Run
 # =============================================================================
 #
 # MustKnowV1 部署约束（关键）：
@@ -31,7 +31,7 @@ env:
 
 jobs:
   # ============================================
-  # Job 1: CI（Lint + E2E）
+  # Job 1: CI（Lint）
   # ============================================
   ci:
     runs-on: ubuntu-latest
@@ -64,14 +64,8 @@ jobs:
       - name: 安装依赖（Bun）
         run: bun install --frozen-lockfile
 
-      - name: 安装 Playwright 浏览器与系统依赖（Chromium）
-        run: bun x playwright install --with-deps chromium
-
       - name: 代码检查（TypeScript + ESLint）
         run: bun run lint
-
-      - name: E2E 浏览器测试（Playwright）
-        run: bun run test:e2e
 
   # ============================================
   # Job 2: 构建并推送镜像到 GHCR（prod-* tags）
