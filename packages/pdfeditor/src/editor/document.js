@@ -47,6 +47,7 @@ export class PDFDocument {
             for (let id in page.elements.items) {
                 let item = page.elements.items[id];
                 if (['text', 'textbox'].indexOf(item.dataType) < 0) continue;
+                if (!trimSpace(item.attrs?.text || '')) continue;
                 if (!texts[page.id]) {
                     texts[page.id] = Object.create(null);
                 }
@@ -118,22 +119,26 @@ export class PDFDocument {
                     if (_text) {
                         try {
                             Font.fetchFallbackFont().then(fallbackBuffer => {
+                                const fontBufferForWorker = arrayBuffer.slice(0);
+                                const fallbackBufferForWorker = fallbackBuffer.slice(0);
                                 this.editor.fontWorker.postMessage({
                                     type: 'font_subset',
                                     text: _text,
                                     pageId: pageId,
                                     fontFile: fontFile,
-                                    arrayBuffer: arrayBuffer,
-                                    fallbackBuffer: fallbackBuffer
+                                    arrayBuffer: fontBufferForWorker,
+                                    fallbackBuffer: fallbackBufferForWorker
                                 }, [
-                                    arrayBuffer,
-                                    fallbackBuffer
+                                    fontBufferForWorker,
+                                    fallbackBufferForWorker
                                 ]);
                             }).catch(() => {
                                 this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                                PDFEvent.dispatch(Events.DOWNLOAD);
                             });
                         } catch (e) {
                             this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                            PDFEvent.dispatch(Events.DOWNLOAD);
                         }
                         return null;
                     } else {
