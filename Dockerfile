@@ -40,7 +40,9 @@ FROM gotenberg/gotenberg:8.17.3 AS gotenberg
 # -----------------------------------------------------------------------------
 # Stage 3: Production runtime
 # -----------------------------------------------------------------------------
-FROM ubuntu:22.04 AS runtime
+FROM gotenberg AS runtime
+
+USER root
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -48,41 +50,16 @@ ENV TZ=UTC
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Node.js runtime
-    curl \
     ca-certificates \
-    # Nginx
-    nginx \
-    # Supervisord
-    supervisor \
-    # Cron (scheduled tasks)
     cron \
-    # LibreOffice for document conversion
-    libreoffice-core \
-    libreoffice-writer \
-    libreoffice-calc \
-    libreoffice-impress \
-    # Fonts for proper document rendering
-    fonts-liberation \
-    fonts-dejavu-core \
-    fonts-freefont-ttf \
-    fonts-noto-cjk \
-    fonts-noto-color-emoji \
-    # PDF utilities
-    ghostscript \
-    pdftk-java \
-    # Cleanup
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    nginx \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
-
-# Copy Gotenberg binary from official image
-COPY --from=gotenberg /usr/bin/gotenberg /usr/local/bin/gotenberg
-RUN chmod +x /usr/local/bin/gotenberg
 
 # Create application user
 RUN useradd -m -s /bin/bash appuser
@@ -121,5 +98,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost/api/health || exit 1
 
 # Start all services via supervisord
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

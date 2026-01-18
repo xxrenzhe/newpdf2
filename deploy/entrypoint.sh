@@ -36,7 +36,8 @@ fi
 
 # Print environment info
 echo "Node.js version: $(node --version)"
-echo "Gotenberg version: $(/usr/local/bin/gotenberg --version 2>/dev/null || echo 'installed')"
+gotenberg_version="$(gotenberg --version 2>&1 | awk '/^Version:/{print $2; exit}' || true)"
+echo "Gotenberg version: ${gotenberg_version:-installed}"
 echo "LibreOffice version: $(libreoffice --version 2>/dev/null | head -1 || echo 'installed')"
 echo "=========================================="
 echo "Starting services via supervisord..."
