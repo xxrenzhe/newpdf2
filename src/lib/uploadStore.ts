@@ -1,5 +1,7 @@
 "use client";
 
+import { safeRandomUUID } from "@/lib/safeRandomUUID";
+
 type StoredFile = {
   name: string;
   type: string;
@@ -36,7 +38,7 @@ function openDb(): Promise<IDBDatabase> {
 
 export async function saveUpload(files: File[]): Promise<string> {
   const db = await openDb();
-  const id = crypto.randomUUID();
+  const id = safeRandomUUID();
   const value: StoredUpload = {
     id,
     createdAt: Date.now(),

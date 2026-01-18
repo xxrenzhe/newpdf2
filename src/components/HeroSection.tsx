@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { createGuestDocument } from "@/lib/guestDocumentStore";
@@ -8,10 +8,13 @@ import { toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
 
 export default function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
   const router = useRouter();
 
   const openWithFiles = useCallback(async (files: FileList | File[]) => {
+    setUploadError(null);
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
 
@@ -21,9 +24,13 @@ export default function HeroSection() {
     const isImage = first.type.startsWith("image/") || /\.(png|jpg|jpeg|gif|bmp|webp)$/.test(name);
     const chosenTool = isPdf ? "edit-pdf" : isImage ? "convert" : "convert";
     const toolKey = toolKeyFromChosenTool(chosenTool);
-    const documentId = await createGuestDocument(toolKey, fileArray);
-
-    router.push(`/app/guest/document?chosenTool=${encodeURIComponent(chosenTool)}&documentId=${encodeURIComponent(documentId)}`);
+    try {
+      const documentId = await createGuestDocument(toolKey, fileArray);
+      router.push(`/app/guest/document?chosenTool=${encodeURIComponent(chosenTool)}&documentId=${encodeURIComponent(documentId)}`);
+    } catch (err) {
+      console.error("Failed to create guest document", err);
+      setUploadError("Could not start the editor in this browser. Please try Chrome or disable Private Browsing.");
+    }
   }, [router]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -106,18 +113,31 @@ export default function HeroSection() {
               {/* Browse button */}
               <div className="mb-6">
                 <input
+                  id={fileInputId}
                   type="file"
                   className="sr-only"
+                  aria-hidden="true"
+                  tabIndex={-1}
                   accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.bmp,.txt"
                   onChange={handleFileSelect}
                   ref={fileInputRef}
                 />
                 <Button
-                  type="button"
+                  asChild
                   className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 transition-all duration-300"
-                  onClick={() => fileInputRef.current?.click()}
                 >
-                  Browse files
+                  <label
+                    htmlFor={fileInputId}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    Browse files
+                  </label>
                 </Button>
               </div>
 
@@ -125,6 +145,11 @@ export default function HeroSection() {
               <p className="text-base text-gray-500 max-w-lg">
                 Up to <span className="font-semibold text-gray-700">100 MB</span> for PDF and up to <span className="font-semibold text-gray-700">20 MB</span> for DOC, DOCX, PPT, PPTX, XLS, XLSX, images, or TXT
               </p>
+              {uploadError ? (
+                <p className="mt-4 text-sm text-red-600" role="alert">
+                  {uploadError}
+                </p>
+              ) : null}
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 
 // 文件大小限制常量
 const MAX_PDF_SIZE = 100 * 1024 * 1024; // 100MB for PDF
@@ -47,6 +47,7 @@ export default function FileDropzone({
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
 
   const emitFiles = useCallback(
     (list: FileList | File[]) => {
@@ -164,20 +165,29 @@ export default function FileDropzone({
           <h3 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">{title}</h3>
           <p className="text-sm text-gray-500 mb-6">{subtitle}</p>
 
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
+          <label
+            htmlFor={inputId}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              inputRef.current?.click();
+            }}
             className="inline-flex items-center justify-center bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium px-10 py-3 rounded-lg transition-all duration-200 hover:shadow-lg btn-press"
           >
             Browse files
-          </button>
+          </label>
           <input
             ref={inputRef}
+            id={inputId}
             type="file"
             accept={accept}
             multiple={multiple}
             onChange={onChange}
-            className="hidden"
+            className="sr-only"
+            aria-hidden="true"
+            tabIndex={-1}
           />
 
           {/* File size info */}

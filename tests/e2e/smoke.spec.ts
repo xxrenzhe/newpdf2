@@ -56,6 +56,37 @@ test('home "Browse files" opens file chooser', async ({ page }) => {
   await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
 });
 
+test("pdf editor converts PDF text into editable element", async ({ page }) => {
+  test.setTimeout(120_000);
+  const pdfBytes = await makePdfBytes("convert-widget");
+
+  const pageErrors: Error[] = [];
+  page.on("pageerror", (err) => pageErrors.push(err));
+
+  await page.goto("/");
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: "Browse files" }).click(),
+  ]);
+
+  await chooser.setFiles({
+    name: "convert-widget.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(pdfBytes),
+  });
+
+  await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
+
+  const editorFrame = page.frameLocator('iframe[title="PDF Editor"]');
+  const firstTextDiv = editorFrame.locator(".text-border").first();
+  await expect(firstTextDiv).toBeVisible({ timeout: 30_000 });
+
+  await firstTextDiv.click({ force: true });
+  await expect(editorFrame.locator(".__pdf_editor_element").first()).toBeVisible({ timeout: 30_000 });
+
+  expect(pageErrors.map((err) => err.message).join("\n")).not.toContain("querySelector");
+});
+
 test("watermark tool downloads a PDF", async ({ page }) => {
   test.setTimeout(120_000);
   const pdfBytes = await makePdfBytes("watermark");

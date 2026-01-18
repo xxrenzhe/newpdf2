@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useRef } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { mergePdfs, downloadBlob } from "@/lib/pdf/client";
 
@@ -8,6 +8,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
   const [files, setFiles] = useState<File[]>(initialFiles ?? []);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
   const canMerge = files.length >= 2 && files.every((f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
 
   const totalSize = useMemo(() => files.reduce((acc, f) => acc + f.size, 0), [files]);
@@ -64,23 +65,36 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
+          <label
+            htmlFor={inputId}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              inputRef.current?.click();
+            }}
             className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm flex items-center gap-2"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" />
             </svg>
             Add more
-          </button>
+          </label>
           <input
             ref={inputRef}
+            id={inputId}
             type="file"
             accept=".pdf,application/pdf"
             multiple
-            onChange={(e) => e.target.files && addMoreFiles(e.target.files)}
-            className="hidden"
+            onChange={(e) => {
+              if (!e.target.files) return;
+              addMoreFiles(e.target.files);
+              e.target.value = "";
+            }}
+            className="sr-only"
+            aria-hidden="true"
+            tabIndex={-1}
           />
           <button
             type="button"

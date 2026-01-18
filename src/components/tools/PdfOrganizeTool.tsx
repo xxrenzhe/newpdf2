@@ -5,6 +5,7 @@ import FileDropzone from "./FileDropzone";
 import type { PageOpItem } from "@/lib/pdf/client";
 import { downloadBlob, rebuildPdfWithOps } from "@/lib/pdf/client";
 import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
+import { safeRandomUUID } from "@/lib/safeRandomUUID";
 
 type PageItem = {
   id: string;
@@ -52,7 +53,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
 
       setItems(
         Array.from({ length: doc.numPages }, (_, i) => ({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           sourcePageIndex: i,
           rotationDegrees: 0,
         }))
@@ -326,4 +327,3 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
     </div>
   );
 }
-

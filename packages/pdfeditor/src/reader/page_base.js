@@ -250,7 +250,10 @@ export class PDFPageBase {
         canvas.width = Math.floor(viewport.width * this.outputScale);
         canvas.height = Math.floor(viewport.height * this.outputScale);
         
-        let context = canvas.getContext('2d');
+        let context = canvas.getContext('2d', { willReadFrequently: true });
+        if (!context) {
+            context = canvas.getContext('2d');
+        }
         let transform = this.outputScale !== 1 ?
             [this.outputScale, 0, 0, this.outputScale, 0, 0] : null;
 

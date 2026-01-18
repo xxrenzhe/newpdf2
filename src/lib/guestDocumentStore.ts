@@ -1,5 +1,7 @@
 "use client";
 
+import { safeRandomUUID } from "@/lib/safeRandomUUID";
+
 type StoredFile = {
   name: string;
   type: string;
@@ -57,7 +59,7 @@ function storedToFiles(stored: StoredFile[]): File[] {
 
 export async function createGuestDocument(toolKey: string, files: File[]): Promise<string> {
   const db = await openDb();
-  const id = crypto.randomUUID();
+  const id = safeRandomUUID();
   const now = Date.now();
   const value: GuestDocumentRecord = {
     id,
@@ -127,4 +129,3 @@ export async function updateGuestDocumentFiles(id: string, files: File[]): Promi
     tx.onerror = () => reject(tx.error);
   });
 }
-

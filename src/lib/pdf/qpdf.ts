@@ -1,5 +1,7 @@
 "use client";
 
+import { safeRandomUUID } from "@/lib/safeRandomUUID";
+
 type QpdfModule = {
   FS: {
     writeFile: (path: string, data: Uint8Array) => void;
@@ -48,7 +50,7 @@ async function getQpdfModule(): Promise<QpdfModule> {
 }
 
 function uniqueName(prefix: string, suffix: string) {
-  const id = crypto.randomUUID().replaceAll("-", "");
+  const id = safeRandomUUID().replace(/-/g, "");
   return `${prefix}-${id}${suffix}`;
 }
 

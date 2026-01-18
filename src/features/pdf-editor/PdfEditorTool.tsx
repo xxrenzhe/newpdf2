@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { downloadBlob } from "@/lib/pdf/client";
@@ -124,6 +124,7 @@ export default function PdfEditorTool({
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
   const router = useRouter();
   const [iframeReady, setIframeReady] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
@@ -248,11 +249,6 @@ export default function PdfEditorTool({
     }
   }, [file, onConvert, router]);
 
-  const onUploadNew = useCallback(() => {
-    if (busy) return;
-    fileInputRef.current?.click();
-  }, [busy]);
-
   const onFileChange = useCallback(
     (evt: React.ChangeEvent<HTMLInputElement>) => {
       const next = evt.target.files?.[0] ?? null;
@@ -309,19 +305,32 @@ export default function PdfEditorTool({
         <div className={actionsClassName}>
           <input
             ref={fileInputRef}
+            id={fileInputId}
             type="file"
             accept=".pdf,application/pdf"
-            className="hidden"
+            className="sr-only"
             onChange={onFileChange}
-          />
-          <button
-            type="button"
-            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            onClick={onUploadNew}
             disabled={busy}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          <label
+            htmlFor={fileInputId}
+            role="button"
+            tabIndex={busy ? -1 : 0}
+            aria-disabled={busy}
+            onKeyDown={(e) => {
+              if (busy) return;
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }}
+            className={`px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 ${
+              busy ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
+            }`}
           >
             Upload New
-          </button>
+          </label>
           <button
             type="button"
             className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"

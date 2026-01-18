@@ -104,18 +104,21 @@ export class PDFEditor {
             textTool.setActions(element);
             sendResponse(true);
             
-            const elFontList = element.elActions.querySelector('.font-dropdown');
-            let elOption = document.createElement('div');
-            elOption.classList.add('font-item');
-            elOption.textContent = element.attrs.showName;
-            elOption.fontFamily = element.attrs.fontFamily;
-            elOption.fontFile = element.attrs.fontFile;
-            elOption.selected = true;
-            elFontList.insertBefore(elOption, elFontList.firstElementChild);
-            // elFontList.selectedIndex = 0;
+            const elFontList = element?.elActions ? element.elActions.querySelector('.font-dropdown') : null;
+            if (elFontList) {
+                const elOption = document.createElement('div');
+                elOption.classList.add('font-item');
+                elOption.textContent = element.attrs.showName;
+                elOption.fontFamily = element.attrs.fontFamily;
+                elOption.fontFile = element.attrs.fontFile;
+                elOption.selected = true;
+                elFontList.insertBefore(elOption, elFontList.firstElementChild);
+            }
 
-            let elSpan = document.querySelector('#history_slider span');
-            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            const elSpan = document.querySelector('#history_slider span');
+            if (elSpan) {
+                elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            }
         });
 
         let timeout = null;
