@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import type { PageOpItem } from "@/lib/pdf/client";
 import { downloadBlob, rebuildPdfWithOps } from "@/lib/pdf/client";
@@ -12,6 +12,8 @@ type PageItem = {
   sourcePageIndex: number; // 0-based
   rotationDegrees: number; // 0/90/180/270
 };
+
+type ThumbState = Record<number, string>;
 
 function clampRotation(deg: number) {
   const v = ((deg % 360) + 360) % 360;
@@ -25,8 +27,18 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
   const [error, setError] = useState("");
   const [items, setItems] = useState<PageItem[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [thumbs, setThumbs] = useState<Record<number, string>>({});
+  const [thumbs, setThumbs] = useState<ThumbState>({});
   const [numPages, setNumPages] = useState(0);
+
+  const docRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
+  const thumbsRef = useRef<ThumbState>({});
+  const renderChainRef = useRef(Promise.resolve());
+  const createdObjectUrlsRef = useRef<string[]>([]);
+  const renderSessionRef = useRef(0);
+
+  useEffect(() => {
+    thumbsRef.current = thumbs;
+  }, [thumbs]);
 
   const isPdf = useMemo(
     () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
@@ -36,19 +48,40 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
   const selectedIds = useMemo(() => new Set(Object.entries(selected).filter(([, v]) => v).map(([k]) => k)), [selected]);
   const selectedCount = selectedIds.size;
 
+  const resetFileState = useCallback(() => {
+    renderSessionRef.current += 1;
+
+    const doc = docRef.current;
+    docRef.current = null;
+    void (doc as { destroy?: () => Promise<void> | void } | null)?.destroy?.();
+
+    setError("");
+    setThumbs({});
+    thumbsRef.current = {};
+    setNumPages(0);
+    setItems([]);
+    setSelected({});
+
+    for (const url of createdObjectUrlsRef.current) URL.revokeObjectURL(url);
+    createdObjectUrlsRef.current = [];
+
+    renderChainRef.current = Promise.resolve();
+  }, []);
+
   useEffect(() => {
     if (!file || !isPdf) return;
     configurePdfJsWorker();
     let cancelled = false;
 
     const run = async () => {
-      setError("");
-      setThumbs({});
-      setNumPages(0);
-
+      resetFileState();
       const data = new Uint8Array(await file.arrayBuffer());
       const doc = await pdfjs.getDocument({ data }).promise;
-      if (cancelled) return;
+      if (cancelled) {
+        void (doc as { destroy?: () => Promise<void> | void }).destroy?.();
+        return;
+      }
+      docRef.current = doc;
       setNumPages(doc.numPages);
 
       setItems(
@@ -59,29 +92,72 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
         }))
       );
       setSelected({});
-
-      const nextThumbs: Record<number, string> = {};
-      const scale = 0.22;
-      for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-        const page = await doc.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-        const ctx = canvas.getContext("2d", { alpha: false });
-        if (!ctx) continue;
-        await page.render({ canvasContext: ctx, canvas, viewport }).promise;
-        nextThumbs[pageNum - 1] = canvas.toDataURL("image/jpeg", 0.8);
-        if (cancelled) return;
-        setThumbs({ ...nextThumbs });
-      }
     };
 
     void run().catch((e) => setError(e instanceof Error ? e.message : "Failed to load PDF"));
     return () => {
       cancelled = true;
     };
-  }, [file, isPdf]);
+  }, [file, isPdf, resetFileState]);
+
+  useEffect(() => {
+    return () => {
+      renderSessionRef.current += 1;
+      const doc = docRef.current;
+      docRef.current = null;
+      void (doc as { destroy?: () => Promise<void> | void } | null)?.destroy?.();
+      for (const url of createdObjectUrlsRef.current) URL.revokeObjectURL(url);
+      createdObjectUrlsRef.current = [];
+    };
+  }, []);
+
+  const renderThumb = useCallback(async (pageIndex: number) => {
+    const session = renderSessionRef.current;
+    if (!docRef.current) return;
+    if (thumbsRef.current[pageIndex]) return;
+
+    renderChainRef.current = renderChainRef.current.then(async () => {
+      if (session !== renderSessionRef.current) return;
+      if (thumbsRef.current[pageIndex]) return;
+
+      const doc = docRef.current;
+      if (!doc) return;
+
+      try {
+        const page = await doc.getPage(pageIndex + 1);
+        if (session !== renderSessionRef.current) return;
+
+        const targetWidth = 240;
+        const viewport0 = page.getViewport({ scale: 1 });
+        const scale = targetWidth / Math.max(1, viewport0.width);
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (!ctx) return;
+
+        await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/jpeg", 0.8)
+        );
+        const url = blob ? URL.createObjectURL(blob) : canvas.toDataURL("image/jpeg", 0.8);
+        if (blob) createdObjectUrlsRef.current.push(url);
+
+        if (session !== renderSessionRef.current) {
+          if (blob) URL.revokeObjectURL(url);
+          return;
+        }
+
+        setThumbs((prev) => ({ ...prev, [pageIndex]: url }));
+        (page as { cleanup?: () => void }).cleanup?.();
+      } catch {
+        // ignore
+      }
+    });
+  }, []);
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -171,7 +247,10 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
             <button
               type="button"
               className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
-              onClick={() => setFile(null)}
+              onClick={() => {
+                resetFileState();
+                setFile(null);
+              }}
             >
               Change file
             </button>
@@ -267,62 +346,132 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
             const thumb = thumbs[item.sourcePageIndex];
             const isSelected = !!selected[item.id];
             return (
-              <div key={item.id} className={`rounded-xl border ${isSelected ? "border-[#2d85de]" : "border-gray-200"} overflow-hidden`}>
-                <button
-                  type="button"
-                  className="w-full text-left"
-                  onClick={() => toggleSelect(item.id)}
-                  title="Select"
-                >
-                  <div className="bg-gray-50 p-2 flex items-center justify-between">
-                    <span className="text-xs text-gray-600">
-                      {idx + 1} / {items.length}
-                    </span>
-                    <span className="text-xs text-gray-600">
-                      p{item.sourcePageIndex + 1}
-                      {item.rotationDegrees ? ` · ${item.rotationDegrees}°` : ""}
-                    </span>
-                  </div>
-                  <div className="bg-white p-2">
-                    {thumb ? (
-                      <img src={thumb} alt="" className="w-full rounded-lg border border-gray-100" />
-                    ) : (
-                      <div className="w-full aspect-[3/4] rounded-lg bg-gray-100" />
-                    )}
-                  </div>
-                </button>
-                <div className="flex items-center justify-between gap-1 px-2 pb-2">
-                  <button
-                    type="button"
-                    onClick={() => move(item.id, -1)}
-                    disabled={idx === 0}
-                    className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    title="Move up"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => move(item.id, 1)}
-                    disabled={idx === items.length - 1}
-                    className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    title="Move down"
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => rotateIds(new Set([item.id]), 90)}
-                    className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
-                    title="Rotate"
-                  >
-                    ⟳
-                  </button>
-                </div>
-              </div>
+              <OrganizePageCard
+                key={item.id}
+                idx={idx}
+                total={items.length}
+                item={item}
+                thumbUrl={thumb}
+                selected={isSelected}
+                onToggleSelect={() => toggleSelect(item.id)}
+                onMoveUp={() => move(item.id, -1)}
+                onMoveDown={() => move(item.id, 1)}
+                onRotate={() => rotateIds(new Set([item.id]), 90)}
+                onNeedThumb={() => void renderThumb(item.sourcePageIndex)}
+                disableMoveUp={idx === 0}
+                disableMoveDown={idx === items.length - 1}
+              />
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function OrganizePageCard({
+  idx,
+  total,
+  item,
+  thumbUrl,
+  selected,
+  onToggleSelect,
+  onMoveUp,
+  onMoveDown,
+  onRotate,
+  onNeedThumb,
+  disableMoveUp,
+  disableMoveDown,
+}: {
+  idx: number;
+  total: number;
+  item: PageItem;
+  thumbUrl?: string;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRotate: () => void;
+  onNeedThumb: () => void;
+  disableMoveUp: boolean;
+  disableMoveDown: boolean;
+}) {
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const el = buttonRef.current;
+    if (!el || thumbUrl) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          onNeedThumb();
+          observer.disconnect();
+          return;
+        }
+      },
+      { root: null, rootMargin: "900px", threshold: 0.01 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onNeedThumb, thumbUrl]);
+
+  return (
+    <div className={`rounded-xl border ${selected ? "border-[#2d85de]" : "border-gray-200"} overflow-hidden`}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="w-full text-left"
+        onClick={onToggleSelect}
+        title="Select"
+      >
+        <div className="bg-gray-50 p-2 flex items-center justify-between">
+          <span className="text-xs text-gray-600">
+            {idx + 1} / {total}
+          </span>
+          <span className="text-xs text-gray-600">
+            p{item.sourcePageIndex + 1}
+            {item.rotationDegrees ? ` · ${item.rotationDegrees}°` : ""}
+          </span>
+        </div>
+        <div className="bg-white p-2">
+          {thumbUrl ? (
+            <img src={thumbUrl} alt="" className="w-full rounded-lg border border-gray-100" />
+          ) : (
+            <div className="w-full aspect-[3/4] rounded-lg bg-gray-100" />
+          )}
+        </div>
+      </button>
+
+      <div className="flex items-center justify-between gap-1 px-2 pb-2">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={disableMoveUp}
+          className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          title="Move up"
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={disableMoveDown}
+          className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          title="Move down"
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          onClick={onRotate}
+          className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+          title="Rotate"
+        >
+          ⟳
+        </button>
       </div>
     </div>
   );

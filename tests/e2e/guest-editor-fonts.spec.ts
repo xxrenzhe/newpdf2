@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { expectPdfHeader, makePdfBytes, readDownloadBytes } from "./utils";
 
 test("guest edit-pdf download completes and output reopens without font extraction errors", async ({ page }) => {

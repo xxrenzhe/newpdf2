@@ -29,6 +29,19 @@ const child = spawn(process.execPath, [standaloneServer], {
   env: { ...process.env, PORT: String(port) },
 });
 
+const stop = (signal) => {
+  if (child.killed) return;
+  try {
+    child.kill(signal);
+  } catch {
+    // ignore
+  }
+};
+
+process.on("SIGTERM", () => stop("SIGTERM"));
+process.on("SIGINT", () => stop("SIGINT"));
+process.on("exit", () => stop("SIGTERM"));
+
 child.on("exit", (code) => {
   process.exit(code ?? 0);
 });

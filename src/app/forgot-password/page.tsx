@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
         <div className="container mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <img
-              src="https://ext.same-assets.com/170935311/198227732.svg"
+              src="/assets/same-assets/198227732.svg"
               alt="Files Editor"
               className="h-8"
             />

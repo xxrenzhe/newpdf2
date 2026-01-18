@@ -214,6 +214,7 @@ class Forms extends ToolbarItemBase {
         this.floatElement = element;
         this.floatElement.style.position = 'fixed';
         this.floatElement.style.zIndex = 1;
+        this.floatElement.style.pointerEvents = 'none';
         document.body.appendChild(this.floatElement);
 
         this.evtMousemove = e => {
@@ -245,8 +246,12 @@ class Forms extends ToolbarItemBase {
         const readerPage = e.data.page;
         const page = this.editor.pdfDocument.getPage(readerPage.pageNum);
         const rect = readerPage.elWrapper.getBoundingClientRect();
-        let y = parseInt(this.floatElement.style.top) - rect.top;
-        let x = parseInt(this.floatElement.style.left) - rect.left;
+        let y = parseInt(this.floatElement?.style.top || '', 10) - rect.top;
+        let x = parseInt(this.floatElement?.style.left || '', 10) - rect.left;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            y = e.data.evt.clientY - rect.top;
+            x = e.data.evt.clientX - rect.left;
+        }
         let options = {
             pos: {
                 x: x,
@@ -314,6 +319,20 @@ class Forms extends ToolbarItemBase {
         this.floatElement = null;
     }
 
+    closeFormsPickerIfOverlay() {
+        const elFormsWrapper = document.getElementById('forms_wrapper');
+        if (!elFormsWrapper) return;
+        if (!elFormsWrapper.classList.contains('show')) return;
+
+        const isTouch = typeof navigator !== 'undefined' && (navigator.maxTouchPoints || 0) > 0;
+        const isCoarsePointer = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+        if (!isTouch && !isCoarsePointer && window.innerWidth > 768) return;
+
+        elFormsWrapper.classList.remove('show');
+        elFormsWrapper.style.display = 'none';
+        document.getElementById('forms_slider')?.classList.remove('active');
+    }
+
     _bindCheckbox(el) {
         this.__setzIndex();
         this.isPageClick = false;
@@ -324,6 +343,7 @@ class Forms extends ToolbarItemBase {
         _element.style.width = '25px';
         _element.style.height= '25px';
         this.createFloatElement(_element);
+        this.closeFormsPickerIfOverlay();
         // this._loadImg('forms_4.png').then(image => {
         //     image.elementType = 'checkbox';
         // });
@@ -339,6 +359,7 @@ class Forms extends ToolbarItemBase {
         _element.style.width = '25px';
         _element.style.height= '25px';
         this.createFloatElement(_element);
+        this.closeFormsPickerIfOverlay();
         // this._loadImg('forms_5.png').then(image => {
         //     image.elementType = 'radioGroup';
         // });
@@ -358,6 +379,7 @@ class Forms extends ToolbarItemBase {
         _element.style.width = '150px';
         _element.style.height= '25px';
         this.createFloatElement(_element);
+        this.closeFormsPickerIfOverlay();
         // this._loadImg('forms_6.png').then(image => {
         //     image.elementType = 'textField';
         // });
@@ -387,6 +409,7 @@ class Forms extends ToolbarItemBase {
         _element.style.height= '35px';
         _element.style.background= 'rgba(207,216,246,.7)';
         this.createFloatElement(_element);
+        this.closeFormsPickerIfOverlay();
         // this._loadImg('forms_7.png').then(image => {
         //     image.elementType = 'dropdown';
         // });

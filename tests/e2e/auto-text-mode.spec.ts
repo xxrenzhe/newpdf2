@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { makePdfBytes } from "./utils";
 
 test("clicking PDF text auto-enters Text edit mode", async ({ page }) => {

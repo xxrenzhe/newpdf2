@@ -21,8 +21,17 @@ const DB_NAME = "files-editor";
 const DB_VERSION = 2;
 const STORE_NAME = "guest-documents";
 
+const inMemoryStore = new Map<string, GuestDocumentRecord>();
+
+let dbPromise: Promise<IDBDatabase> | null = null;
+let dbFailed = false;
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") {
+      reject(new Error("IndexedDB is not available"));
+      return;
+    }
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -34,8 +43,20 @@ function openDb(): Promise<IDBDatabase> {
       }
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB open failed"));
   });
+}
+
+async function getDb(): Promise<IDBDatabase | null> {
+  if (dbFailed) return null;
+  if (!dbPromise) dbPromise = openDb();
+  try {
+    return await dbPromise;
+  } catch {
+    dbPromise = null;
+    dbFailed = true;
+    return null;
+  }
 }
 
 function filesToStored(files: File[]): StoredFile[] {
@@ -58,7 +79,6 @@ function storedToFiles(stored: StoredFile[]): File[] {
 }
 
 export async function createGuestDocument(toolKey: string, files: File[]): Promise<string> {
-  const db = await openDb();
   const id = safeRandomUUID();
   const now = Date.now();
   const value: GuestDocumentRecord = {
@@ -69,23 +89,38 @@ export async function createGuestDocument(toolKey: string, files: File[]): Promi
     files: filesToStored(files),
   };
 
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(value);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  const db = await getDb();
+  if (db) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        tx.objectStore(STORE_NAME).put(value);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
+      });
+      return id;
+    } catch {
+      // Fall back to in-memory storage (Safari Private Browsing / WebKit quirks).
+    }
+  }
+
+  inMemoryStore.set(id, value);
 
   return id;
 }
 
 export async function loadGuestDocument(id: string): Promise<{ toolKey: string; files: File[] } | null> {
-  const db = await openDb();
+  const inMem = inMemoryStore.get(id);
+  if (inMem) return { toolKey: inMem.toolKey, files: storedToFiles(inMem.files) };
+
+  const db = await getDb();
+  if (!db) return null;
+
   const record = await new Promise<GuestDocumentRecord | undefined>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
     const req = tx.objectStore(STORE_NAME).get(id);
     req.onsuccess = () => resolve(req.result as GuestDocumentRecord | undefined);
-    req.onerror = () => reject(req.error);
+    req.onerror = () => reject(req.error ?? new Error("IndexedDB read failed"));
   });
 
   if (!record) return null;
@@ -93,12 +128,21 @@ export async function loadGuestDocument(id: string): Promise<{ toolKey: string; 
 }
 
 export async function updateGuestDocumentTool(id: string, toolKey: string): Promise<void> {
-  const db = await openDb();
+  const mem = inMemoryStore.get(id);
+  if (mem) {
+    mem.toolKey = toolKey;
+    mem.updatedAt = Date.now();
+    return;
+  }
+
+  const db = await getDb();
+  if (!db) return;
+
   const record = await new Promise<GuestDocumentRecord | undefined>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
     const req = tx.objectStore(STORE_NAME).get(id);
     req.onsuccess = () => resolve(req.result as GuestDocumentRecord | undefined);
-    req.onerror = () => reject(req.error);
+    req.onerror = () => reject(req.error ?? new Error("IndexedDB read failed"));
   });
   if (!record) return;
   record.toolKey = toolKey;
@@ -107,17 +151,26 @@ export async function updateGuestDocumentTool(id: string, toolKey: string): Prom
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).put(record);
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
   });
 }
 
 export async function updateGuestDocumentFiles(id: string, files: File[]): Promise<void> {
-  const db = await openDb();
+  const mem = inMemoryStore.get(id);
+  if (mem) {
+    mem.files = filesToStored(files);
+    mem.updatedAt = Date.now();
+    return;
+  }
+
+  const db = await getDb();
+  if (!db) return;
+
   const record = await new Promise<GuestDocumentRecord | undefined>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
     const req = tx.objectStore(STORE_NAME).get(id);
     req.onsuccess = () => resolve(req.result as GuestDocumentRecord | undefined);
-    req.onerror = () => reject(req.error);
+    req.onerror = () => reject(req.error ?? new Error("IndexedDB read failed"));
   });
   if (!record) return;
   record.files = filesToStored(files);
@@ -126,6 +179,6 @@ export async function updateGuestDocumentFiles(id: string, files: File[]): Promi
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).put(record);
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
   });
 }

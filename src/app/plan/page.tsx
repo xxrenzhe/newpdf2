@@ -14,29 +14,29 @@ import {
 } from "@/components/ui/accordion";
 
 const features = [
-  { icon: "https://ext.same-assets.com/170935311/1797688836.svg", title: "Powerful PDF Editor" },
-  { icon: "https://ext.same-assets.com/170935311/2537515307.svg", title: "Digital Signatures", isNew: true },
-  { icon: "https://ext.same-assets.com/170935311/1990291496.svg", title: "Workspace", subtitle: "with File Manager" },
-  { icon: "https://ext.same-assets.com/170935311/3612369820.svg", title: "Unlimited File Conversion" },
-  { icon: "https://ext.same-assets.com/170935311/867393456.svg", title: "Redaction Tool", isNew: true },
-  { icon: "https://ext.same-assets.com/170935311/3533335575.svg", title: "Drive, OneDrive", subtitle: "& DropBox integration" },
-  { icon: "https://ext.same-assets.com/170935311/3216288370.svg", title: "OCR technology" },
-  { icon: "https://ext.same-assets.com/170935311/1530033771.svg", title: "Page Manipulation", isNew: true },
-  { icon: "https://ext.same-assets.com/170935311/2231875426.svg", title: "No Software", subtitle: "Installation Required" },
-  { icon: "https://ext.same-assets.com/170935311/4206478627.svg", title: "Multiple Security Tools" },
-  { icon: "https://ext.same-assets.com/170935311/1702208235.svg", title: "SSO Sign in", isNew: true },
-  { icon: "https://ext.same-assets.com/170935311/981624432.svg", title: "Access to All Upcoming", subtitle: "Features" },
+  { icon: "/assets/same-assets/1797688836.svg", title: "Powerful PDF Editor" },
+  { icon: "/assets/same-assets/2537515307.svg", title: "Digital Signatures", isNew: true },
+  { icon: "/assets/same-assets/1990291496.svg", title: "Workspace", subtitle: "with File Manager" },
+  { icon: "/assets/same-assets/3612369820.svg", title: "Unlimited File Conversion" },
+  { icon: "/assets/same-assets/867393456.svg", title: "Redaction Tool", isNew: true },
+  { icon: "/assets/same-assets/3533335575.svg", title: "Drive, OneDrive", subtitle: "& DropBox integration" },
+  { icon: "/assets/same-assets/3216288370.svg", title: "OCR technology" },
+  { icon: "/assets/same-assets/1530033771.svg", title: "Page Manipulation", isNew: true },
+  { icon: "/assets/same-assets/2231875426.svg", title: "No Software", subtitle: "Installation Required" },
+  { icon: "/assets/same-assets/4206478627.svg", title: "Multiple Security Tools" },
+  { icon: "/assets/same-assets/1702208235.svg", title: "SSO Sign in", isNew: true },
+  { icon: "/assets/same-assets/981624432.svg", title: "Access to All Upcoming", subtitle: "Features" },
 ];
 
 const brands = [
-  "https://ext.same-assets.com/170935311/3959512356.png",
-  "https://ext.same-assets.com/170935311/2364094864.png",
-  "https://ext.same-assets.com/170935311/2448600377.png",
-  "https://ext.same-assets.com/170935311/2983692322.png",
-  "https://ext.same-assets.com/170935311/2317977816.png",
-  "https://ext.same-assets.com/170935311/3923762797.png",
-  "https://ext.same-assets.com/170935311/3953556544.png",
-  "https://ext.same-assets.com/170935311/2908841443.png",
+  "/assets/same-assets/3959512356.png",
+  "/assets/same-assets/2364094864.png",
+  "/assets/same-assets/2448600377.png",
+  "/assets/same-assets/2983692322.png",
+  "/assets/same-assets/2317977816.png",
+  "/assets/same-assets/3923762797.png",
+  "/assets/same-assets/3953556544.png",
+  "/assets/same-assets/2908841443.png",
 ];
 
 const faqItems = [
@@ -117,7 +117,7 @@ export default function PlanPage() {
                 )}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                    <img src="https://ext.same-assets.com/170935311/2242939468.svg" alt="" className="w-5 h-5" />
+                    <img src="/assets/same-assets/2242939468.svg" alt="" className="w-5 h-5" />
                   </div>
                   <span className="text-3xl font-bold text-gray-900">$19.95<span className="text-lg font-normal text-gray-500">/mo</span></span>
                 </div>
@@ -147,7 +147,7 @@ export default function PlanPage() {
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <img src="https://ext.same-assets.com/170935311/2774339654.svg" alt="" className="w-5 h-5" />
+                    <img src="/assets/same-assets/2774339654.svg" alt="" className="w-5 h-5" />
                   </div>
                   <span className="text-3xl font-bold text-gray-900">$49.95<span className="text-lg font-normal text-gray-500">/mo</span></span>
                 </div>

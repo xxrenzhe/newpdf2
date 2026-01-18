@@ -28,6 +28,22 @@ export function dataUrlToUint8Array(dataUrl: string): Uint8Array {
   return bytes;
 }
 
+async function canvasToUint8Array(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality?: number
+): Promise<Uint8Array> {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    if (!("toBlob" in canvas)) {
+      resolve(null);
+      return;
+    }
+    canvas.toBlob(resolve, type, quality);
+  });
+  if (blob) return new Uint8Array(await blob.arrayBuffer());
+  return dataUrlToUint8Array(canvas.toDataURL(type, quality));
+}
+
 export async function mergePdfs(files: File[]): Promise<Uint8Array> {
   const merged = await PDFDocument.create();
 
@@ -190,19 +206,20 @@ export async function pdfToImagesZip(
   const ext = opts.format === "jpg" ? "jpg" : "png";
   const mime = opts.format === "jpg" ? "image/jpeg" : "image/png";
 
+  const canvas = document.createElement("canvas");
+
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
     const page = await doc.getPage(pageNum);
     const viewport = page.getViewport({ scale });
-    const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) throw new Error("Canvas 2D context unavailable");
 
     await page.render({ canvasContext: ctx, canvas, viewport }).promise;
-    const dataUrl = canvas.toDataURL(mime, quality);
-    const bytes = dataUrlToUint8Array(dataUrl);
+    const bytes = await canvasToUint8Array(canvas, mime, quality);
     zip.file(`${pageNum}.${ext}`, bytes);
+    (page as { cleanup?: () => void }).cleanup?.();
   }
 
   return zip.generateAsync({ type: "blob" });
@@ -258,8 +275,7 @@ export async function compressPdfRasterize(
 
     await page.render({ canvasContext: ctx, canvas, viewport }).promise;
 
-    const jpgDataUrl = canvas.toDataURL("image/jpeg", quality);
-    const jpgBytes = dataUrlToUint8Array(jpgDataUrl);
+    const jpgBytes = await canvasToUint8Array(canvas, "image/jpeg", quality);
     const embedded = await output.embedJpg(jpgBytes);
 
     const outPage = output.addPage([viewport1.width, viewport1.height]);
@@ -269,6 +285,7 @@ export async function compressPdfRasterize(
       width: viewport1.width,
       height: viewport1.height,
     });
+    (page as { cleanup?: () => void }).cleanup?.();
   }
 
   return output.save();
@@ -342,8 +359,7 @@ export async function redactPdfRasterize(
       ctx.drawImage(overlayCanvas, 0, 0, baseCanvas.width, baseCanvas.height);
     }
 
-    const jpgDataUrl = baseCanvas.toDataURL("image/jpeg", quality);
-    const jpgBytes = dataUrlToUint8Array(jpgDataUrl);
+    const jpgBytes = await canvasToUint8Array(baseCanvas, "image/jpeg", quality);
     const embedded = await output.embedJpg(jpgBytes);
 
     const outPage = output.addPage([viewport1.width, viewport1.height]);
@@ -352,7 +368,8 @@ export async function redactPdfRasterize(
       y: 0,
       width: viewport1.width,
       height: viewport1.height,
-    });
+      });
+    (page as { cleanup?: () => void }).cleanup?.();
   }
 
   return output.save();
@@ -403,6 +420,31 @@ export async function renderFabricJsonToPngDataUrl(
   return dataUrl;
 }
 
+export async function renderFabricJsonToPngBytes(
+  json: string,
+  size: { width: number; height: number }
+): Promise<Uint8Array> {
+  const canvasEl = createCanvas(size.width, size.height);
+  const canvas = new fabric.StaticCanvas(canvasEl, { width: size.width, height: size.height });
+
+  const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(
+    json,
+    () => {}
+  );
+  if (loadResult instanceof Promise) {
+    await loadResult;
+  } else {
+    await new Promise<void>((resolve) => {
+      (canvas as unknown as { loadFromJSON: (json: string, cb: () => void) => void }).loadFromJSON(json, () => resolve());
+    });
+  }
+
+  canvas.renderAll();
+  const bytes = await canvasToUint8Array(canvasEl, "image/png");
+  canvas.dispose();
+  return bytes;
+}
+
 export async function applyAnnotationOverlays(
   file: File,
   overlays: Record<number, string>,
@@ -418,8 +460,7 @@ export async function applyAnnotationOverlays(
     const pageIndex = pageNumber1Based - 1;
     if (pageIndex < 0 || pageIndex >= pdf.getPageCount()) continue;
 
-    const dataUrl = await renderFabricJsonToPngDataUrl(json, pageSize);
-    const pngBytes = dataUrlToUint8Array(dataUrl);
+    const pngBytes = await renderFabricJsonToPngBytes(json, pageSize);
     const png = await pdf.embedPng(pngBytes);
     const page = pdf.getPage(pageIndex);
     page.drawImage(png, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });

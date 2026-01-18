@@ -299,15 +299,17 @@ function getUrlParam(name) {
 }
 
 function downloadLoad(percent){
-    let _percent = 314 * (percent / 100)+ ', ' + 314,
-    elSvg = document.querySelector('._loadingv2'),
-    elProgress = elSvg.querySelector(".progress"),
-    elProgressText = elSvg.querySelector('.progress-text');
-    if(elProgress){
-        elProgress.style.strokeDasharray = _percent;
-        if(percent > 100){
-            percent = 100
-        }
+    let _percent = 314 * (percent / 100)+ ', ' + 314;
+    const elSvg = document.querySelector('._loadingv2');
+    if (!elSvg) return;
+    const elProgress = elSvg.querySelector(".progress");
+    const elProgressText = elSvg.querySelector('.progress-text');
+    if(!elProgress) return;
+    elProgress.style.strokeDasharray = _percent;
+    if(percent > 100){
+        percent = 100
+    }
+    if (elProgressText) {
         elProgressText.textContent = parseInt(percent) + '%';
     }
 }

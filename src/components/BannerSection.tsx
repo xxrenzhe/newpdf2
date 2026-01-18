@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { Button } from "@/components/ui/button";
 
 export default function BannerSection() {
@@ -11,7 +11,7 @@ export default function BannerSection() {
           {/* Left Image */}
           <div className="hidden lg:block w-1/4">
             <img
-              src="https://ext.same-assets.com/170935311/414827711.png"
+              src="/assets/same-assets/414827711.png"
               alt=""
               className="w-full max-w-[240px] mx-auto"
             />
@@ -35,7 +35,7 @@ export default function BannerSection() {
           {/* Right Image */}
           <div className="hidden lg:block w-1/4">
             <img
-              src="https://ext.same-assets.com/170935311/2898045088.png"
+              src="/assets/same-assets/2898045088.png"
               alt=""
               className="w-full max-w-[240px] mx-auto"
             />

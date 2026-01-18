@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { downloadBlob } from "@/lib/pdf/client";
 import { savePdfEditorInput, savePdfEditorOutput } from "@/lib/pdfEditorCache";
 import { saveUpload } from "@/lib/uploadStore";

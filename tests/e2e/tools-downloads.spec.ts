@@ -1,6 +1,6 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { PDFDocument } from "pdf-lib";
-import { readDownloadBytes, makePdfBytes, expectPdfHeader, loadPdfPageCount, repoPath, unzip } from "./utils";
+import { readDownloadBytes, makePdfBytes, expectPdfHeader, loadPdfPageCount, repoPath, unzip, drawSignatureStroke } from "./utils";
 
 test("COEP tools are crossOriginIsolated and avoid cross-origin requests", async ({ page }) => {
   const baseURL = test.info().project.use.baseURL;
@@ -257,15 +257,7 @@ test("sign downloads a PDF containing an embedded image", async ({ page }) => {
   });
 
   const pad = page.locator("canvas").first();
-  const box = await pad.boundingBox();
-  expect(box).toBeTruthy();
-  const x = box!.x + box!.width * 0.2;
-  const y = box!.y + box!.height * 0.5;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x + box!.width * 0.4, y - box!.height * 0.2);
-  await page.mouse.move(x + box!.width * 0.6, y + box!.height * 0.15);
-  await page.mouse.up();
+  await drawSignatureStroke(pad);
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Apply Signature & Download" }).click();

@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { makePdfBytes } from "./utils";
 
 test("pdf editor page header actions: Upload New, Convert, Change file", async ({ page }) => {
@@ -35,7 +35,7 @@ test("pdf editor page header actions: Upload New, Convert, Change file", async (
     page.waitForURL(/\/tools\/convert\?uploadId=/),
     page.getByRole("button", { name: "Convert" }).click(),
   ]);
-  await expect(page.getByRole("heading", { name: "Convert" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Convert Document" })).toBeVisible();
   await expect(page.getByText("b.pdf")).toBeVisible();
 
   // Navigate back to edit and verify Change file returns to dropzone.
@@ -50,4 +50,3 @@ test("pdf editor page header actions: Upload New, Convert, Change file", async (
   await page.getByRole("button", { name: "Change file" }).click();
   await expect(page.getByText("Drop your file here")).toBeVisible();
 });
-

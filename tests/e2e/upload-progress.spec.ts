@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { makePdfBytes } from "./utils";
 
 test("edit tool shows upload progress overlay while loading PDF", async ({ page }) => {
@@ -24,4 +24,3 @@ test("edit tool shows upload progress overlay while loading PDF", async ({ page 
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
   await expect(overlayHeading).toHaveCount(0, { timeout: 60_000 });
 });
-

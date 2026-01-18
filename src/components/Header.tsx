@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,7 @@ export default function Header() {
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
+                  aria-label="Tools"
                   className="flex items-center gap-2 border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-3 md:px-4 py-2 h-10 rounded-lg"
                 >
                   <svg

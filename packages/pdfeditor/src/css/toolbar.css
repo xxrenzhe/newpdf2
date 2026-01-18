@@ -141,6 +141,7 @@
     transition: transform 300ms;
     position: absolute;
     z-index: 0;
+    pointer-events: none;
 }
 
 .pdf-el-actions-wrapper.show {
@@ -170,6 +171,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    pointer-events: auto;
 }
 
 .__pdf_el_actions .line,

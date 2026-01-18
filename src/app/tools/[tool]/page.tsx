@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import dynamic from "next/dynamic";
 import FileDropzone from "@/components/tools/FileDropzone";
 import { deleteUpload, loadUpload } from "@/lib/uploadStore";

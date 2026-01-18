@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Download } from "playwright/test";
+import type { Download, Locator } from "playwright/test";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import JSZip from "jszip";
 
@@ -45,4 +45,20 @@ export async function loadPdfPageCount(bytes: Uint8Array): Promise<number> {
 
 export async function unzip(bytes: Uint8Array) {
   return JSZip.loadAsync(bytes);
+}
+
+export async function drawSignatureStroke(canvas: Locator) {
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Missing signature canvas bounding box");
+
+  const start = { x: box.x + box.width * 0.2, y: box.y + box.height * 0.6 };
+  const mid = { x: box.x + box.width * 0.5, y: box.y + box.height * 0.4 };
+  const end = { x: box.x + box.width * 0.8, y: box.y + box.height * 0.65 };
+  const pointer = { pointerId: 1, pointerType: "pen", isPrimary: true };
+
+  await canvas.dispatchEvent("pointerdown", { bubbles: true, cancelable: true, buttons: 1, clientX: start.x, clientY: start.y, ...pointer });
+  await canvas.dispatchEvent("pointermove", { bubbles: true, cancelable: true, buttons: 1, clientX: mid.x, clientY: mid.y, ...pointer });
+  await canvas.dispatchEvent("pointermove", { bubbles: true, cancelable: true, buttons: 1, clientX: end.x, clientY: end.y, ...pointer });
+  await canvas.dispatchEvent("pointerup", { bubbles: true, cancelable: true, buttons: 0, clientX: end.x, clientY: end.y, ...pointer });
 }

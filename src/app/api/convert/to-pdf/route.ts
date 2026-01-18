@@ -32,11 +32,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const pdfBytes = await res.arrayBuffer();
-  return new NextResponse(pdfBytes, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=\"${file.name.replace(/\.[^.]+$/, "")}.pdf\"`,
-    },
+  const filename = `${file.name.replace(/\.[^.]+$/, "")}.pdf`;
+  const headers = new Headers({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="${filename}"`,
   });
+  const length = res.headers.get("content-length");
+  if (length) headers.set("Content-Length", length);
+
+  if (res.body) {
+    return new NextResponse(res.body, { headers });
+  }
+
+  const pdfBytes = await res.arrayBuffer();
+  return new NextResponse(pdfBytes, { headers });
 }

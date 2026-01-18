@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { makePdfBytes } from "./utils";
 
 test("guest edit-pdf keeps actions top-right and renders PDF", async ({ page }) => {

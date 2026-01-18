@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { getToolsByCategory, TOOL_CATEGORIES, TOOLS } from "../../src/lib/tools";
 
 test("home tools grid category tabs filter correctly", async ({ page }) => {
@@ -27,4 +27,3 @@ test("home tools grid category tabs filter correctly", async ({ page }) => {
     }
   }
 });
-

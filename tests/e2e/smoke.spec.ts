@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 import { TOOLS } from "../../src/lib/tools";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 

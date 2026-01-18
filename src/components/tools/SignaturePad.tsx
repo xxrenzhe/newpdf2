@@ -22,6 +22,7 @@ function getPoint(e: PointerEvent, el: HTMLCanvasElement) {
 const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ className }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasInk, setHasInk] = useState(false);
+  const hasInkRef = useRef(false);
   const drawingRef = useRef(false);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -31,6 +32,7 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ classN
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasInkRef.current = false;
     setHasInk(false);
   }, []);
 
@@ -38,10 +40,10 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ classN
     ref,
     () => ({
       clear,
-      isEmpty: () => !hasInk,
+      isEmpty: () => !hasInkRef.current,
       toPngDataUrl: () => canvasRef.current?.toDataURL("image/png") ?? "",
     }),
-    [clear, hasInk]
+    [clear]
   );
 
   useEffect(() => {
@@ -57,7 +59,13 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ classN
 
     const onPointerDown = (e: PointerEvent) => {
       drawingRef.current = true;
-      canvas.setPointerCapture(e.pointerId);
+      if (typeof canvas.setPointerCapture === "function") {
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch {
+          // Ignore synthetic/unsupported pointer capture scenarios.
+        }
+      }
       lastRef.current = getPoint(e, canvas);
     };
 
@@ -71,6 +79,7 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ classN
       ctx.lineTo(next.x, next.y);
       ctx.stroke();
       lastRef.current = next;
+      hasInkRef.current = true;
       setHasInk(true);
     };
 
@@ -107,4 +116,3 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ classN
 SignaturePad.displayName = "SignaturePad";
 
 export default SignaturePad;
-

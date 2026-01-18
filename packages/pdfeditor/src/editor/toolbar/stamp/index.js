@@ -428,8 +428,12 @@ class Stamp extends ToolbarItemBase {
         const page = this.editor.pdfDocument.getPage(readerPage.pageNum);
         
         const rect = readerPage.elWrapper.getBoundingClientRect();
-        let y = parseInt(this.floatElement.style.top) - rect.top;
-        let x = parseInt(this.floatElement.style.left) - rect.left;
+        let y = parseInt(this.floatElement?.style.top || '', 10) - rect.top;
+        let x = parseInt(this.floatElement?.style.left || '', 10) - rect.left;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            y = e.data.evt.clientY - rect.top;
+            x = e.data.evt.clientX - rect.left;
+        }
         page.elements.add('image', {
             image: this.image,
             imageType: this.imageType,
@@ -455,6 +459,7 @@ class Stamp extends ToolbarItemBase {
         this.floatElement = element;
         this.floatElement.style.position = 'fixed';
         this.floatElement.style.zIndex = 1;
+        this.floatElement.style.pointerEvents = 'none';
         document.body.appendChild(this.floatElement);
 
         this.evtMousemove = e => {

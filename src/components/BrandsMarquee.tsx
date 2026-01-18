@@ -1,14 +1,14 @@
 "use client";
 
 const brands = [
-  "https://ext.same-assets.com/170935311/3959512356.png",
-  "https://ext.same-assets.com/170935311/2364094864.png",
-  "https://ext.same-assets.com/170935311/2448600377.png",
-  "https://ext.same-assets.com/170935311/2983692322.png",
-  "https://ext.same-assets.com/170935311/2317977816.png",
-  "https://ext.same-assets.com/170935311/3923762797.png",
-  "https://ext.same-assets.com/170935311/3953556544.png",
-  "https://ext.same-assets.com/170935311/2908841443.png",
+  "/assets/same-assets/3959512356.png",
+  "/assets/same-assets/2364094864.png",
+  "/assets/same-assets/2448600377.png",
+  "/assets/same-assets/2983692322.png",
+  "/assets/same-assets/2317977816.png",
+  "/assets/same-assets/3923762797.png",
+  "/assets/same-assets/3953556544.png",
+  "/assets/same-assets/2908841443.png",
 ];
 
 export default function BrandsMarquee() {

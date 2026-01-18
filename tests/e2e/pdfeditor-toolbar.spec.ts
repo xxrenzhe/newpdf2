@@ -1,4 +1,5 @@
-import { expect, test, type Frame, type FrameLocator, type Page } from "playwright/test";
+import { expect, test } from "./fixtures";
+import type { Frame, FrameLocator, Page } from "playwright/test";
 import { loadPdfPageCount, makePdfBytes, readDownloadBytes, repoPath } from "./utils";
 
 async function openEditor(page: Page, pdfBytes: Uint8Array, filename: string) {
@@ -13,7 +14,9 @@ async function openEditor(page: Page, pdfBytes: Uint8Array, filename: string) {
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frameLocator = page.frameLocator('iframe[title="PDF Editor"]');
-  await expect(frameLocator.locator("#pdf-main .__pdf_page_preview").first()).toBeVisible({ timeout: 120_000 });
+  const firstPreview = frameLocator.locator("#pdf-main .__pdf_page_preview").first();
+  await expect(firstPreview).toBeVisible({ timeout: 120_000 });
+  await firstPreview.scrollIntoViewIfNeeded();
 
   const frame = page.frame({ url: /\/pdfeditor\/index\.html/ }) as Frame | null;
   if (!frame) throw new Error("Missing pdfeditor iframe");
@@ -22,17 +25,35 @@ async function openEditor(page: Page, pdfBytes: Uint8Array, filename: string) {
 }
 
 async function dragOnFirstPage(page: Page, frameLocator: FrameLocator) {
-  const firstPage = frameLocator.locator("#pdf-main .__pdf_page_preview").first();
-  const box = await firstPage.boundingBox();
-  if (!box) throw new Error("Missing PDF page bounding box");
+  const drawLayer = frameLocator.locator("#pdf-main .drawLayer").first();
+  await drawLayer.scrollIntoViewIfNeeded();
+  const rect = await drawLayer.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return { left: box.left, top: box.top, width: box.width, height: box.height };
+  });
+  if (!rect.width || !rect.height) throw new Error("Missing PDF draw layer size");
 
-  const start = { x: box.x + box.width * 0.2, y: box.y + box.height * 0.25 };
-  const end = { x: box.x + box.width * 0.55, y: box.y + box.height * 0.4 };
+  const start = { x: rect.left + rect.width * 0.2, y: rect.top + rect.height * 0.25 };
+  const end = { x: rect.left + rect.width * 0.55, y: rect.top + rect.height * 0.4 };
 
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(end.x, end.y);
-  await page.mouse.up();
+  await drawLayer.dispatchEvent("mousedown", { bubbles: true, cancelable: true, button: 0, buttons: 1, clientX: start.x, clientY: start.y });
+  await drawLayer.dispatchEvent("mousemove", { bubbles: true, cancelable: true, buttons: 1, clientX: start.x + 5, clientY: start.y + 5 });
+  await drawLayer.dispatchEvent("mousemove", { bubbles: true, cancelable: true, buttons: 1, clientX: end.x, clientY: end.y });
+  await drawLayer.dispatchEvent("mouseup", { bubbles: true, cancelable: true, button: 0, buttons: 0, clientX: end.x, clientY: end.y });
+}
+
+async function clickOnFirstPage(frameLocator: FrameLocator, xRatio = 0.3, yRatio = 0.3) {
+  const drawLayer = frameLocator.locator("#pdf-main .drawLayer").first();
+  await drawLayer.scrollIntoViewIfNeeded();
+  const rect = await drawLayer.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return { left: box.left, top: box.top, width: box.width, height: box.height };
+  });
+  if (!rect.width || !rect.height) throw new Error("Missing PDF draw layer size");
+
+  const point = { x: rect.left + rect.width * xRatio, y: rect.top + rect.height * yRatio };
+  await drawLayer.dispatchEvent("mousedown", { bubbles: true, cancelable: true, button: 0, buttons: 1, clientX: point.x, clientY: point.y });
+  await drawLayer.dispatchEvent("mouseup", { bubbles: true, cancelable: true, button: 0, buttons: 0, clientX: point.x, clientY: point.y });
 }
 
 test("pdfeditor toolbar: draw tool adds a stroke", async ({ page }) => {
@@ -256,7 +277,7 @@ test("pdfeditor toolbar: stamp preset and text art can be placed", async ({ page
   await frameLocator.locator("#tool_seal").click();
   await expect(frameLocator.locator("#dropdown_stamp")).toBeVisible();
   await frameLocator.locator("#dropdown_stamp .preset_item").first().click();
-  await frameLocator.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 140, y: 160 } });
+  await clickOnFirstPage(frameLocator, 0.25, 0.25);
   await expect.poll(async () => images.count()).toBeGreaterThan(beforeImages);
 
   const textArt = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_textArt");
@@ -264,6 +285,6 @@ test("pdfeditor toolbar: stamp preset and text art can be placed", async ({ page
   await frameLocator.locator("#tool_textArt").click();
   await expect(frameLocator.locator("#dropdown_textArt")).toBeVisible();
   await frameLocator.locator("#dropdown_textArt .text_art").first().click();
-  await frameLocator.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 240, y: 140 } });
+  await clickOnFirstPage(frameLocator, 0.4, 0.22);
   await expect.poll(async () => textArt.count()).toBeGreaterThan(beforeTextArt);
 });

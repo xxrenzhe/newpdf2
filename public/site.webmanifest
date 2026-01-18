@@ -1,0 +1,15 @@
+{
+  "name": "Files Editor",
+  "short_name": "Files Editor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2d85de",
+  "icons": [
+    {
+      "src": "/assets/brand/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
