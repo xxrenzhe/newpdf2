@@ -232,6 +232,7 @@ export class PDFPage extends PDFPageBase {
         let color = elDiv.getAttribute('data-fontcolor');
         let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), x * this.outputScale, y * this.outputScale);
         let fontFamily = elDiv.getAttribute('data-loadedname') || 'Helvetica';
+        const coverWidth = elDiv.getBoundingClientRect().width;
 
         // textPart.elements.forEach(async (element, i) => {
         //     if (fontSize == 0) {
@@ -257,7 +258,9 @@ export class PDFPage extends PDFPageBase {
                 fontName: elDiv.getAttribute('data-fontname'),
                 opacity: 1,
                 underline: null,
-                background: null,
+                // Cover the original glyphs when exporting without relying on PDF.js worker patches.
+                background: bgColor,
+                backgroundWidth: coverWidth,
                 bold: bold,
                 italic: italic,
                 rotate: null

@@ -153,11 +153,13 @@ class TextElement extends BaseElement {
         let lineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : (fontSize - 2)) + lineTop;
         //let lineHeight = options.font.heightAtSize(fontSize);
 
+        const textRgb = hexToRgb(this.attrs.color) || [0, 0, 0];
+
         let options = {
             x: x,
             y: y,
             size: fontSize,
-            color: this.editor.PDFLib.componentsToColor(hexToRgb(this.attrs.color).map(v => (v / 255))),
+            color: this.editor.PDFLib.componentsToColor(textRgb.map(v => (v / 255))),
             opacity: this.attrs.opacity,
             lineHeight: lineHeight,
             font: await this.pdfDocument.getFont(this.page.id, this.attrs.text, this.attrs.fontFile),
@@ -165,20 +167,31 @@ class TextElement extends BaseElement {
         };
 
         if (this.attrs.background) {
+            const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
             let maxWidth = 0;
-            lines.forEach(v => {
-                let w = options.font.widthOfTextAtSize(v, fontSize);
-                if (w > maxWidth) {
-                    maxWidth = w;
+            if (options.font) {
+                lines.forEach(v => {
+                    let w = options.font.widthOfTextAtSize(v, fontSize);
+                    if (w > maxWidth) {
+                        maxWidth = w;
+                    }
+                });
+            }
+
+            if (typeof this.attrs.backgroundWidth === 'number' && Number.isFinite(this.attrs.backgroundWidth)) {
+                const rect = this.page.readerPage.content.getBoundingClientRect();
+                if (rect.width) {
+                    const scaleX = this.page.width / rect.width;
+                    maxWidth = Math.max(maxWidth, this.attrs.backgroundWidth * scaleX);
                 }
-            });
+            }
 
             this.page.pageProxy.drawRectangle({
                 x: x,
                 y: y - ((lines.length - 1) * lineHeight) - 3.5,
                 width: maxWidth + 2.5,
                 height: lines.length * (options.lineHeight + thickness) - 2,
-                color: this.editor.PDFLib.componentsToColor(hexToRgb(this.attrs.background).map(v => (v / 255))),
+                color: this.editor.PDFLib.componentsToColor(bgRgb.map(v => (v / 255))),
                 opacity: options.opacity
             });
         }
@@ -194,7 +207,7 @@ class TextElement extends BaseElement {
                 }
                 this.page.pageProxy.drawLine({
                     start: { x: x, y: lineY },
-                    end: { x: x + options.font.widthOfTextAtSize(lines[i], fontSize), y: lineY },
+                    end: { x: x + (options.font ? options.font.widthOfTextAtSize(lines[i], fontSize) : 0), y: lineY },
                     thickness: thickness,
                     // color: options.color,
                     color: this.editor.PDFLib.componentsToColor(hexToRgb('#ff0000').map(v => (v / 255))),

@@ -38,14 +38,31 @@ function rgbToHex(r, g, b) {
 }
 
 function hexToRgb(hex) {
-    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (typeof hex !== 'string') return null;
+    const value = hex.trim();
+
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(value);
     if (result) {
-        let r = parseInt(result[1], 16);
-        let g = parseInt(result[2], 16);
-        let b = parseInt(result[3], 16);
-        //return r + "," + g + "," + b;
-        return [ r, g, b ];
+        const r = parseInt(result[1], 16);
+        const g = parseInt(result[2], 16);
+        const b = parseInt(result[3], 16);
+        return [r, g, b];
     }
+
+    result = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(value);
+    if (result) {
+        const r = parseInt(result[1] + result[1], 16);
+        const g = parseInt(result[2] + result[2], 16);
+        const b = parseInt(result[3] + result[3], 16);
+        return [r, g, b];
+    }
+
+    result = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i.exec(value);
+    if (result) {
+        const clamp = v => Math.max(0, Math.min(255, parseInt(v, 10)));
+        return [clamp(result[1]), clamp(result[2]), clamp(result[3])];
+    }
+
     return null;
 }
 

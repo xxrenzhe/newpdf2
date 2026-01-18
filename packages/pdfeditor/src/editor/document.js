@@ -89,65 +89,65 @@ export class PDFDocument {
 
         //从pdf文件中提取字体数据
         let arrayBuffer = Font.getCache(pageId, fontFile);
-        if (!arrayBuffer) {
-            const page = this.getPageForId(pageId);
-            let commonObjs = page.readerPage.pageProxy.commonObjs;
-            if (commonObjs.has(fontFile)) {
-                let fontFace = commonObjs.get(fontFile);
-                arrayBuffer = fontFace.data.buffer;
-                let newFont = opentype.parse(arrayBuffer);
-                text = text.split('').filter((value, index, self) => self.indexOf(value) === index);
-                let isFetchFont = text.some(val => (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) == -1));
-                let _text = text.map(val => {
-                    if (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) > -1) {
-                        return val;
-                    }
-                    return '';
-                }).join('');
+        if (arrayBuffer) {
+            return this.setFont(pageId, fontFile, arrayBuffer);
+        }
 
-                //如果包含CJK并需要补字体
-                let isIncludeCJK = new RegExp(Font.CJK_RANGE);
-                if (isIncludeCJK.test(text) && _text) {
-                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
-                    this.setFont(pageId, fontFile, arrayBuffer);
-                } else {
-                    if (!isFetchFont) {
-                        if (_text) {
-                            try {
-                                Font.fetchFallbackFont().then(fallbackBuffer => {
-                                    this.editor.fontWorker.postMessage({
-                                        type: 'font_subset',
-                                        text: _text,
-                                        pageId: pageId,
-                                        fontFile: fontFile,
-                                        arrayBuffer: arrayBuffer,
-                                        fallbackBuffer: fallbackBuffer
-                                    }, [
-                                        arrayBuffer,
-                                        fallbackBuffer
-                                    ]);
-                                }).catch(e => {
-                                    this.setFont(pageId, fontFile, StandardFonts.Helvetica);
-                                });
-                            } catch (e) {
-                                this.setFont(pageId, fontFile, StandardFonts.Helvetica);
-                            }
-                        } else {
-                            this.setFont(pageId, fontFile, arrayBuffer);
-                        }
-                    } else {
-                        arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
-                        this.setFont(pageId, fontFile, arrayBuffer);
-                    }
+        const page = this.getPageForId(pageId);
+        let commonObjs = page.readerPage.pageProxy.commonObjs;
+        if (commonObjs.has(fontFile)) {
+            let fontFace = commonObjs.get(fontFile);
+            arrayBuffer = fontFace.data.buffer;
+            let newFont = opentype.parse(arrayBuffer);
+            text = text.split('').filter((value, index, self) => self.indexOf(value) === index);
+            let isFetchFont = text.some(val => (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) == -1));
+            let _text = text.map(val => {
+                if (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) > -1) {
+                    return val;
                 }
+                return '';
+            }).join('');
+
+            //如果包含CJK并需要补字体
+            let isIncludeCJK = new RegExp(Font.CJK_RANGE);
+            if (isIncludeCJK.test(text) && _text) {
+                arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
+                return this.setFont(pageId, fontFile, arrayBuffer);
             } else {
-                //从服务器拉取字体数据
-                arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
-                this.setFont(pageId, fontFile, arrayBuffer);
+                if (!isFetchFont) {
+                    if (_text) {
+                        try {
+                            Font.fetchFallbackFont().then(fallbackBuffer => {
+                                this.editor.fontWorker.postMessage({
+                                    type: 'font_subset',
+                                    text: _text,
+                                    pageId: pageId,
+                                    fontFile: fontFile,
+                                    arrayBuffer: arrayBuffer,
+                                    fallbackBuffer: fallbackBuffer
+                                }, [
+                                    arrayBuffer,
+                                    fallbackBuffer
+                                ]);
+                            }).catch(() => {
+                                this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                            });
+                        } catch (e) {
+                            this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                        }
+                        return null;
+                    } else {
+                        return this.setFont(pageId, fontFile, arrayBuffer);
+                    }
+                } else {
+                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
+                    return this.setFont(pageId, fontFile, arrayBuffer);
+                }
             }
-            // if (!arrayBuffer) {
-            //     arrayBuffer = this.documentProxy.embedFont(StandardFonts.Helvetica);
-            // }
+        } else {
+            //从服务器拉取字体数据
+            arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
+            return this.setFont(pageId, fontFile, arrayBuffer);
         }
     }
 
@@ -159,7 +159,7 @@ export class PDFDocument {
         Font.setCache(pageId, fontFile, arrayBuffer);
         if (typeof arrayBuffer === 'string') {
             this.embedFonts[pageId][fontFile] = this.documentProxy.embedFont(arrayBuffer);
-            return;
+            return this.embedFonts[pageId][fontFile];
         }
 
         const shouldSubset = !isCffOtfFont(arrayBuffer);
@@ -169,6 +169,7 @@ export class PDFDocument {
         )
             .catch(() => this.documentProxy.embedFont(arrayBuffer))
             .catch(() => this.documentProxy.embedFont(StandardFonts.Helvetica));
+        return this.embedFonts[pageId][fontFile];
     }
 
     checkFonts() {
@@ -260,19 +261,9 @@ export class PDFDocument {
         }
         PDFEvent.dispatch(Events.SAVE_AFTER, this);
 
-        return new Promise(resolve => {
-            const bytesPromise = this.documentProxy.save();
-            if (toBlob) {
-                bytesPromise.then(bytes => {
-                    const blob = new Blob([bytes], {
-                        type: "application/pdf"
-                    });
-                    resolve(blob);
-                })
-            } else {
-                resolve(bytesPromise);
-            }
-        });
+        const bytes = await this.documentProxy.save();
+        if (!toBlob) return bytes;
+        return new Blob([bytes], { type: 'application/pdf' });
     }
 
     remove(pageNum) {

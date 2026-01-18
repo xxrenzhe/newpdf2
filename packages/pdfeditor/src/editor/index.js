@@ -181,6 +181,11 @@ export class PDFEditor {
                 this.pdfDocument.setFont(data.pageId, data.fontFile, data.newBuffer);
                 PDFEvent.dispatch(Events.DOWNLOAD);
             }
+            if (data.type == 'font_subset_error') {
+                console.warn('font_subset failed, falling back to Helvetica:', data.message);
+                this.pdfDocument.setFont(data.pageId, data.fontFile, null);
+                PDFEvent.dispatch(Events.DOWNLOAD);
+            }
         });
 
         window.addEventListener('mousedown', e => {
@@ -241,31 +246,15 @@ export class PDFEditor {
     }
 
     async flushData() {
-        let isUpdateStream = false;
-        let chars = {};
-        for (let page of this.reader.pdfDocument.pages) {
-            for (let i = 0; i < page.clearTexts.length; i++) {
-                if (!chars[page.index]) {
-                    chars[page.index] = [];
-                }
-                chars[page.index].push(page.clearTexts[i]);
-                isUpdateStream = true;
-            }
-        }
-
-        // return this.reader.pdfDocument.documentProxy._transport.messageHandler.sendWithPromise('AssemblePDF', {
-        //     outType: 'Uint8Array',
-        //     chars: chars
-        // }).then(stream => this.setDocumentProxy(stream));
-
-        if (!isUpdateStream) {
-            return this.reader.getData().then(int8Array => this.setDocumentProxy(int8Array));
-        } else {
-            return this.reader.pdfDocument.documentProxy._transport.messageHandler.sendWithPromise('AssemblePDF', {
-                outType: 'Uint8Array',
-                chars: chars
-            }).then(stream => this.setDocumentProxy(stream));
-        }
+        // NOTE: Previous versions used a custom PDF.js worker action ("AssemblePDF")
+        // to remove/replace existing text in the source PDF before saving.
+        // The bundled worker shipped with this repo no longer implements that action,
+        // which caused Save & Download to hang (progress stuck at 99%).
+        //
+        // For now we always start from the original PDF bytes and rely on editor
+        // elements (e.g. text background) to visually cover replaced content.
+        const int8Array = await this.reader.getData();
+        return this.setDocumentProxy(int8Array);
     }
 
     async reset() {
@@ -282,17 +271,16 @@ export class PDFEditor {
 
     async download(fileName) {
         try {
-            this.flushData().then(() => {
-                PDFEvent.dispatch(Events.SAVE);
-                // this.pdfDocument.save(true).then(async blob => {
-                //     if (this.options.debug) {
-                //         window.open(URL.createObjectURL(blob));
-                //     } else {
-                //         saveAs(blob, fileName);
-                //     }
-                //     this.reset();
-                // });
-            });
+            await this.flushData();
+            PDFEvent.dispatch(Events.SAVE);
+            // this.pdfDocument.save(true).then(async blob => {
+            //     if (this.options.debug) {
+            //         window.open(URL.createObjectURL(blob));
+            //     } else {
+            //         saveAs(blob, fileName);
+            //     }
+            //     this.reset();
+            // });
         } catch (e) {
             console.log(e);
             PDFEvent.dispatch(Events.ERROR, e);
