@@ -27,6 +27,7 @@ const Operator = {
     create: (element, elements) => {
         elements.items[element.id] = element;
         element.page.readerPage.elWrapper.appendChild(element.el);
+        element.el.classList.toggle('__pdf_el_hidden', Boolean(element.attrs?.hidden));
         element.zoom(element.scale);
         elements.setActive(element.id);
     },
@@ -47,6 +48,7 @@ const Operator = {
     updateAttrs: (element, attrs) => {
         element.attrs = attrs;
         element.setStyle(attrs);
+        element.el.classList.toggle('__pdf_el_hidden', Boolean(element.attrs?.hidden));
         element.zoom(element.scale);
     }
 }
