@@ -1,44 +1,173 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import FileDropzone from "@/components/tools/FileDropzone";
 import { downloadBlob, extractPdfPages } from "@/lib/pdf/client";
 import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
 
 type ThumbState = Record<number, string>;
 
+const THUMB_WIDTH = 220;
+const THUMB_QUALITY = 0.75;
+const THUMB_PAGE_SIZE = 60;
+const MAX_CONCURRENT_THUMB_RENDERS = 2;
+
 function isPdfFile(file: File | null): file is File {
   return !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"));
 }
 
-export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File }) {
+export default function PdfDeletePagesTool({
+  initialFile,
+  onExit,
+}: {
+  initialFile?: File;
+  onExit?: () => void;
+}) {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [numPages, setNumPages] = useState(0);
   const [thumbs, setThumbs] = useState<ThumbState>({});
   const [deleted, setDeleted] = useState<Record<number, boolean>>({});
+  const [thumbPage, setThumbPage] = useState(1);
 
   const docRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
   const thumbsRef = useRef<ThumbState>({});
-  const renderChainRef = useRef(Promise.resolve());
+  const renderSessionRef = useRef(0);
+  const pendingThumbsRef = useRef<number[]>([]);
+  const inFlightThumbsRef = useRef<Map<number, number>>(new Map());
+  const activeThumbRendersRef = useRef(0);
   const createdObjectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     thumbsRef.current = thumbs;
   }, [thumbs]);
 
-  const pageIndices = useMemo(() => Array.from({ length: numPages }, (_, i) => i), [numPages]);
+  const totalThumbPages = useMemo(() => Math.max(1, Math.ceil(numPages / THUMB_PAGE_SIZE)), [numPages]);
+  const thumbPageClamped = useMemo(() => Math.min(Math.max(1, thumbPage), totalThumbPages), [thumbPage, totalThumbPages]);
+  const visibleRange = useMemo(() => {
+    const start = (thumbPageClamped - 1) * THUMB_PAGE_SIZE;
+    const endExclusive = Math.min(numPages, start + THUMB_PAGE_SIZE);
+    return { start, endExclusive };
+  }, [numPages, thumbPageClamped]);
+  const pageIndices = useMemo(
+    () => Array.from({ length: visibleRange.endExclusive - visibleRange.start }, (_, i) => visibleRange.start + i),
+    [visibleRange.endExclusive, visibleRange.start]
+  );
+
   const deletedCount = useMemo(() => Object.values(deleted).filter(Boolean).length, [deleted]);
 
   const resetFileState = useCallback(() => {
+    const prevDoc = docRef.current;
     docRef.current = null;
+
+    renderSessionRef.current += 1;
+    pendingThumbsRef.current = [];
+    inFlightThumbsRef.current.clear();
+    activeThumbRendersRef.current = 0;
+
     setNumPages(0);
     setThumbs({});
     setDeleted({});
+    setThumbPage(1);
+
     for (const url of createdObjectUrlsRef.current) URL.revokeObjectURL(url);
     createdObjectUrlsRef.current = [];
+
+    if (prevDoc) void prevDoc.destroy().catch(() => {});
   }, []);
+
+  const exit = useCallback(() => {
+    if (onExit) {
+      onExit();
+      return;
+    }
+    router.push("/");
+  }, [onExit, router]);
+
+  const drainThumbQueue = useCallback(() => {
+    const doc = docRef.current;
+    if (!doc) return;
+
+    while (
+      activeThumbRendersRef.current < MAX_CONCURRENT_THUMB_RENDERS &&
+      pendingThumbsRef.current.length > 0
+    ) {
+      const pageIndex = pendingThumbsRef.current.shift();
+      if (pageIndex === undefined) break;
+
+      const sessionId = renderSessionRef.current;
+      if (inFlightThumbsRef.current.get(pageIndex) !== sessionId) continue;
+      if (thumbsRef.current[pageIndex]) {
+        inFlightThumbsRef.current.delete(pageIndex);
+        continue;
+      }
+
+      activeThumbRendersRef.current += 1;
+
+      void (async () => {
+        try {
+          const page = await doc.getPage(pageIndex + 1);
+          if (renderSessionRef.current !== sessionId) {
+            (page as { cleanup?: () => void }).cleanup?.();
+            return;
+          }
+
+          const viewport0 = page.getViewport({ scale: 1 });
+          const scale = THUMB_WIDTH / Math.max(1, viewport0.width);
+          const viewport = page.getViewport({ scale });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const ctx = canvas.getContext("2d", { alpha: false });
+          if (!ctx) return;
+
+          await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", THUMB_QUALITY));
+          const url = blob ? URL.createObjectURL(blob) : canvas.toDataURL("image/jpeg", THUMB_QUALITY);
+
+          canvas.width = 0;
+          canvas.height = 0;
+          (page as { cleanup?: () => void }).cleanup?.();
+
+          if (renderSessionRef.current !== sessionId) {
+            if (blob) URL.revokeObjectURL(url);
+            return;
+          }
+
+          if (blob) createdObjectUrlsRef.current.push(url);
+          setThumbs((prev) => ({ ...prev, [pageIndex]: url }));
+        } catch {
+          // Ignore thumbnail errors; the grid can still function without them.
+        } finally {
+          if (inFlightThumbsRef.current.get(pageIndex) === sessionId) {
+            inFlightThumbsRef.current.delete(pageIndex);
+          }
+          if (renderSessionRef.current === sessionId) {
+            activeThumbRendersRef.current = Math.max(0, activeThumbRendersRef.current - 1);
+            drainThumbQueue();
+          }
+        }
+      })();
+    }
+  }, []);
+
+  const queueThumbRender = useCallback(
+    (pageIndex: number) => {
+      const sessionId = renderSessionRef.current;
+      if (thumbsRef.current[pageIndex]) return;
+      if (inFlightThumbsRef.current.get(pageIndex) === sessionId) return;
+
+      inFlightThumbsRef.current.set(pageIndex, sessionId);
+      pendingThumbsRef.current.push(pageIndex);
+      pendingThumbsRef.current.sort((a, b) => a - b);
+      drainThumbQueue();
+    },
+    [drainThumbQueue]
+  );
 
   useEffect(() => {
     if (!isPdfFile(file)) return;
@@ -50,7 +179,10 @@ export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File
       resetFileState();
       const data = new Uint8Array(await file.arrayBuffer());
       const doc = await pdfjs.getDocument({ data }).promise;
-      if (cancelled) return;
+      if (cancelled) {
+        void doc.destroy().catch(() => {});
+        return;
+      }
       docRef.current = doc;
       setNumPages(doc.numPages);
     };
@@ -62,38 +194,18 @@ export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File
   }, [file, resetFileState]);
 
   useEffect(() => {
+    const inFlightThumbs = inFlightThumbsRef.current;
     return () => {
+      const prevDoc = docRef.current;
+      docRef.current = null;
+      renderSessionRef.current += 1;
+      pendingThumbsRef.current = [];
+      inFlightThumbs.clear();
+      activeThumbRendersRef.current = 0;
       for (const url of createdObjectUrlsRef.current) URL.revokeObjectURL(url);
       createdObjectUrlsRef.current = [];
+      if (prevDoc) void prevDoc.destroy().catch(() => {});
     };
-  }, []);
-
-  const renderThumb = useCallback(async (pageIndex: number) => {
-    const doc = docRef.current;
-    if (!doc) return;
-    if (thumbsRef.current[pageIndex]) return;
-
-    renderChainRef.current = renderChainRef.current.then(async () => {
-      if (thumbsRef.current[pageIndex]) return;
-      const page = await doc.getPage(pageIndex + 1);
-      const targetWidth = 240;
-      const viewport0 = page.getViewport({ scale: 1 });
-      const scale = targetWidth / Math.max(1, viewport0.width);
-      const viewport = page.getViewport({ scale });
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      const ctx = canvas.getContext("2d", { alpha: false });
-      if (!ctx) return;
-      await page.render({ canvasContext: ctx, canvas, viewport }).promise;
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.78)
-      );
-
-      const url = blob ? URL.createObjectURL(blob) : canvas.toDataURL("image/jpeg", 0.78);
-      if (blob) createdObjectUrlsRef.current.push(url);
-      setThumbs((prev) => ({ ...prev, [pageIndex]: url }));
-    });
   }, []);
 
   const toggleDelete = useCallback((pageIndex: number) => {
@@ -147,7 +259,15 @@ export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File
             <button
               type="button"
               className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
-              onClick={() => setFile(null)}
+              onClick={exit}
+              disabled={busy}
+            >
+              Exit
+            </button>
+            <button
+              type="button"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              onClick={() => (onExit ? onExit() : setFile(null))}
               disabled={busy}
             >
               Change file
@@ -178,6 +298,35 @@ export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File
 
       {numPages > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3">
+            <p className="text-sm text-gray-600">
+              Pages {visibleRange.start + 1}-{visibleRange.endExclusive} of {numPages}
+            </p>
+            {totalThumbPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={() => setThumbPage((p) => Math.max(1, p - 1))}
+                  disabled={thumbPageClamped <= 1}
+                >
+                  Prev
+                </button>
+                <span className="text-sm text-gray-600 tabular-nums">
+                  {thumbPageClamped} / {totalThumbPages}
+                </span>
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={() => setThumbPage((p) => Math.min(totalThumbPages, p + 1))}
+                  disabled={thumbPageClamped >= totalThumbPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {pageIndices.map((pageIndex) => (
               <DeletePageCard
@@ -185,8 +334,8 @@ export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File
                 pageIndex={pageIndex}
                 thumbUrl={thumbs[pageIndex]}
                 marked={!!deleted[pageIndex]}
-                onToggle={() => toggleDelete(pageIndex)}
-                onNeedThumb={() => void renderThumb(pageIndex)}
+                onToggle={toggleDelete}
+                onNeedThumb={queueThumbRender}
               />
             ))}
           </div>
@@ -196,7 +345,7 @@ export default function PdfDeletePagesTool({ initialFile }: { initialFile?: File
   );
 }
 
-function DeletePageCard({
+const DeletePageCard = memo(function DeletePageCard({
   pageIndex,
   thumbUrl,
   marked,
@@ -206,8 +355,8 @@ function DeletePageCard({
   pageIndex: number;
   thumbUrl?: string;
   marked: boolean;
-  onToggle: () => void;
-  onNeedThumb: () => void;
+  onToggle: (pageIndex: number) => void;
+  onNeedThumb: (pageIndex: number) => void;
 }) {
   const ref = useRef<HTMLButtonElement | null>(null);
 
@@ -219,16 +368,16 @@ function DeletePageCard({
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          onNeedThumb();
+          onNeedThumb(pageIndex);
           observer.disconnect();
           return;
         }
       },
-      { root: null, rootMargin: "900px", threshold: 0.01 }
+      { root: null, rootMargin: "400px", threshold: 0.01 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onNeedThumb, thumbUrl]);
+  }, [onNeedThumb, pageIndex, thumbUrl]);
 
   return (
     <button
@@ -237,7 +386,7 @@ function DeletePageCard({
       className={`rounded-xl border overflow-hidden text-left ${
         marked ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white hover:bg-gray-50"
       }`}
-      onClick={onToggle}
+      onClick={() => onToggle(pageIndex)}
       title={marked ? "Click to keep this page" : "Click to delete this page"}
     >
       <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50">
@@ -257,4 +406,4 @@ function DeletePageCard({
       </div>
     </button>
   );
-}
+});

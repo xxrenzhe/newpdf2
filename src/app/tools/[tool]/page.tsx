@@ -205,7 +205,7 @@ function ToolContent() {
               ) : toolKey === "organize" || toolKey === "rotate" ? (
                 <PdfOrganizeTool initialFile={files[0]!} />
               ) : toolKey === "delete" ? (
-                <PdfDeletePagesTool initialFile={files[0]!} />
+                <PdfDeletePagesTool initialFile={files[0]!} onExit={reset} />
               ) : toolKey === "watermark" ? (
                 <PdfWatermarkTool initialFile={files[0]!} />
               ) : toolKey === "password" ? (
