@@ -2,9 +2,12 @@ import opentype from 'opentype.js';
 import { trimSpace } from './misc';
 
 const CHARS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 's', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'S', 'Y', 'Z', ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '~', '!', '@', '#', '$', '%', '^', '&', '(', ')', '_', '+', '-', '=', '{', '}', '|', '[', ']', ';', "'", ':', '"', ',', '.', '/', '<', '>', '?', '*'];
-// Offline CJK fallback font (served from `ASSETS_URL + "fonts/..."`)
+// Offline CJK fallback font (served from `ASSETS_URL + "fonts/..."`).
+// This font supports CJK + Hangul + Kana; we use it as a safe Unicode fallback
+// when the original PDF font can't be embedded/encoded.
 const UNICODE_FONT = 'fonts/NotoSansCJKsc-Regular.otf';
-const CJK_RANGE = '[\u4E00-\u9FFF]';
+// Include: Hangul Jamo/Compatibility/Syllables, Hiragana/Katakana, CJK ideographs.
+const CJK_RANGE = '[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]';
 
 export class Font {
     static #cache = {};

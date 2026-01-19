@@ -5,14 +5,6 @@ import { trimSpace } from '../misc';
 import { PDFPage } from './page';
 import opentype from 'opentype.js';
 
-function isCffOtfFont(buffer) {
-    if (!(buffer instanceof ArrayBuffer)) return false;
-    if (buffer.byteLength < 4) return false;
-    const bytes = new Uint8Array(buffer, 0, 4);
-    const tag = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
-    return tag === 'OTTO';
-}
-
 
 export class PDFDocument {
     editor = null;
@@ -70,7 +62,7 @@ export class PDFDocument {
                 } catch(e) {
                     console.log('error');
                     console.log(e);
-                    await this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                    await this.setFont(pageId, fontFile, null);
                 }
             }
         }
@@ -164,23 +156,41 @@ export class PDFDocument {
     }
 
     async setFont(pageId, fontFile, arrayBuffer) {
-        //当获取字体数据错误时，使用默认字体
-        if (!arrayBuffer) {
-            arrayBuffer = StandardFonts.Helvetica;
+        if (!this.embedFonts[pageId]) {
+            this.embedFonts[pageId] = Object.create(null);
         }
+
+        const embedUnicodeFallback = async () => {
+            const fallbackBuffer = await Font.fetchFont(pageId, 'A', Font.UNICODE_FONT);
+            if (fallbackBuffer) {
+                Font.setCache(pageId, fontFile, fallbackBuffer);
+                return this.documentProxy
+                    .embedFont(fallbackBuffer, { subset: true })
+                    .catch(() => this.documentProxy.embedFont(fallbackBuffer));
+            }
+            Font.setCache(pageId, fontFile, StandardFonts.Helvetica);
+            return this.documentProxy.embedFont(StandardFonts.Helvetica);
+        };
+
+        // When font bytes are missing/invalid, fall back to a Unicode-capable font
+        // to avoid WinAnsi encoding errors (e.g. CJK/Hangul/Kana).
+        if (!arrayBuffer) {
+            this.embedFonts[pageId][fontFile] = embedUnicodeFallback();
+            return this.embedFonts[pageId][fontFile];
+        }
+
         Font.setCache(pageId, fontFile, arrayBuffer);
         if (typeof arrayBuffer === 'string') {
             this.embedFonts[pageId][fontFile] = this.documentProxy.embedFont(arrayBuffer);
             return this.embedFonts[pageId][fontFile];
         }
 
-        const shouldSubset = !isCffOtfFont(arrayBuffer);
-        this.embedFonts[pageId][fontFile] = (shouldSubset
-            ? this.documentProxy.embedFont(arrayBuffer, { subset: true })
-            : this.documentProxy.embedFont(arrayBuffer)
-        )
+        this.embedFonts[pageId][fontFile] = this.documentProxy
+            .embedFont(arrayBuffer, { subset: true })
             .catch(() => this.documentProxy.embedFont(arrayBuffer))
+            .catch(embedUnicodeFallback)
             .catch(() => this.documentProxy.embedFont(StandardFonts.Helvetica));
+
         return this.embedFonts[pageId][fontFile];
     }
 
