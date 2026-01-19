@@ -23,6 +23,49 @@ const PdfUnlockTool = dynamic(() => import("@/components/tools/PdfUnlockTool"), 
 const PdfCropTool = dynamic(() => import("@/components/tools/PdfCropTool"), { ssr: false });
 const PdfRedactTool = dynamic(() => import("@/components/tools/PdfRedactTool"), { ssr: false });
 
+const prefetched = new Set<string>();
+
+function prefetchResource(
+  href: string,
+  as?: string,
+  opts?: {
+    rel?: "prefetch" | "preload";
+    priority?: "low" | "high" | "auto";
+  }
+) {
+  if (!href) return;
+  if (!href.startsWith("/pdfeditor/")) return;
+  if (prefetched.has(href)) return;
+  prefetched.add(href);
+
+  const link = document.createElement("link");
+  link.rel = opts?.rel ?? "prefetch";
+  link.href = href;
+  if (as) link.as = as;
+  link.setAttribute("fetchpriority", opts?.priority ?? "low");
+  document.head.appendChild(link);
+}
+
+async function prefetchPdfEditor(signal?: AbortSignal) {
+  // Preload the worker script used by PDF.js for faster first render.
+  prefetchResource("/pdfeditor/assets/js/pdfjs/pdf.worker.min.js", "script", { rel: "preload", priority: "high" });
+
+  const res = await fetch("/pdfeditor/index.html", { signal }).catch(() => null);
+  if (!res?.ok) return;
+  const html = await res.text().catch(() => "");
+  if (!html) return;
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const el of Array.from(doc.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][href]'))) {
+    const href = el.getAttribute("href");
+    if (href) prefetchResource(href, "style", { rel: "preload", priority: "high" });
+  }
+  for (const el of Array.from(doc.querySelectorAll<HTMLScriptElement>("script[src]"))) {
+    const src = el.getAttribute("src");
+    if (src) prefetchResource(src, "script", { rel: "preload", priority: "high" });
+  }
+}
+
 function ToolContent() {
   const params = useParams();
   const toolKey = params.tool as string;
@@ -37,11 +80,44 @@ function ToolContent() {
   const uploadId = searchParams.get("uploadId");
 
   useEffect(() => {
+    if (!isPdfEditor) return;
+    const controller = new AbortController();
+    let idleHandle: number | null = null;
+    let usedIdleCallback = false;
+
+    const schedule = () => {
+      const w = window as unknown as {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+      if (typeof w.requestIdleCallback === "function") {
+        idleHandle = w.requestIdleCallback(() => void prefetchPdfEditor(controller.signal), { timeout: 2500 });
+        usedIdleCallback = true;
+        return;
+      }
+      idleHandle = window.setTimeout(() => void prefetchPdfEditor(controller.signal), 200);
+    };
+
+    schedule();
+    return () => {
+      controller.abort();
+      if (idleHandle !== null) {
+        if (usedIdleCallback) {
+          const w = window as unknown as { cancelIdleCallback?: (handle: number) => void };
+          w.cancelIdleCallback?.(idleHandle);
+        } else {
+          window.clearTimeout(idleHandle);
+        }
+      }
+    };
+  }, [isPdfEditor]);
+
+  useEffect(() => {
     if (!uploadId) return;
     const run = async () => {
       const loaded = await loadUpload(uploadId);
-      await deleteUpload(uploadId);
       if (loaded && loaded.length > 0) setFiles(loaded);
+      void deleteUpload(uploadId).catch(() => {});
     };
     void run();
   }, [uploadId]);

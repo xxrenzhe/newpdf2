@@ -8,9 +8,13 @@ import { savePdfEditorInput, savePdfEditorOutput } from "@/lib/pdfEditorCache";
 import { saveUpload } from "@/lib/uploadStore";
 
 type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
-type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number };
-type PdfPasswordErrorMessage = { type: "pdf-password-error" };
-type PdfErrorMessage = { type: "pdf-error"; message?: string };
+type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number; loadToken?: number };
+type PdfProgressMessage = { type: "pdf-progress"; loaded: number; total?: number; loadToken?: number };
+type PdfPasswordErrorMessage = { type: "pdf-password-error"; loadToken?: number };
+type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number };
+type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
+
+const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 
 const UPLOAD_TIPS = [
   "Uploading and preparing your document. Optimizing for editing...",
@@ -22,10 +26,12 @@ function UploadProgressOverlay({
   open,
   progress,
   tip,
+  onCancel,
 }: {
   open: boolean;
   progress: number;
   tip: string;
+  onCancel?: () => void;
 }) {
   if (!open) return null;
   const clamped = Math.max(0, Math.min(100, progress));
@@ -83,6 +89,18 @@ function UploadProgressOverlay({
             <p className="mt-4 text-gray-600 text-base leading-relaxed">{tip}</p>
           </div>
         </div>
+
+        {onCancel ? (
+          <div className="mt-7 flex justify-end">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -98,6 +116,13 @@ function hasMessageType<T extends string>(value: unknown, type: T): value is { t
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   return v.type === type;
+}
+
+function matchesLoadToken(value: unknown, expectedToken: number) {
+  if (!value || typeof value !== "object") return true;
+  const v = value as Record<string, unknown>;
+  if (typeof v.loadToken !== "number") return true;
+  return v.loadToken === expectedToken;
 }
 
 export default function PdfEditorTool({
@@ -124,44 +149,171 @@ export default function PdfEditorTool({
   actionsPosition?: "inline" | "top-right";
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const fileObjectUrlRef = useRef<string | null>(null);
+  const fileBytesPromiseRef = useRef<Promise<ArrayBuffer> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeLoadTokenRef = useRef(0);
   const fileInputId = useId();
   const router = useRouter();
   const [iframeReady, setIframeReady] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [loadCancelled, setLoadCancelled] = useState(false);
   const appliedToolRef = useRef<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadTip, setUploadTip] = useState(UPLOAD_TIPS[0]!);
   const uploadProgressTimerRef = useRef<number | null>(null);
+  const uploadProgressStartTimeoutRef = useRef<number | null>(null);
+  const hasRealProgressRef = useRef(false);
 
   const outName = useMemo(() => file.name.replace(/\.[^.]+$/, "") + "-edited.pdf", [file.name]);
 
-  const postToEditor = useCallback((message: unknown) => {
+  const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
     const win = iframeRef.current?.contentWindow;
     if (!win) return;
-    win.postMessage(message, "*");
+    if (transfer && transfer.length > 0) {
+      win.postMessage(message, "*", transfer);
+    } else {
+      win.postMessage(message, "*");
+    }
   }, []);
 
   useEffect(() => {
-    void savePdfEditorInput(file).catch(() => {});
+    const useTransfer = file.size <= TRANSFER_PDF_BYTES_LIMIT;
+
+    if (useTransfer) {
+      if (fileObjectUrlRef.current) {
+        try {
+          URL.revokeObjectURL(fileObjectUrlRef.current);
+        } catch {
+          // ignore
+        }
+        fileObjectUrlRef.current = null;
+      }
+      fileBytesPromiseRef.current = file.arrayBuffer();
+      return;
+    }
+
+    fileBytesPromiseRef.current = null;
+    const url = URL.createObjectURL(file);
+    if (fileObjectUrlRef.current) {
+      try {
+        URL.revokeObjectURL(fileObjectUrlRef.current);
+      } catch {
+        // ignore
+      }
+    }
+    fileObjectUrlRef.current = url;
+    return () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        // ignore
+      }
+      if (fileObjectUrlRef.current === url) {
+        fileObjectUrlRef.current = null;
+      }
+    };
   }, [file]);
 
   useEffect(() => {
+    if (!pdfLoaded) return;
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    let usedIdleCallback = false;
+
+    const schedule = () => {
+      const w = window as unknown as {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+      if (typeof w.requestIdleCallback === "function") {
+        usedIdleCallback = true;
+        idleHandle = w.requestIdleCallback(() => {
+          if (cancelled) return;
+          void savePdfEditorInput(file).catch(() => {});
+        }, { timeout: 5000 });
+        return;
+      }
+
+      idleHandle = window.setTimeout(() => {
+        if (cancelled) return;
+        void savePdfEditorInput(file).catch(() => {});
+      }, 500);
+    };
+
+    schedule();
+    return () => {
+      cancelled = true;
+      if (idleHandle === null) return;
+      if (usedIdleCallback) {
+        const w = window as unknown as { cancelIdleCallback?: (handle: number) => void };
+        w.cancelIdleCallback?.(idleHandle);
+      } else {
+        window.clearTimeout(idleHandle);
+      }
+    };
+  }, [file, pdfLoaded]);
+
+  useEffect(() => {
     if (!iframeReady) return;
+    const useTransfer = file.size <= TRANSFER_PDF_BYTES_LIMIT;
+    const token = activeLoadTokenRef.current + 1;
+    activeLoadTokenRef.current = token;
+    let cancelled = false;
     setError("");
     setPdfLoaded(false);
+    setLoadCancelled(false);
     setBusy(true);
     appliedToolRef.current = null;
-    postToEditor({ type: "load-pdf", blob: file });
-    return;
+    hasRealProgressRef.current = false;
+    void (async () => {
+      if (useTransfer) {
+        const promise = fileBytesPromiseRef.current ?? file.arrayBuffer();
+        const buffer = await promise.catch(() => null);
+        if (cancelled || activeLoadTokenRef.current !== token) return;
+        if (!buffer) {
+          postToEditor({ type: "load-pdf", blob: file, loadToken: token });
+          return;
+        }
+        postToEditor({ type: "load-pdf", data: buffer, loadToken: token }, [buffer]);
+        return;
+      }
+
+      const url = fileObjectUrlRef.current;
+      if (url) {
+        if (cancelled || activeLoadTokenRef.current !== token) return;
+        postToEditor({ type: "load-pdf", url, loadToken: token });
+        return;
+      }
+      if (cancelled || activeLoadTokenRef.current !== token) return;
+      postToEditor({ type: "load-pdf", blob: file, loadToken: token });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [file, iframeReady, postToEditor]);
 
   const uploadOverlayOpen = !error && !pdfLoaded && (busy || !iframeReady);
 
+  const cancelLoading = useCallback(() => {
+    const tokenToCancel = activeLoadTokenRef.current;
+    activeLoadTokenRef.current = tokenToCancel + 1;
+    hasRealProgressRef.current = false;
+    setUploadProgress(0);
+    setError("");
+    setPdfLoaded(false);
+    setBusy(false);
+    setLoadCancelled(true);
+    postToEditor({ type: "cancel-load", loadToken: tokenToCancel });
+  }, [postToEditor]);
+
   useEffect(() => {
     if (!uploadOverlayOpen) {
+      if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
+      uploadProgressStartTimeoutRef.current = null;
       if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
       uploadProgressTimerRef.current = null;
       setUploadProgress(0);
@@ -172,20 +324,26 @@ export default function PdfEditorTool({
     setUploadProgress(0);
 
     if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
+    if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
     const started = Date.now();
-    uploadProgressTimerRef.current = window.setInterval(() => {
-      const elapsed = Date.now() - started;
-      const t = Math.min(1, elapsed / 2800);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const next = Math.round(eased * 95);
-      setUploadProgress((prev) => (prev >= 95 ? prev : Math.max(prev, next)));
-      if (next >= 95 && uploadProgressTimerRef.current) {
-        window.clearInterval(uploadProgressTimerRef.current);
-        uploadProgressTimerRef.current = null;
-      }
-    }, 100);
+    uploadProgressStartTimeoutRef.current = window.setTimeout(() => {
+      if (hasRealProgressRef.current) return;
+      uploadProgressTimerRef.current = window.setInterval(() => {
+        const elapsed = Date.now() - started;
+        const t = Math.min(1, elapsed / 2800);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const next = Math.round(eased * 95);
+        setUploadProgress((prev) => (prev >= 95 ? prev : Math.max(prev, next)));
+        if (next >= 95 && uploadProgressTimerRef.current) {
+          window.clearInterval(uploadProgressTimerRef.current);
+          uploadProgressTimerRef.current = null;
+        }
+      }, 100);
+    }, 250);
 
     return () => {
+      if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
+      uploadProgressStartTimeoutRef.current = null;
       if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
       uploadProgressTimerRef.current = null;
     };
@@ -207,21 +365,52 @@ export default function PdfEditorTool({
     const onMessage = (evt: MessageEvent) => {
       if (evt.source !== iframeRef.current?.contentWindow) return;
       if (hasMessageType<PdfLoadedMessage["type"]>(evt.data, "pdf-loaded")) {
+        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
+        hasRealProgressRef.current = false;
         setPdfLoaded(true);
         setBusy(false);
+        setLoadCancelled(false);
+      }
+      if (hasMessageType<PdfProgressMessage["type"]>(evt.data, "pdf-progress")) {
+        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
+        const data = evt.data as PdfProgressMessage;
+        if (!Number.isFinite(data.loaded)) return;
+        const total = typeof data.total === "number" ? data.total : 0;
+        if (!Number.isFinite(total) || total <= 0) return;
+        const ratio = Math.max(0, Math.min(1, data.loaded / total));
+        const pct = Math.min(95, Math.round(ratio * 95));
+        hasRealProgressRef.current = true;
+        if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
+        uploadProgressStartTimeoutRef.current = null;
+        if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
+        uploadProgressTimerRef.current = null;
+        setUploadProgress(pct);
       }
       if (hasMessageType<PdfPasswordErrorMessage["type"]>(evt.data, "pdf-password-error")) {
+        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
+        hasRealProgressRef.current = false;
         setBusy(false);
+        setLoadCancelled(false);
         setError("This PDF is password protected. Please unlock it first, then re-open in the editor.");
       }
       if (hasMessageType<PdfErrorMessage["type"]>(evt.data, "pdf-error")) {
+        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
+        hasRealProgressRef.current = false;
         const rawMessage = (evt.data as PdfErrorMessage).message;
         const message =
           typeof rawMessage === "string" && rawMessage.trim().length > 0
             ? rawMessage.trim()
-            : "Something went wrong while exporting your PDF. Please try again.";
+          : "Something went wrong while exporting your PDF. Please try again.";
         setBusy(false);
+        setLoadCancelled(false);
         setError(message);
+      }
+      if (hasMessageType<PdfLoadCancelledMessage["type"]>(evt.data, "pdf-load-cancelled")) {
+        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
+        hasRealProgressRef.current = false;
+        setBusy(false);
+        setPdfLoaded(false);
+        setLoadCancelled(true);
       }
     };
     window.addEventListener("message", onMessage);
@@ -292,9 +481,24 @@ export default function PdfEditorTool({
       ? "absolute top-3 right-5 flex items-center gap-2"
       : "flex items-center gap-2";
 
+  const statusText = busy
+    ? "Working…"
+    : pdfLoaded
+      ? "Ready"
+      : loadCancelled
+        ? "Canceled"
+        : iframeReady
+          ? "Waiting…"
+          : "Loading…";
+
   return (
     <div className={shellClassName}>
-      <UploadProgressOverlay open={uploadOverlayOpen} progress={uploadProgress} tip={uploadTip} />
+      <UploadProgressOverlay
+        open={uploadOverlayOpen}
+        progress={uploadProgress}
+        tip={uploadTip}
+        onCancel={busy ? cancelLoading : undefined}
+      />
       <div className={headerClassName}>
         <div className={titleClassName}>
           {showBrand ? (
@@ -308,7 +512,7 @@ export default function PdfEditorTool({
           )}
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-            <p className="text-xs text-gray-500">{busy ? "Working…" : pdfLoaded ? "Ready" : "Loading…"}</p>
+            <p className="text-xs text-gray-500">{statusText}</p>
           </div>
         </div>
 

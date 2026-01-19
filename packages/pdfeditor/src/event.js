@@ -12,6 +12,7 @@ export const Events = {
     ERROR: 'error',
     PASSWORD_ERROR: 'password_error',
     READER_INIT: 'reader_init',
+    LOAD_PROGRESS: 'load_progress',
     SET_SCALE: 'set_scale',
     PAGE_ZOOM: 'page_zoom',
     PAGE_ACTIVE: 'page_active',

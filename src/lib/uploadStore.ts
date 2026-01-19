@@ -20,6 +20,8 @@ const DB_VERSION = 2;
 const STORE_NAME = "uploads";
 
 const inMemoryStore = new Map<string, StoredUpload>();
+const pendingDbWrites = new Map<string, Promise<void>>();
+const deletedIds = new Set<string>();
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 let dbFailed = false;
@@ -57,6 +59,30 @@ async function getDb(): Promise<IDBDatabase | null> {
   }
 }
 
+async function putUploadRecord(value: StoredUpload): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(value);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
+  });
+}
+
+async function deleteUploadRecord(id: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB delete failed"));
+  });
+}
+
 export async function saveUpload(files: File[]): Promise<string> {
   const id = safeRandomUUID();
   const value: StoredUpload = {
@@ -70,22 +96,18 @@ export async function saveUpload(files: File[]): Promise<string> {
     })),
   };
 
-  const db = await getDb();
-  if (db) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        tx.objectStore(STORE_NAME).put(value);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
-      });
-      return id;
-    } catch {
-      // Fall back to in-memory storage (Safari Private Browsing / WebKit quirks).
-    }
-  }
-
+  // Always store in-memory first so same-tab navigation can use it immediately.
   inMemoryStore.set(id, value);
+
+  // Persist to IndexedDB in the background as a best-effort fallback.
+  const writePromise = putUploadRecord(value).catch(() => {});
+  pendingDbWrites.set(id, writePromise);
+  void writePromise.finally(() => {
+    pendingDbWrites.delete(id);
+    if (!deletedIds.has(id)) return;
+    deletedIds.delete(id);
+    void deleteUploadRecord(id).catch(() => {});
+  });
 
   return id;
 }
@@ -123,18 +145,21 @@ export async function loadUpload(id: string): Promise<File[] | null> {
 }
 
 export async function deleteUpload(id: string): Promise<void> {
-  if (inMemoryStore.has(id)) {
-    inMemoryStore.delete(id);
-    return;
+  inMemoryStore.delete(id);
+  deletedIds.add(id);
+
+  const pending = pendingDbWrites.get(id);
+  if (pending) {
+    try {
+      await pending;
+    } catch {
+      // ignore
+    }
   }
 
-  const db = await getDb();
-  if (!db) return;
-
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB delete failed"));
-  });
+  try {
+    await deleteUploadRecord(id);
+  } finally {
+    deletedIds.delete(id);
+  }
 }

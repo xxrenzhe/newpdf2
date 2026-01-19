@@ -66,6 +66,14 @@ export class PDFPage extends PDFPageBase {
             this.elTextLayer = document.createElement('div');
             this.elTextLayer.classList.add('textLayer');
             this.elWrapper.appendChild(this.elTextLayer);
+            this.elTextLayer.addEventListener('click', (e) => {
+                const target = e?.target;
+                if (!(target instanceof Element)) return;
+                const elDiv = target.closest('[data-id]');
+                if (!elDiv) return;
+                if (!this.elTextLayer || !this.elTextLayer.contains(elDiv)) return;
+                this.convertWidget(elDiv);
+            });
         }
         this.elTextLayer.style.width = canvas.style.width;
         this.elTextLayer.style.height = canvas.style.height;
@@ -150,9 +158,6 @@ export class PDFPage extends PDFPageBase {
                         elDiv.setAttribute('data-fontname', objs.name);
                     }
                     elements.push(elDiv);
-                    elDiv.addEventListener('click', () => {
-                        this.convertWidget(elDiv);
-                    });
 
                     if ((i+1) == this.textContentItems.length) {
                         this.textParts[n] = {

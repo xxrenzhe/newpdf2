@@ -35,6 +35,7 @@ export class PDFPageBase {
     elDrawLayer = null;
     content = null;
     #canvasImage = null;
+    renderPromise = null;
 
     constructor(pdfDocument, pageNum, scale) {
         this.pdfDocument = pdfDocument;
@@ -112,27 +113,41 @@ export class PDFPageBase {
         if (this.rendered) {
             return this.content;
         }
-
-        switch (renderType) {
-            case 'html':
-                this.content = await this.renderHTML();
-                break;
-            case 'image':
-                this.content = await this.renderImage();
-                break;
-            case 'canvas':
-                this.content = await this.renderCanvas();
-                break;
+        if (this.renderPromise) {
+            return this.renderPromise;
         }
-        this.rendered = true;
-        this.#clearWrapper();
-        this.elWrapper.appendChild(this.content);
-        this.elDrawLayer.style.width = this.content.style.width;
-        this.elDrawLayer.style.height = this.content.style.height;
-        this.elWrapper.style.width = this.content.style.width;
-        this.elWrapper.style.height = this.content.style.height;
-        PDFEvent.dispatch(Events.PAGE_RENDERED, this);
-        return this.content;
+
+        const task = (async () => {
+            switch (renderType) {
+                case 'html':
+                    this.content = await this.renderHTML();
+                    break;
+                case 'image':
+                    this.content = await this.renderImage();
+                    break;
+                case 'canvas':
+                    this.content = await this.renderCanvas();
+                    break;
+            }
+            this.rendered = true;
+            this.#clearWrapper();
+            this.elWrapper.appendChild(this.content);
+            this.elDrawLayer.style.width = this.content.style.width;
+            this.elDrawLayer.style.height = this.content.style.height;
+            this.elWrapper.style.width = this.content.style.width;
+            this.elWrapper.style.height = this.content.style.height;
+            PDFEvent.dispatch(Events.PAGE_RENDERED, this);
+            return this.content;
+        })();
+
+        this.renderPromise = task;
+        try {
+            return await task;
+        } finally {
+            if (this.renderPromise === task) {
+                this.renderPromise = null;
+            }
+        }
     }
 
     /**
@@ -250,10 +265,8 @@ export class PDFPageBase {
         canvas.width = Math.floor(viewport.width * this.outputScale);
         canvas.height = Math.floor(viewport.height * this.outputScale);
         
-        let context = canvas.getContext('2d', { willReadFrequently: true });
-        if (!context) {
-            context = canvas.getContext('2d');
-        }
+        let context = canvas.getContext('2d', { alpha: false });
+        if (!context) context = canvas.getContext('2d');
         let transform = this.outputScale !== 1 ?
             [this.outputScale, 0, 0, this.outputScale, 0, 0] : null;
 

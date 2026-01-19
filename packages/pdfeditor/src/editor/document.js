@@ -213,8 +213,10 @@ export class PDFDocument {
                 page.index++;
                 page.pageNum++;
                 page.elContainer.setAttribute('data-page', page.pageNum);
-                page.elThumbs.setAttribute('data-page', page.pageNum);
-                page.elThumbs.querySelector('.__pdf_page_number').textContent = page.pageNum;
+                if (page.elThumbs) {
+                    page.elThumbs.setAttribute('data-page', page.pageNum);
+                    page.elThumbs.querySelector('.__pdf_page_number').textContent = page.pageNum;
+                }
             }
         });
         this.editor.reader.pdfDocument.pages.splice(newReaderPage.index, 0, newReaderPage);
@@ -228,7 +230,9 @@ export class PDFDocument {
             this.pageRemoved.push(index);
         }
         page.readerPage.elContainer.remove();
-        page.readerPage.elThumbs.remove();
+        if (page.readerPage.elThumbs) {
+            page.readerPage.elThumbs.remove();
+        }
 
         this.pages.forEach(page => {
             if (page.pageNum > pageNum) {
@@ -244,8 +248,10 @@ export class PDFDocument {
                 page.index--;
                 page.pageNum--;
                 page.elContainer.setAttribute('data-page', page.pageNum);
-                page.elThumbs.setAttribute('data-page', page.pageNum);
-                page.elThumbs.querySelector('.__pdf_page_number').textContent = page.pageNum;
+                if (page.elThumbs) {
+                    page.elThumbs.setAttribute('data-page', page.pageNum);
+                    page.elThumbs.querySelector('.__pdf_page_number').textContent = page.pageNum;
+                }
             }
         });
         this.editor.reader.pdfDocument.pages.splice(index, 1);

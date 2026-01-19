@@ -57,10 +57,16 @@ export class PDFDocument {
         if (this.pageActive == pageNum) {
             return;
         }
+        if (!this.reader.thumbsBox) {
+            return;
+        }
         if (setActive) {
             this.setPageActive(pageNum);
         }
         const elThumbs = this.reader.thumbsBox.querySelector('.__pdf_page_preview[data-page="'+ pageNum +'"]');
+        if (!elThumbs) {
+            return;
+        }
         const parentClientRect = this.reader.thumbsBox.getBoundingClientRect();
         let parentBottom = parentClientRect.bottom;
         let parentTop = parentClientRect.top;

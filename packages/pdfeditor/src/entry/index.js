@@ -120,6 +120,8 @@ if (window.parent && window.parent !== window) {
     document.documentElement.classList.add('embed');
 }
 
+let hostLoadToken = 0;
+
 function postToParent(message) {
     try {
         if (window.parent && window.parent !== window) {
@@ -129,6 +131,13 @@ function postToParent(message) {
         // ignore
     }
 }
+
+PDFEvent.on(Events.LOAD_PROGRESS, (evt) => {
+    const loaded = evt?.data?.loaded;
+    const total = evt?.data?.total;
+    if (typeof loaded !== 'number') return;
+    postToParent({ type: 'pdf-progress', loaded, total, loadToken: hostLoadToken });
+});
 
 const reader = new PDFReader({
     // url: null,
@@ -141,8 +150,13 @@ const reader = new PDFReader({
     viewMode: VIEW_MODE.AUTO_ZOOM,
     cMapUrl: cMapUrl,
     standardFontDataUrl: standardFontDataUrl,
+    enableXfa: false,
+    fontExtraProperties: false,
     usePageBase: false,
-    expandThumbs: false
+    expandThumbs: false,
+    lazyThumbs: true,
+    initPageBatchSize: 12,
+    initThumbBatchSize: 40
 }, pdfjsLib);
 
 reader.init();
@@ -205,7 +219,7 @@ elDownload.addEventListener('click', () => {
     const onError = (evt) => {
         try {
             const message = evt?.data?.message || (evt?.data ? String(evt.data) : 'Unknown error');
-            postToParent({ type: 'pdf-error', message });
+            postToParent({ type: 'pdf-error', message, loadToken: hostLoadToken });
         } catch {
             // ignore
         }
@@ -221,9 +235,32 @@ elDownload.addEventListener('click', () => {
 //     editor.toolbar.get('forms').click();
 // });
 
+let readyLoadId = 0;
+let sentLoadedForLoadId = 0;
+let readyFallbackTimer = null;
+
 PDFEvent.on(Events.READER_INIT, () => {
     elDownload.style.display = 'block';
-    postToParent({ type: 'pdf-loaded', pageCount: reader.pageCount });
+    readyLoadId = reader.loadId;
+    if (readyFallbackTimer) {
+        clearTimeout(readyFallbackTimer);
+        readyFallbackTimer = null;
+    }
+    // Kick off page 1 rendering immediately for faster first-screen time.
+    try {
+        reader.pdfDocument?.getPage(1)?.render(reader.options.renderType).catch(() => {});
+    } catch {
+        // ignore
+    }
+
+    // Safety net: if page rendering stalls, don't block the host overlay forever.
+    const thisLoadId = reader.loadId;
+    readyFallbackTimer = setTimeout(() => {
+        if (reader.loadId !== thisLoadId) return;
+        if (sentLoadedForLoadId === thisLoadId) return;
+        sentLoadedForLoadId = thisLoadId;
+        postToParent({ type: 'pdf-loaded', pageCount: reader.pageCount, loadToken: hostLoadToken });
+    }, 15000);
     // let rotate = -90;
     // let width = 300;
     // let height = 200;
@@ -259,13 +296,50 @@ PDFEvent.on(Events.READER_INIT, () => {
     // });
 });
 
+PDFEvent.on(Events.PAGE_RENDERED, (evt) => {
+    const page = evt?.data;
+    if (!page || page.pageNum !== 1) return;
+    if (reader.loadId !== readyLoadId) return;
+    if (sentLoadedForLoadId === reader.loadId) return;
+    sentLoadedForLoadId = reader.loadId;
+    if (readyFallbackTimer) {
+        clearTimeout(readyFallbackTimer);
+        readyFallbackTimer = null;
+    }
+    postToParent({ type: 'pdf-loaded', pageCount: reader.pageCount, loadToken: hostLoadToken });
+});
+
 PDFEvent.on(Events.PASSWORD_ERROR, () => {
-    postToParent({ type: 'pdf-password-error' });
+    postToParent({ type: 'pdf-password-error', loadToken: hostLoadToken });
 });
 
 window.addEventListener('message', e => {
     if (e.data.type == 'load-pdf') {
-        reader.load(URL.createObjectURL(e.data.blob));
+        const payload = e.data || {};
+        hostLoadToken = typeof payload.loadToken === 'number' ? payload.loadToken : 0;
+        if (payload.data instanceof ArrayBuffer) {
+            reader.load(payload.data);
+        } else if (typeof payload.url === 'string' && payload.url) {
+            reader.load(payload.url);
+        } else if (payload.blob instanceof Blob) {
+            reader.load(URL.createObjectURL(payload.blob));
+        }
+    }
+    if (e.data.type === 'cancel-load') {
+        const token = typeof e.data.loadToken === 'number' ? e.data.loadToken : null;
+        if (token !== null && token !== hostLoadToken) return;
+        if (readyFallbackTimer) {
+            clearTimeout(readyFallbackTimer);
+            readyFallbackTimer = null;
+        }
+        const cancelledToken = hostLoadToken;
+        hostLoadToken = 0;
+        try {
+            reader.cancelLoad?.();
+        } catch {
+            // ignore
+        }
+        postToParent({ type: 'pdf-load-cancelled', loadToken: cancelledToken });
     }
     if (e.data.type == 'download') {
         elDownload.click();
