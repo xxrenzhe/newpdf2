@@ -95,11 +95,18 @@ export class PDFDocument {
         }
 
         const page = this.getPageForId(pageId);
-        let commonObjs = page.readerPage.pageProxy.commonObjs;
-        if (commonObjs.has(fontFile)) {
+        const commonObjs = page?.readerPage?.pageProxy?.commonObjs;
+        if (commonObjs?.has?.(fontFile)) {
             let fontFace = commonObjs.get(fontFile);
             arrayBuffer = fontFace.data.buffer;
-            let newFont = opentype.parse(arrayBuffer);
+            let newFont = null;
+            try {
+                newFont = opentype.parse(arrayBuffer);
+            } catch (e) {
+                arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
+                return this.setFont(pageId, fontFile, arrayBuffer);
+            }
+
             text = text.split('').filter((value, index, self) => self.indexOf(value) === index);
             let isFetchFont = text.some(val => (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) == -1));
             let _text = text.map(val => {
@@ -306,6 +313,32 @@ export class PDFDocument {
     }
 
     getPageForId(pageId) {
-        return this.pages.find(page => page.id == pageId);
+        for (let i = 0; i < this.pages.length; i++) {
+            const page = this.pages[i];
+            if (!page) continue;
+            try {
+                if (page.id == pageId) return page;
+            } catch {
+                continue;
+            }
+        }
+
+        // Fallback: resolve from reader pages and create a matching editor page.
+        try {
+            const readerDoc = this.editor?.reader?.pdfDocument;
+            const pageCount = readerDoc?.pageCount;
+            if (typeof pageCount === 'number' && pageCount > 0) {
+                for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+                    const readerPage = readerDoc.getPage(pageNum);
+                    if (readerPage && readerPage.id == pageId) {
+                        return this.getPage(pageNum);
+                    }
+                }
+            }
+        } catch {
+            // ignore
+        }
+
+        return null;
     }
 };

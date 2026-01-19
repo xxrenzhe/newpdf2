@@ -10,6 +10,7 @@ import { saveUpload } from "@/lib/uploadStore";
 type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
 type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number };
 type PdfPasswordErrorMessage = { type: "pdf-password-error" };
+type PdfErrorMessage = { type: "pdf-error"; message?: string };
 
 const UPLOAD_TIPS = [
   "Uploading and preparing your document. Optimizing for editing...",
@@ -212,6 +213,15 @@ export default function PdfEditorTool({
       if (hasMessageType<PdfPasswordErrorMessage["type"]>(evt.data, "pdf-password-error")) {
         setBusy(false);
         setError("This PDF is password protected. Please unlock it first, then re-open in the editor.");
+      }
+      if (hasMessageType<PdfErrorMessage["type"]>(evt.data, "pdf-error")) {
+        const rawMessage = (evt.data as PdfErrorMessage).message;
+        const message =
+          typeof rawMessage === "string" && rawMessage.trim().length > 0
+            ? rawMessage.trim()
+            : "Something went wrong while exporting your PDF. Please try again.";
+        setBusy(false);
+        setError(message);
       }
     };
     window.addEventListener("message", onMessage);

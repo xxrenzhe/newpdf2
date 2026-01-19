@@ -147,7 +147,10 @@ export class PDFEditor {
         });
 
         PDFEvent.on(Events.SAVE, () => {
-            this.pdfDocument.fixFontData();
+            Promise.resolve(this.pdfDocument.fixFontData()).catch(err => {
+                console.log(err);
+                PDFEvent.dispatch(Events.ERROR, err);
+            });
         });
 
         PDFEvent.on(Events.DOWNLOAD, () => {

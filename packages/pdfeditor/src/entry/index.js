@@ -202,7 +202,15 @@ elDownload.addEventListener('click', () => {
         PDFEvent.unbind(Events.ERROR, onError);
     };
 
-    const onError = () => cleanup();
+    const onError = (evt) => {
+        try {
+            const message = evt?.data?.message || (evt?.data ? String(evt.data) : 'Unknown error');
+            postToParent({ type: 'pdf-error', message });
+        } catch {
+            // ignore
+        }
+        cleanup();
+    };
 
     PDFEvent.on(Events.DOWNLOAD_AFTER, cleanup);
     PDFEvent.on(Events.ERROR, onError);
