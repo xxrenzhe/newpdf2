@@ -200,6 +200,29 @@ class TextElement extends BaseElement {
 
         // Pure deletion: cover the original area, but don't embed fonts or draw text.
         if (!hasText) {
+            if (this.attrs.background && !hasCoverBox) {
+                const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
+                let maxWidth = 0;
+
+                if (typeof this.attrs.backgroundWidth === 'number' && Number.isFinite(this.attrs.backgroundWidth)) {
+                    const rect = this.page.readerPage.content.getBoundingClientRect();
+                    if (rect.width) {
+                        const scaleX = this.page.width / rect.width;
+                        maxWidth = Math.max(maxWidth, this.attrs.backgroundWidth * scaleX);
+                    }
+                }
+
+                if (maxWidth > 0) {
+                    this.page.pageProxy.drawRectangle({
+                        x: x,
+                        y: y - ((lines.length - 1) * lineHeight) - 3.5,
+                        width: maxWidth + 2.5,
+                        height: lines.length * (lineHeight + thickness) - 2,
+                        color: this.editor.PDFLib.componentsToColor(bgRgb.map(v => (v / 255))),
+                        opacity: this.attrs.opacity
+                    });
+                }
+            }
             return;
         }
 

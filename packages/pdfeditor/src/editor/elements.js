@@ -122,6 +122,24 @@ export class Elements {
 
     remove(id) {
         const element = this.get(id);
+        if (!element) return;
+
+        // Converted original PDF text needs a "soft delete" so export can still cover/redact
+        // the original glyphs. Removing the element outright would make the deleted text
+        // reappear in the saved PDF because the source content is unchanged.
+        const isConvertedText = element.dataType === 'text' && element.attrs?.coverOriginal;
+        if (isConvertedText) {
+            if (element.elText) {
+                element.elText.textContent = '';
+            }
+            element.edit({
+                text: '',
+                hidden: true
+            });
+            this.activeId = null;
+            return;
+        }
+
         element.remove();
         delete this.items[id];
         this.activeId = null;

@@ -231,6 +231,7 @@ class BaseElement {
         });
         this.attrs = Object.assign(this.attrs, attrs);
         this.setStyle(this.attrs);
+        this.el.classList.toggle('__pdf_el_hidden', Boolean(this.attrs.hidden));
         this.zoom(this.scale);
         PDFEvent.dispatch(Events.ELEMENT_UPDATE_AFTER, Object.assign({}, {
             page: this.page,
@@ -431,6 +432,7 @@ class BaseElement {
         // this.page.readerPage.elWrapper.appendChild(this.el);
         this.page.readerPage.elElementLayer.appendChild(this.el);
 
+        this.el.classList.toggle('__pdf_el_hidden', Boolean(this.attrs.hidden));
         this.setActualRect();
 
         PDFEvent.dispatch(Events.ELEMENT_RENDERD, {

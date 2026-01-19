@@ -1,5 +1,9 @@
 @import url('./theme.css');
 
+.__pdf_el_hidden {
+    display: none !important;
+}
+
 .pdf-toolbar {
     display: flex;
     align-items: center;
