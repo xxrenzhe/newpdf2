@@ -53,8 +53,8 @@ class TextBoxElement extends TextElement {
         }
         this.elText.style.color = this.attrs.color;
         this.elText.style.fontSize = this.attrs.size + 'px';
-        this.elText.style.fontWeight = this.attrs.bold ? 'bold' : '';
-        this.elText.style.fontStyle = this.attrs.italic ? 'italic' : '';
+        this.elText.style.fontWeight = this.attrs.bold ? 'bold' : 'normal';
+        this.elText.style.fontStyle = this.attrs.italic ? 'italic' : 'normal';
         this.elText.style.fontFamily = this.attrs.fontFamily;
         this.elText.style.lineHeight = this.attrs.lineHeight + 'px';
         this.elText.style.opacity = this.attrs.textOpacity;
@@ -181,8 +181,8 @@ class TextBoxElement extends TextElement {
         const elTemp = document.createElement('span');
         elTemp.style.opacity = 0;
         elTemp.style.fontSize = this.attrs.size * this.scale + 'px';
-        elTemp.style.fontWeight = this.attrs.bold ? 'bold' : '';
-        elTemp.style.fontStyle = this.attrs.italic ? 'italic' : '';
+        elTemp.style.fontWeight = this.attrs.bold ? 'bold' : 'normal';
+        elTemp.style.fontStyle = this.attrs.italic ? 'italic' : 'normal';
         elTemp.style.fontFamily = this.attrs.fontFamily;
         elTemp.textContent = this.attrs.text[0];
         document.body.appendChild(elTemp);

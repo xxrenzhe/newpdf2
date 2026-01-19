@@ -221,10 +221,17 @@ export class PDFPage extends PDFPageBase {
         const textPart = this.textParts[idx];
         let x = parseFloat(elDiv.style.left);
         let y = parseFloat(elDiv.style.top);
-        let fontName = textPart.elements[0].getAttribute('data-fontname')?.toLocaleLowerCase();;
-        let bold = fontName && fontName.indexOf('bold') > -1 ? true : false;
-        let italic = fontName && (fontName.indexOf('oblique') > -1 || fontName.indexOf('italic') > -1);
-        if (italic) {
+        // PDF.js already selects the correct font face (regular/bold/italic) for the text layer.
+        // Applying CSS bold/italic on top of that causes "synthetic" styling and can make text
+        // appear thicker than the original PDF.
+        const bold = false;
+        const italic = false;
+
+        // Keep the historical width tweak for italic PDF fonts so the cover box doesn't clip.
+        const rawFontName = textPart.elements[0].getAttribute('data-fontname');
+        const fontName = typeof rawFontName === 'string' ? rawFontName.toLowerCase() : '';
+        const isItalicFont = fontName.includes('oblique') || fontName.includes('italic');
+        if (isItalicFont) {
             elDiv.style.width = (parseFloat(elDiv.style.width) + 3) + 'px';
         }
 

@@ -47,8 +47,8 @@ class TextElement extends BaseElement {
         }
         this.elText.style.color = this.attrs.color;
         this.elText.style.fontSize = this.attrs.size + 'px';
-        this.elText.style.fontWeight = this.attrs.bold ? 'bold' : '';
-        this.elText.style.fontStyle = this.attrs.italic ? 'italic' : '';
+        this.elText.style.fontWeight = this.attrs.bold ? 'bold' : 'normal';
+        this.elText.style.fontStyle = this.attrs.italic ? 'italic' : 'normal';
         this.elText.style.background = this.attrs.background;
         this.elText.style.fontFamily = this.attrs.fontFamily;
         this.elText.style.lineHeight = this.attrs.lineHeight + 'px';
