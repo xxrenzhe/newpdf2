@@ -232,7 +232,24 @@ export class PDFPage extends PDFPageBase {
         let color = elDiv.getAttribute('data-fontcolor');
         let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), x * this.outputScale, y * this.outputScale);
         let fontFamily = elDiv.getAttribute('data-loadedname') || 'Helvetica';
-        const coverWidth = elDiv.getBoundingClientRect().width;
+        const coverRect = elDiv.getBoundingClientRect();
+        const coverWidth = coverRect.width;
+        const coverHeight = coverRect.height;
+
+        // Store a stable "cover box" in PDF units for export-time redaction.
+        // This avoids relying on edited text metrics (which shrink when deleting text),
+        // and ensures we can still cover the original glyphs when the user clears text.
+        const contentRect = this.content.getBoundingClientRect();
+        const pdfWidth = this.pageProxy?.view?.[2] || 0;
+        const pdfHeight = this.pageProxy?.view?.[3] || 0;
+        const pxToPdfX = contentRect.width ? pdfWidth / contentRect.width : 0;
+        const pxToPdfY = contentRect.height ? pdfHeight / contentRect.height : 0;
+        const coverPaddingX = 2;
+        const coverPaddingY = 2;
+        const coverOffsetX = pxToPdfX ? -coverPaddingX * pxToPdfX : 0;
+        const coverOffsetY = pxToPdfY ? -coverPaddingY * pxToPdfY : 0;
+        const coverWidthPdf = pxToPdfX ? (coverWidth + coverPaddingX * 2) * pxToPdfX : 0;
+        const coverHeightPdf = pxToPdfY ? (coverHeight + coverPaddingY * 2) * pxToPdfY : 0;
 
         // textPart.elements.forEach(async (element, i) => {
         //     if (fontSize == 0) {
@@ -261,6 +278,11 @@ export class PDFPage extends PDFPageBase {
                 // Cover the original glyphs when exporting without relying on PDF.js worker patches.
                 background: bgColor,
                 backgroundWidth: coverWidth,
+                coverOriginal: true,
+                coverOffsetX: coverOffsetX,
+                coverOffsetY: coverOffsetY,
+                coverWidth: coverWidthPdf,
+                coverHeight: coverHeightPdf,
                 bold: bold,
                 italic: italic,
                 rotate: null

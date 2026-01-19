@@ -101,12 +101,18 @@ class TextElement extends BaseElement {
 
         this.elText.addEventListener('blur', e => {
             if (!trimSpace(this.attrs.text)) {
-                PDFEvent.dispatch(Events.HISTORY_REMOVE, {
-                    page: this.page,
-                    element: this
-                });
-                this.page.elements.remove(this.id);
-                return;
+                // For newly-created text, an empty value means the element should be removed.
+                // For converted existing PDF text, we keep an empty element so export can still
+                // draw a background "cover box" to redact the original glyphs.
+                if (!this.attrs.coverOriginal) {
+                    PDFEvent.dispatch(Events.HISTORY_REMOVE, {
+                        page: this.page,
+                        element: this
+                    });
+                    this.page.elements.remove(this.id);
+                    return;
+                }
+                this.elText.textContent = '';
             }
             // this.disableDrag = false;
             // this.elText.setAttribute('contenteditable', false);
@@ -144,9 +150,12 @@ class TextElement extends BaseElement {
     }
 
     async insertToPDF() {
+        const rawText = typeof this.attrs.text === 'string' ? this.attrs.text : '';
+        const hasText = trimSpace(rawText) !== '';
+
         let lineTop = 2.5;
         let fontSize = this.attrs.size;
-        let lines = this.attrs.text.split(/[\n\f\r\u000B]/);
+        let lines = rawText.split(/[\n\f\r\u000B]/);
         let thickness = this.attrs.lineStyle ? fontSize / 14 : 0;
         let x = this.getX();
         let y = this.page.height - (this.getY() + fontSize - fontSize * 0.3);
@@ -155,6 +164,45 @@ class TextElement extends BaseElement {
 
         const textRgb = hexToRgb(this.attrs.color) || [0, 0, 0];
 
+        // When editing existing PDF text, we store a "cover box" that can fully hide
+        // the original glyphs even if the new text becomes shorter/empty.
+        const hasCoverBox = Boolean(
+            this.attrs.coverOriginal
+            && typeof this.attrs.coverWidth === 'number'
+            && Number.isFinite(this.attrs.coverWidth)
+            && this.attrs.coverWidth > 0
+            && typeof this.attrs.coverHeight === 'number'
+            && Number.isFinite(this.attrs.coverHeight)
+            && this.attrs.coverHeight > 0
+        );
+
+        if (this.attrs.background && hasCoverBox) {
+            const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
+            const coverOffsetX = (typeof this.attrs.coverOffsetX === 'number' && Number.isFinite(this.attrs.coverOffsetX))
+                ? this.attrs.coverOffsetX
+                : 0;
+            const coverOffsetY = (typeof this.attrs.coverOffsetY === 'number' && Number.isFinite(this.attrs.coverOffsetY))
+                ? this.attrs.coverOffsetY
+                : 0;
+            const coverX = x + coverOffsetX;
+            const coverTopY = this.getY() + coverOffsetY;
+            const coverY = this.page.height - (coverTopY + this.attrs.coverHeight);
+
+            this.page.pageProxy.drawRectangle({
+                x: coverX,
+                y: coverY,
+                width: this.attrs.coverWidth,
+                height: this.attrs.coverHeight,
+                color: this.editor.PDFLib.componentsToColor(bgRgb.map(v => (v / 255))),
+                opacity: this.attrs.opacity
+            });
+        }
+
+        // Pure deletion: cover the original area, but don't embed fonts or draw text.
+        if (!hasText) {
+            return;
+        }
+
         let options = {
             x: x,
             y: y,
@@ -162,11 +210,12 @@ class TextElement extends BaseElement {
             color: this.editor.PDFLib.componentsToColor(textRgb.map(v => (v / 255))),
             opacity: this.attrs.opacity,
             lineHeight: lineHeight,
-            font: await this.pdfDocument.getFont(this.page.id, this.attrs.text, this.attrs.fontFile),
+            font: await this.pdfDocument.getFont(this.page.id, rawText, this.attrs.fontFile),
             rotate: this.attrs.rotate ? this.degrees(this.attrs.rotate) : undefined
         };
 
-        if (this.attrs.background) {
+        // Fallback: background cover based on text metrics (used for newly-created text).
+        if (this.attrs.background && !hasCoverBox) {
             const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
             let maxWidth = 0;
             if (options.font) {
@@ -195,7 +244,7 @@ class TextElement extends BaseElement {
                 opacity: options.opacity
             });
         }
-        this.page.pageProxy.drawText(this.attrs.text, options);
+        this.page.pageProxy.drawText(rawText, options);
 
         if (this.attrs.lineStyle) {
             let lineY = 0;

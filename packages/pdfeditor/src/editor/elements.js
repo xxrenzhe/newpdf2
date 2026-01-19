@@ -79,7 +79,10 @@ export class Elements {
     async insertToPDF() {
         for (let i in this.items) {
             const item = this.items[i];
-            if (['text', 'textbox', 'textCanvans'].indexOf(item.dataType) > -1 && trimSpace(item.attrs.text) == '') { //内容为空时删除
+            const isTextLike = ['text', 'textbox', 'textCanvans', 'textCanvas'].indexOf(item.dataType) > -1;
+            const isEmptyText = trimSpace(item.attrs?.text || '') == '';
+            // Keep converted text elements even when empty so export can cover/redact the original glyphs.
+            if (isTextLike && isEmptyText && !item.attrs?.coverOriginal) {
                 this.remove(this.items[i].id);
                 continue;
             }
