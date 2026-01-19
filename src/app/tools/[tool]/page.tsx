@@ -8,6 +8,7 @@ import FileDropzone from "@/components/tools/FileDropzone";
 import { deleteUpload, loadUpload } from "@/lib/uploadStore";
 import { toolByKey, TOOLS } from "@/lib/tools";
 import { clearPdfEditorCache, loadPdfEditorInput, loadPdfEditorOutput } from "@/lib/pdfEditorCache";
+import { isIndexedDbWritable } from "@/lib/indexedDbSupport";
 
 const PdfEditorTool = dynamic(() => import("@/features/pdf-editor/PdfEditorTool"), { ssr: false });
 const PdfCompressTool = dynamic(() => import("@/components/tools/PdfCompressTool"), { ssr: false });
@@ -74,10 +75,27 @@ function ToolContent() {
   const isPdfEditor = toolKey === "annotate" || toolKey === "edit";
 
   const [files, setFiles] = useState<File[]>([]);
+  const [storageWritable, setStorageWritable] = useState<boolean | null>(null);
   const [resumeInput, setResumeInput] = useState<File | null>(null);
   const [resumeOutput, setResumeOutput] = useState<File | null>(null);
   const [resumeBusy, setResumeBusy] = useState(false);
   const uploadId = searchParams.get("uploadId");
+
+  useEffect(() => {
+    let cancelled = false;
+    void isIndexedDbWritable()
+      .then((ok) => {
+        if (cancelled) return;
+        setStorageWritable(ok);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStorageWritable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isPdfEditor) return;
@@ -205,6 +223,16 @@ function ToolContent() {
               </Link>
             </div>
           </div>
+          )}
+
+          {storageWritable === false && (
+            <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-medium">Limited browser storage</p>
+              <p className="mt-1">
+                Your file will still open and process normally in this tab, but we can’t save it for later. This often
+                happens in Private Browsing. If you refresh or close this page, you may need to upload the file again.
+              </p>
+            </div>
           )}
 
           {files.length === 0 ? (
