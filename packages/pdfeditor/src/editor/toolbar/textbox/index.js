@@ -297,7 +297,7 @@ class TextBox extends Rect {
             applyColor(instance.getColor());
         });
 
-        bgColorPickr.on('swatchselect', objColor => {
+        textColorPickr.on('swatchselect', objColor => {
             applyColor(objColor);
         });
 
