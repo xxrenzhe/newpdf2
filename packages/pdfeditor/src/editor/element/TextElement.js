@@ -1,5 +1,6 @@
 import { hexToRgb, trimSpace } from '../../misc';
 import { Events, PDFEvent } from '../../event';
+import { Font } from '../../font';
 import { BaseElement } from './BaseElement';
 
 class TextElement extends BaseElement {
@@ -163,6 +164,10 @@ class TextElement extends BaseElement {
         //let lineHeight = options.font.heightAtSize(fontSize);
 
         const textRgb = hexToRgb(this.attrs.color) || [0, 0, 0];
+        const preferredFontFile = this.attrs.fontFile;
+        const angleRad = this.attrs.rotate ? (this.attrs.rotate * Math.PI) / 180 : 0;
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
 
         // When editing existing PDF text, we store a "cover box" that can fully hide
         // the original glyphs even if the new text becomes shorter/empty.
@@ -226,6 +231,18 @@ class TextElement extends BaseElement {
             return;
         }
 
+        const lineRuns = lines.map(line => Font.splitTextByFont(line, preferredFontFile));
+        const lineWidths = [];
+        for (const runs of lineRuns) {
+            let width = 0;
+            for (const run of runs) {
+                const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
+                if (!font) continue;
+                width += font.widthOfTextAtSize(run.text, fontSize);
+            }
+            lineWidths.push(width);
+        }
+
         let options = {
             x: x,
             y: y,
@@ -233,22 +250,13 @@ class TextElement extends BaseElement {
             color: this.editor.PDFLib.componentsToColor(textRgb.map(v => (v / 255))),
             opacity: this.attrs.opacity,
             lineHeight: lineHeight,
-            font: await this.pdfDocument.getFont(this.page.id, rawText, this.attrs.fontFile),
             rotate: this.attrs.rotate ? this.degrees(this.attrs.rotate) : undefined
         };
 
         // Fallback: background cover based on text metrics (used for newly-created text).
         if (this.attrs.background && !hasCoverBox) {
             const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
-            let maxWidth = 0;
-            if (options.font) {
-                lines.forEach(v => {
-                    let w = options.font.widthOfTextAtSize(v, fontSize);
-                    if (w > maxWidth) {
-                        maxWidth = w;
-                    }
-                });
-            }
+            let maxWidth = Math.max(0, ...lineWidths);
 
             if (typeof this.attrs.backgroundWidth === 'number' && Number.isFinite(this.attrs.backgroundWidth)) {
                 const rect = this.page.readerPage.content.getBoundingClientRect();
@@ -267,7 +275,27 @@ class TextElement extends BaseElement {
                 opacity: options.opacity
             });
         }
-        this.page.pageProxy.drawText(rawText, options);
+        for (let i = 0; i < lineRuns.length; i++) {
+            const runs = lineRuns[i];
+            const lineX = x + sin * lineHeight * i;
+            const lineY = y - cos * lineHeight * i;
+            let cursorX = lineX;
+            let cursorY = lineY;
+
+            for (const run of runs) {
+                const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
+                if (!font) continue;
+                this.page.pageProxy.drawText(run.text, {
+                    ...options,
+                    x: cursorX,
+                    y: cursorY,
+                    font
+                });
+                const advance = font.widthOfTextAtSize(run.text, fontSize);
+                cursorX += cos * advance;
+                cursorY += sin * advance;
+            }
+        }
 
         if (this.attrs.lineStyle) {
             let lineY = 0;
@@ -279,7 +307,7 @@ class TextElement extends BaseElement {
                 }
                 this.page.pageProxy.drawLine({
                     start: { x: x, y: lineY },
-                    end: { x: x + (options.font ? options.font.widthOfTextAtSize(lines[i], fontSize) : 0), y: lineY },
+                    end: { x: x + (lineWidths[i] || 0), y: lineY },
                     thickness: thickness,
                     // color: options.color,
                     color: this.editor.PDFLib.componentsToColor(hexToRgb('#ff0000').map(v => (v / 255))),

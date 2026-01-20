@@ -40,15 +40,22 @@ export class PDFDocument {
                 let item = page.elements.items[id];
                 if (['text', 'textbox'].indexOf(item.dataType) < 0) continue;
                 if (!trimSpace(item.attrs?.text || '')) continue;
-                if (!texts[page.id]) {
-                    texts[page.id] = Object.create(null);
+                const lines = String(item.attrs.text || '').split(/[\n\f\r\u000B]/);
+                for (const line of lines) {
+                    const runs = Font.splitTextByFont(line, item.attrs.fontFile);
+                    for (const run of runs) {
+                        if (!trimSpace(run.text || '')) continue;
+                        if (!texts[page.id]) {
+                            texts[page.id] = Object.create(null);
+                        }
+                        if (!texts[page.id][run.fontFile]) {
+                            texts[page.id][run.fontFile] = run.text;
+                        } else {
+                            texts[page.id][run.fontFile] += run.text;
+                        }
+                        this.embedFonts[page.id][run.fontFile] = null;
+                    }
                 }
-                if (!texts[page.id][item.attrs.fontFile]) {
-                    texts[page.id][item.attrs.fontFile] = item.attrs.text;
-                } else {
-                    texts[page.id][item.attrs.fontFile] += item.attrs.text;
-                }
-                this.embedFonts[page.id][item.attrs.fontFile] = null;
             }
         }
         

@@ -1,6 +1,7 @@
 import { Events, PDFEvent } from '../event';
 import { elSliderHide, elSliderShow, elSliderToggle, mergeDeep } from '../misc';
 import * as PDFLib from 'pdf-lib';
+import regeneratorRuntime from '@babel/runtime/regenerator';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument } from './document';
 import { Font } from '../font';
@@ -8,6 +9,10 @@ import { saveAs } from 'file-saver';
 import { Toolbar } from './toolbar';
 import { History } from './history';
 import { Locale } from '../locale';
+
+if (!globalThis.regeneratorRuntime) {
+    globalThis.regeneratorRuntime = regeneratorRuntime;
+}
 
 const DISABLED_CLASS = 'disabled';
 const DRAW_ICON_COLOR_CLASS = 'draw_icon_color';

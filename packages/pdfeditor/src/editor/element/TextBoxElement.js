@@ -1,4 +1,5 @@
 import { hexToRgb } from '../../misc';
+import { Font } from '../../font';
 import { TextElement } from './TextElement';
 
 class TextBoxElement extends TextElement {
@@ -115,15 +116,30 @@ class TextBoxElement extends TextElement {
         let x = this.getX();
         let y = this.page.height - (this.getY() + fontSize - 2);
         let lineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : (fontSize - 2)) + lineTop;
+        const preferredFontFile = this.attrs.fontFile;
+        const angleRad = this.attrs.rotate ? (this.attrs.rotate * Math.PI) / 180 : 0;
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
+
+        const lineRuns = lines.map(line => Font.splitTextByFont(line, preferredFontFile));
+        const lineWidths = [];
+        for (const runs of lineRuns) {
+            let width = 0;
+            for (const run of runs) {
+                const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
+                if (!font) continue;
+                width += font.widthOfTextAtSize(run.text, fontSize);
+            }
+            lineWidths.push(width);
+        }
 
         let options = {
             x: x,
             y: y,
             size: fontSize,
             color: this.editor.PDFLib.componentsToColor(hexToRgb(this.attrs.color).map(v => (v / 255))),
-            opacity: this.attrs.opacity,
+            opacity: this.attrs.textOpacity,
             lineHeight: lineHeight,
-            font: await this.pdfDocument.getFont(this.page.id, this.attrs.text, this.attrs.fontFile),
             rotate: this.attrs.rotate ? this.degrees(this.attrs.rotate) : undefined
         };
 
@@ -150,8 +166,27 @@ class TextBoxElement extends TextElement {
             this.page.pageProxy.drawRectangle(_options);
         }
 
-        options.opacity = this.attrs.textOpacity;
-        this.page.pageProxy.drawText(this.attrs.text, options);
+        for (let i = 0; i < lineRuns.length; i++) {
+            const runs = lineRuns[i];
+            const lineX = x + sin * lineHeight * i;
+            const lineY = y - cos * lineHeight * i;
+            let cursorX = lineX;
+            let cursorY = lineY;
+
+            for (const run of runs) {
+                const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
+                if (!font) continue;
+                this.page.pageProxy.drawText(run.text, {
+                    ...options,
+                    x: cursorX,
+                    y: cursorY,
+                    font
+                });
+                const advance = font.widthOfTextAtSize(run.text, fontSize);
+                cursorX += cos * advance;
+                cursorY += sin * advance;
+            }
+        }
         
         if (this.attrs.lineStyle) {
             let lineY = 0;
@@ -163,7 +198,7 @@ class TextBoxElement extends TextElement {
                 }
                 this.page.pageProxy.drawLine({
                     start: { x: x, y: lineY },
-                    end: { x: x + options.font.widthOfTextAtSize(lines[i], fontSize), y: lineY },
+                    end: { x: x + (lineWidths[i] || 0), y: lineY },
                     thickness: thickness,
                     // color: options.color,
                     color: this.editor.PDFLib.componentsToColor(hexToRgb('#ff0000').map(v => (v / 255))),
