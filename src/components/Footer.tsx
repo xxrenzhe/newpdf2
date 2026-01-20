@@ -77,12 +77,12 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link href="/app/sign-in" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
-                  Sign In
+                  Sign in
                 </Link>
               </li>
               <li>
-                <Link href="/app/sign-up" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
-                  Register
+                <Link href="/app/sign-in" className="text-gray-600 hover:text-[#2d85de] transition-colors text-base">
+                  Continue with Google
                 </Link>
               </li>
               <li>

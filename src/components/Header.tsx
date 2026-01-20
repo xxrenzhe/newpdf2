@@ -59,20 +59,9 @@ export default function Header() {
               </>
             ) : (
               <>
-                {/* Sign In Button */}
                 <Link href="/app/sign-in">
-                  <Button
-                    variant="outline"
-                    className="hidden sm:flex border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-4 py-2 h-10 rounded-lg"
-                  >
-                    Sign in
-                  </Button>
-                </Link>
-
-                {/* Sign Up Button */}
-                <Link href="/app/sign-up">
                   <Button className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium px-4 py-2 h-10 rounded-lg">
-                    Sign up
+                    Continue with Google
                   </Button>
                 </Link>
               </>

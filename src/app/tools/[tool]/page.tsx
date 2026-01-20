@@ -9,6 +9,7 @@ import { deleteUpload, loadUpload } from "@/lib/uploadStore";
 import { toolByKey, TOOLS } from "@/lib/tools";
 import { clearPdfEditorCache, loadPdfEditorInput, loadPdfEditorOutput } from "@/lib/pdfEditorCache";
 import { isIndexedDbWritable } from "@/lib/indexedDbSupport";
+import GuestQuotaBanner from "@/components/auth/GuestQuotaBanner";
 
 const PdfEditorTool = dynamic(() => import("@/features/pdf-editor/PdfEditorTool"), { ssr: false });
 const PdfCompressTool = dynamic(() => import("@/components/tools/PdfCompressTool"), { ssr: false });
@@ -194,6 +195,7 @@ function ToolContent() {
   return (
     <main className={isPdfEditor && files.length > 0 ? "py-4 md:py-6" : "py-12 md:py-20"}>
         <div className={isPdfEditor && files.length > 0 ? "w-full px-2 md:px-4 lg:px-6" : "container mx-auto px-4 md:px-6 lg:px-8"}>
+          <GuestQuotaBanner />
           {/* Tool Header */}
           {!(isPdfEditor && files.length > 0) && (
           <div className="text-center max-w-2xl mx-auto mb-10">

@@ -5,6 +5,7 @@ import Link from "@/components/AppLink";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FileDropzone from "@/components/tools/FileDropzone";
+import GuestQuotaBanner from "@/components/auth/GuestQuotaBanner";
 import { toolByKey } from "@/lib/tools";
 import { createGuestDocument, loadGuestDocument, updateGuestDocumentFiles, updateGuestDocumentTool } from "@/lib/guestDocumentStore";
 import { chosenToolFromToolKey, displayToolKeyFromChosenTool, pdfEditorInitialTool, toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
@@ -166,8 +167,8 @@ export default function GuestDocumentClient() {
             <Link href="/app/sign-in" className="text-sm text-gray-600 hover:text-gray-900 hidden sm:inline">
               Sign in
             </Link>
-            <Link href="/app/sign-up" className="text-sm px-3 py-2 rounded-lg bg-[#2d85de] text-white hover:bg-[#2473c4] hidden sm:inline">
-              Sign up
+            <Link href="/app/sign-in" className="text-sm px-3 py-2 rounded-lg bg-[#2d85de] text-white hover:bg-[#2473c4] hidden sm:inline">
+              Continue with Google
             </Link>
           </div>
           {documentId ? <div className="px-3 py-2 border-t border-gray-100">{switcher}</div> : null}
@@ -175,6 +176,9 @@ export default function GuestDocumentClient() {
       ) : null}
 
       <div className={showEditor && isPdfEditor ? "p-0" : showEditor ? "py-4 px-2 md:px-4 lg:px-6" : "py-12 px-4"}>
+        <div className={showEditor && isPdfEditor ? "p-4" : "max-w-3xl mx-auto"}>
+          <GuestQuotaBanner />
+        </div>
         {!documentId && (
           <div className="max-w-2xl mx-auto text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{toolDef.name}</h1>

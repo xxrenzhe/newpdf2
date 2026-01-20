@@ -69,10 +69,7 @@ export default function UnsubscribePage() {
                 Difficulties signing into your account?
               </h2>
               <p className="text-gray-600 mb-4">
-                If you have any trouble logging in, we suggest you reset your account password by{" "}
-                <Link href="/app/forgot-password" className="text-[#2d85de] hover:underline">
-                  clicking here.
-                </Link>
+                If you have any trouble logging in, please try signing in with Google again.
               </p>
               <p className="text-gray-600">
                 If you still have issues, please{" "}

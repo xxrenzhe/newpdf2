@@ -3,6 +3,8 @@
 import { PDFDocument, degrees, rgb } from "pdf-lib";
 import JSZip from "jszip";
 import * as fabric from "fabric";
+import { getClientAuthStatus } from "@/lib/clientAuthState";
+import { consumeGuestDownload, getGuestQuotaState } from "@/lib/guestQuota";
 import { decryptPdfBytes, encryptPdfBytes } from "./qpdf";
 import { drawPreparedTextLines, prepareTextLinesWithFallback } from "./textFallback";
 
@@ -10,6 +12,16 @@ export type PdfCompressPreset = "balanced" | "small" | "smallest";
 export type PdfRasterPreset = PdfCompressPreset;
 
 export function downloadBlob(blob: Blob, filename: string) {
+  const authed = getClientAuthStatus();
+  if (authed === false) {
+    const quota = getGuestQuotaState();
+    if (quota.remaining <= 0) {
+      window.alert("Guest daily download limit reached. Continue with Google to download more.");
+      return;
+    }
+    consumeGuestDownload(1);
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

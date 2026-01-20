@@ -25,7 +25,7 @@ export default function BannerSection() {
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-8 leading-tight">
               All the PDF tools you need, in a single platform
             </h2>
-            <Link href="/sign-up">
+            <Link href="/sign-in">
               <Button className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-semibold px-10 py-4 h-14 rounded-xl text-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all duration-300">
                 Get Started Free
               </Button>

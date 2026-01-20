@@ -77,6 +77,14 @@ export async function createCustomer(email: string, name?: string) {
   return customer;
 }
 
+export async function ensureCustomerForEmail(email: string, name?: string) {
+  const stripe = getStripe();
+  const existing = await stripe.customers.list({ email, limit: 1 });
+  const first = existing.data[0];
+  if (first) return first;
+  return createCustomer(email, name);
+}
+
 export async function getSubscription(subscriptionId: string) {
   const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
   return subscription;
