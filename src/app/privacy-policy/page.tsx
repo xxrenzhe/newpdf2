@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
             <h1 className="text-4xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
 
             <p className="text-gray-600 mb-6">
-              This privacy notice for Files Editor ("Company", "Site", "Website", "Application", "we", "us", or "our"), describes how and why we might collect, store, use, and/or share ("process") your information when you use our services ("Services"), such as when you:
+              This privacy notice for QwerPDF ("Company", "Site", "Website", "Application", "we", "us", or "our"), describes how and why we might collect, store, use, and/or share ("process") your information when you use our services ("Services"), such as when you:
             </p>
 
             <p className="text-gray-600 mb-6">
@@ -33,13 +33,13 @@ export default function PrivacyPolicyPage() {
               We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Services, or otherwise when you contact us.
             </p>
             <p className="text-gray-600 mb-6">
-              <strong>Personal Information Provided by You.</strong> Files Editor requires each customer to provide us with personal information (email address for example) to access and use Files Editor products and services. The personal information that we collect depends on the context of your interactions with us and the Services, the choices you make, and the products and features you use.
+              <strong>Personal Information Provided by You.</strong> QwerPDF requires each customer to provide us with personal information (email address for example) to access and use QwerPDF products and services. The personal information that we collect depends on the context of your interactions with us and the Services, the choices you make, and the products and features you use.
             </p>
             <p className="text-gray-600 mb-6">
               <strong>Payment Data.</strong> Our Payment provider may collect necessary payment data to process your payment if you make purchases. You may find their privacy notice link(s) here: https://solidgate.com/privacy-policy/
             </p>
             <p className="text-gray-600 mb-6">
-              <strong>Cookies.</strong> Files Editor may utilize the standard cookie functionality of popular browser applications and third-party providers, such as Google Analytics features, or implement cookies and tracking codes.
+              <strong>Cookies.</strong> QwerPDF may utilize the standard cookie functionality of popular browser applications and third-party providers, such as Google Analytics features, or implement cookies and tracking codes.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">2. How Do We Process Your Information?</h2>
@@ -115,7 +115,7 @@ export default function PrivacyPolicyPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Cookie Policy</h1>
 
             <p className="text-gray-600 mb-6">
-              This Cookie Policy explains how Files Editor ("Company", "Site", "Website", "Application", "we", "us", or "our") uses cookies and similar technologies to recognize you when you visit our website at https://files-editor.com ("Website"). It explains what these technologies are and why we use them.
+              This Cookie Policy explains how QwerPDF ("Company", "Site", "Website", "Application", "we", "us", or "our") uses cookies and similar technologies to recognize you when you visit our website at https://files-editor.com ("Website"). It explains what these technologies are and why we use them.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">1. What are cookies?</h2>

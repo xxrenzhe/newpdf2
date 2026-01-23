@@ -24,7 +24,7 @@ export default function TermsAndConditionsPage() {
             </p>
 
             <p className="text-gray-600 mb-6">
-              This Terms of Use for Files Editor ("Company," "Site," "Website," "Application," "We," "Us," or "Our") outlines the rules and conditions governing your use of our services ("Services"), such as when you:
+              This Terms of Use for QwerPDF ("Company," "Site," "Website," "Application," "We," "Us," or "Our") outlines the rules and conditions governing your use of our services ("Services"), such as when you:
             </p>
 
             <p className="text-gray-600 mb-6">

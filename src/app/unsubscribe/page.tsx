@@ -14,7 +14,7 @@ export default function UnsubscribePage() {
           <div className="max-w-3xl mx-auto">
             {/* Title */}
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              How to Cancel Your Files Editor Subscription
+              How to Cancel Your QwerPDF Subscription
             </h1>
 
             {/* Introduction */}
@@ -32,7 +32,7 @@ export default function UnsubscribePage() {
               {/* Step 1 */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  1. Log into your Files Editor account
+                  1. Log into your QwerPDF account
                 </h3>
                 <p className="text-gray-600">
                   <Link href="/app/sign-in" className="text-[#2d85de] hover:underline">

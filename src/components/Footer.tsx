@@ -41,9 +41,9 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2 mb-5">
               <img
-                src="/assets/brand/logo.svg"
-                alt="Files Editor"
-                className="h-10"
+                src="/logo.png"
+                alt="QwerPDF"
+                className="h-28 w-auto"
               />
             </Link>
             <p className="text-gray-600 font-medium text-base">All-in-one PDF solutions</p>
@@ -114,7 +114,7 @@ export default function Footer() {
         {/* Bottom section */}
         <div className="pt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div>
-            <p className="text-gray-600 text-base mb-1">© Files Editor | All rights reserved</p>
+            <p className="text-gray-600 text-base mb-1">© QwerPDF | All rights reserved</p>
             <p className="text-gray-500 text-sm">Apollo Technology LLC - Fargo, ND, USA</p>
           </div>
 

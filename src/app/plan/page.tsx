@@ -42,7 +42,7 @@ const brands = [
 const faqItems = [
   { question: "What are my payment options?", answer: "We accept all major credit cards, PayPal, and other payment methods depending on your region." },
   { question: "Why are certain websites offering PDF editing features for free?", answer: "Some websites offer limited free features but may have restrictions on file size, number of documents, or include watermarks." },
-  { question: "Is Files Editor safe to use?", answer: "Yes, Files Editor uses industry-standard encryption and security measures to protect your documents and personal information." },
+  { question: "Is QwerPDF safe to use?", answer: "Yes, QwerPDF uses industry-standard encryption and security measures to protect your documents and personal information." },
   { question: "Can I change my plan?", answer: "Yes, you can upgrade or downgrade your plan at any time from your account settings." },
   { question: "What will happen if I cancel my subscription?", answer: "You will continue to have access to premium features until the end of your billing period." },
   { question: "How can I cancel my subscription?", answer: "You can cancel your subscription from your account settings under the Subscription section." },

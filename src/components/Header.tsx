@@ -24,13 +24,13 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="flex items-center justify-between h-24 md:h-28">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <img
-              src="/assets/brand/logo.svg"
-              alt="Files Editor"
-              className="h-8 md:h-9"
+              src="/logo.png"
+              alt="QwerPDF"
+              className="h-24 md:h-28 w-auto"
             />
           </Link>
 

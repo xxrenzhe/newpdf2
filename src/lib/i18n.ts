@@ -69,15 +69,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'The ultimate solution to edit and manage PDF documents with ease',
-    advantagesSubtitle: 'Files Editor meets all requirements to edit and manage PDF document!',
+    advantagesSubtitle: 'QwerPDF meets all requirements to edit and manage PDF document!',
     pdfEditingMadeEasy: 'PDF editing made easy',
     pdfEditingMadeEasyDesc: 'Edit your PDFs effortlessly with our intuitive tools. Add text, images, annotations, or even e-signatures, all in just a few clicks.',
     safeAndSecure: '100% safe and secure',
-    safeAndSecureDesc: 'Files Editor keeps your documents and privacy safe. You can boost security with features like file password encryption, encrypted storage, and more.',
+    safeAndSecureDesc: 'QwerPDF keeps your documents and privacy safe. You can boost security with features like file password encryption, encrypted storage, and more.',
     fastAndEasy: 'Fast & easy online conversion',
     fastAndEasyDesc: 'Quickly convert your files to formats like Word, PDF, Excel, PNG, JPG, and more. Its quick, easy, and only takes a few seconds.',
     noSoftware: 'No software installation required',
-    noSoftwareDesc: 'With Files Editor, there\'s no need for downloads or browser extensions. Our PDF editor and converter are fully web-based, requiring only an internet connection to get started.',
+    noSoftwareDesc: 'With QwerPDF, there\'s no need for downloads or browser extensions. Our PDF editor and converter are fully web-based, requiring only an internet connection to get started.',
 
     // FAQ
     faqTitle: 'Frequently Asked Questions',
@@ -101,7 +101,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: 'Unsubscribe',
     termsAndConditions: 'Terms & Conditions',
     privacyPolicy: 'Privacy Policy',
-    allRightsReserved: 'Files Editor | All rights reserved',
+    allRightsReserved: 'QwerPDF | All rights reserved',
     securityCompliance: 'Security & Compliance',
 
     // Pricing
@@ -204,15 +204,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'La solución definitiva para editar y gestionar documentos PDF fácilmente',
-    advantagesSubtitle: 'Files Editor incluye todo lo necesario para editar y administrar documentos PDF!',
+    advantagesSubtitle: 'QwerPDF incluye todo lo necesario para editar y administrar documentos PDF!',
     pdfEditingMadeEasy: 'La edición de PDF simplificada',
     pdfEditingMadeEasyDesc: 'Edite sus PDF sin esfuerzo con nuestras intuitivas herramientas. Añada texto, imágenes, anotaciones o firmas electrónicas con solo unos clics.',
     safeAndSecure: '100% seguro y protegido',
-    safeAndSecureDesc: 'Files Editor protege sus documentos y privacidad. Puede aumentar la seguridad con funciones de cifrado de contraseñas de archivos.',
+    safeAndSecureDesc: 'QwerPDF protege sus documentos y privacidad. Puede aumentar la seguridad con funciones de cifrado de contraseñas de archivos.',
     fastAndEasy: 'Conversión en línea rápida y sencilla',
     fastAndEasyDesc: 'Convierta rápidamente sus archivos a formatos como Word, PDF, Excel, PNG, JPG y más.',
     noSoftware: 'No requiere instalación de software',
-    noSoftwareDesc: 'Con Files Editor, no son necesarias descargas ni extensiones de navegador. Nuestro editor está totalmente basado en la web.',
+    noSoftwareDesc: 'Con QwerPDF, no son necesarias descargas ni extensiones de navegador. Nuestro editor está totalmente basado en la web.',
 
     // FAQ
     faqTitle: 'Preguntas frecuentes',
@@ -236,7 +236,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: 'Cancelar suscripción',
     termsAndConditions: 'Términos y condiciones',
     privacyPolicy: 'Política de privacidad',
-    allRightsReserved: 'Files Editor | Todos los derechos reservados',
+    allRightsReserved: 'QwerPDF | Todos los derechos reservados',
     securityCompliance: 'Seguridad y cumplimiento',
 
     // Pricing
@@ -339,15 +339,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'La solution ultime pour éditer et gérer vos documents PDF facilement',
-    advantagesSubtitle: 'Files Editor répond à toutes les exigences pour éditer et gérer les documents PDF!',
+    advantagesSubtitle: 'QwerPDF répond à toutes les exigences pour éditer et gérer les documents PDF!',
     pdfEditingMadeEasy: "L'édition PDF simplifiée",
     pdfEditingMadeEasyDesc: 'Éditez vos PDF sans effort avec nos outils intuitifs. Ajoutez du texte, des images, des annotations ou des signatures électroniques.',
     safeAndSecure: '100% sûr et sécurisé',
-    safeAndSecureDesc: 'Files Editor protège vos documents et votre vie privée. Renforcez la sécurité avec le chiffrement de mot de passe.',
+    safeAndSecureDesc: 'QwerPDF protège vos documents et votre vie privée. Renforcez la sécurité avec le chiffrement de mot de passe.',
     fastAndEasy: 'Conversion en ligne rapide et facile',
     fastAndEasyDesc: 'Convertissez rapidement vos fichiers vers des formats comme Word, PDF, Excel, PNG, JPG et plus.',
     noSoftware: "Aucune installation de logiciel requise",
-    noSoftwareDesc: "Avec Files Editor, pas besoin de téléchargements ni d'extensions de navigateur. Entièrement basé sur le web.",
+    noSoftwareDesc: "Avec QwerPDF, pas besoin de téléchargements ni d'extensions de navigateur. Entièrement basé sur le web.",
 
     // FAQ
     faqTitle: 'Questions fréquemment posées',
@@ -371,7 +371,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: 'Se désabonner',
     termsAndConditions: 'Conditions générales',
     privacyPolicy: 'Politique de confidentialité',
-    allRightsReserved: 'Files Editor | Tous droits réservés',
+    allRightsReserved: 'QwerPDF | Tous droits réservés',
     securityCompliance: 'Sécurité et conformité',
 
     // Pricing
@@ -474,15 +474,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'Die ultimative Lösung zum einfachen Bearbeiten und Verwalten von PDF-Dokumenten',
-    advantagesSubtitle: 'Files Editor erfüllt alle Anforderungen zum Bearbeiten und Verwalten von PDF-Dokumenten!',
+    advantagesSubtitle: 'QwerPDF erfüllt alle Anforderungen zum Bearbeiten und Verwalten von PDF-Dokumenten!',
     pdfEditingMadeEasy: 'PDF-Bearbeitung leicht gemacht',
     pdfEditingMadeEasyDesc: 'Bearbeiten Sie Ihre PDFs mühelos mit unseren intuitiven Tools. Fügen Sie Text, Bilder, Anmerkungen oder E-Signaturen hinzu.',
     safeAndSecure: '100% sicher und geschützt',
-    safeAndSecureDesc: 'Files Editor schützt Ihre Dokumente und Ihre Privatsphäre. Erhöhen Sie die Sicherheit mit Passwortverschlüsselung.',
+    safeAndSecureDesc: 'QwerPDF schützt Ihre Dokumente und Ihre Privatsphäre. Erhöhen Sie die Sicherheit mit Passwortverschlüsselung.',
     fastAndEasy: 'Schnelle und einfache Online-Konvertierung',
     fastAndEasyDesc: 'Konvertieren Sie Ihre Dateien schnell in Formate wie Word, PDF, Excel, PNG, JPG und mehr.',
     noSoftware: 'Keine Softwareinstallation erforderlich',
-    noSoftwareDesc: 'Mit Files Editor sind keine Downloads oder Browser-Erweiterungen nötig. Vollständig webbasiert.',
+    noSoftwareDesc: 'Mit QwerPDF sind keine Downloads oder Browser-Erweiterungen nötig. Vollständig webbasiert.',
 
     // FAQ
     faqTitle: 'Häufig gestellte Fragen',
@@ -506,7 +506,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: 'Abmelden',
     termsAndConditions: 'Nutzungsbedingungen',
     privacyPolicy: 'Datenschutzrichtlinie',
-    allRightsReserved: 'Files Editor | Alle Rechte vorbehalten',
+    allRightsReserved: 'QwerPDF | Alle Rechte vorbehalten',
     securityCompliance: 'Sicherheit und Compliance',
 
     // Pricing
@@ -609,15 +609,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'A solução definitiva para editar e gerenciar documentos PDF com facilidade',
-    advantagesSubtitle: 'Files Editor atende a todos os requisitos para editar e gerenciar documentos PDF!',
+    advantagesSubtitle: 'QwerPDF atende a todos os requisitos para editar e gerenciar documentos PDF!',
     pdfEditingMadeEasy: 'Edição de PDF simplificada',
     pdfEditingMadeEasyDesc: 'Edite seus PDFs sem esforço com nossas ferramentas intuitivas. Adicione texto, imagens, anotações ou assinaturas eletrônicas.',
     safeAndSecure: '100% seguro e protegido',
-    safeAndSecureDesc: 'Files Editor mantém seus documentos e privacidade seguros. Aumente a segurança com criptografia de senha.',
+    safeAndSecureDesc: 'QwerPDF mantém seus documentos e privacidade seguros. Aumente a segurança com criptografia de senha.',
     fastAndEasy: 'Conversão online rápida e fácil',
     fastAndEasyDesc: 'Converta rapidamente seus arquivos para formatos como Word, PDF, Excel, PNG, JPG e mais.',
     noSoftware: 'Nenhuma instalação de software necessária',
-    noSoftwareDesc: 'Com Files Editor, não há necessidade de downloads ou extensões de navegador. Totalmente baseado na web.',
+    noSoftwareDesc: 'Com QwerPDF, não há necessidade de downloads ou extensões de navegador. Totalmente baseado na web.',
 
     // FAQ
     faqTitle: 'Perguntas Frequentes',
@@ -641,7 +641,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: 'Cancelar inscrição',
     termsAndConditions: 'Termos e Condições',
     privacyPolicy: 'Política de Privacidade',
-    allRightsReserved: 'Files Editor | Todos os direitos reservados',
+    allRightsReserved: 'QwerPDF | Todos os direitos reservados',
     securityCompliance: 'Segurança e Conformidade',
 
     // Pricing
@@ -744,15 +744,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'La soluzione definitiva per modificare e gestire documenti PDF con facilità',
-    advantagesSubtitle: 'Files Editor soddisfa tutti i requisiti per modificare e gestire documenti PDF!',
+    advantagesSubtitle: 'QwerPDF soddisfa tutti i requisiti per modificare e gestire documenti PDF!',
     pdfEditingMadeEasy: 'Modifica PDF semplificata',
     pdfEditingMadeEasyDesc: 'Modifica i tuoi PDF senza sforzo con i nostri strumenti intuitivi. Aggiungi testo, immagini, annotazioni o firme elettroniche.',
     safeAndSecure: '100% sicuro e protetto',
-    safeAndSecureDesc: 'Files Editor mantiene i tuoi documenti e la tua privacy al sicuro. Aumenta la sicurezza con la crittografia delle password.',
+    safeAndSecureDesc: 'QwerPDF mantiene i tuoi documenti e la tua privacy al sicuro. Aumenta la sicurezza con la crittografia delle password.',
     fastAndEasy: 'Conversione online veloce e facile',
     fastAndEasyDesc: 'Converti rapidamente i tuoi file in formati come Word, PDF, Excel, PNG, JPG e altro.',
     noSoftware: 'Nessuna installazione software richiesta',
-    noSoftwareDesc: 'Con Files Editor, non sono necessari download o estensioni del browser. Completamente basato sul web.',
+    noSoftwareDesc: 'Con QwerPDF, non sono necessari download o estensioni del browser. Completamente basato sul web.',
 
     // FAQ
     faqTitle: 'Domande Frequenti',
@@ -776,7 +776,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: 'Annulla iscrizione',
     termsAndConditions: 'Termini e Condizioni',
     privacyPolicy: 'Informativa sulla Privacy',
-    allRightsReserved: 'Files Editor | Tutti i diritti riservati',
+    allRightsReserved: 'QwerPDF | Tutti i diritti riservati',
     securityCompliance: 'Sicurezza e Conformità',
 
     // Pricing
@@ -879,15 +879,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: '轻松编辑和管理PDF文档的终极解决方案',
-    advantagesSubtitle: 'Files Editor满足编辑和管理PDF文档的所有需求！',
+    advantagesSubtitle: 'QwerPDF满足编辑和管理PDF文档的所有需求！',
     pdfEditingMadeEasy: 'PDF编辑变得简单',
     pdfEditingMadeEasyDesc: '使用我们直观的工具轻松编辑PDF。添加文本、图片、注释或电子签名。',
     safeAndSecure: '100%安全可靠',
-    safeAndSecureDesc: 'Files Editor保护您的文档和隐私安全。通过密码加密增强安全性。',
+    safeAndSecureDesc: 'QwerPDF保护您的文档和隐私安全。通过密码加密增强安全性。',
     fastAndEasy: '快速简便的在线转换',
     fastAndEasyDesc: '快速将文件转换为Word、PDF、Excel、PNG、JPG等格式。',
     noSoftware: '无需安装软件',
-    noSoftwareDesc: '使用Files Editor，无需下载或浏览器扩展。完全基于网络。',
+    noSoftwareDesc: '使用QwerPDF，无需下载或浏览器扩展。完全基于网络。',
 
     // FAQ
     faqTitle: '常见问题',
@@ -911,7 +911,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: '取消订阅',
     termsAndConditions: '条款与条件',
     privacyPolicy: '隐私政策',
-    allRightsReserved: 'Files Editor | 保留所有权利',
+    allRightsReserved: 'QwerPDF | 保留所有权利',
     securityCompliance: '安全与合规',
 
     // Pricing
@@ -1014,15 +1014,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'PDFドキュメントを簡単に編集・管理する究極のソリューション',
-    advantagesSubtitle: 'Files EditorはPDFドキュメントの編集・管理のすべての要件を満たします！',
+    advantagesSubtitle: 'QwerPDFはPDFドキュメントの編集・管理のすべての要件を満たします！',
     pdfEditingMadeEasy: 'PDF編集が簡単に',
     pdfEditingMadeEasyDesc: '直感的なツールでPDFを簡単に編集。テキスト、画像、注釈、電子署名を追加。',
     safeAndSecure: '100%安全・安心',
-    safeAndSecureDesc: 'Files Editorはドキュメントとプライバシーを安全に保護。パスワード暗号化でセキュリティを強化。',
+    safeAndSecureDesc: 'QwerPDFはドキュメントとプライバシーを安全に保護。パスワード暗号化でセキュリティを強化。',
     fastAndEasy: '高速で簡単なオンライン変換',
     fastAndEasyDesc: 'ファイルをWord、PDF、Excel、PNG、JPGなどの形式に素早く変換。',
     noSoftware: 'ソフトウェアのインストール不要',
-    noSoftwareDesc: 'Files Editorではダウンロードやブラウザ拡張機能は不要。完全にWebベース。',
+    noSoftwareDesc: 'QwerPDFではダウンロードやブラウザ拡張機能は不要。完全にWebベース。',
 
     // FAQ
     faqTitle: 'よくある質問',
@@ -1046,7 +1046,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: '購読解除',
     termsAndConditions: '利用規約',
     privacyPolicy: 'プライバシーポリシー',
-    allRightsReserved: 'Files Editor | 全著作権所有',
+    allRightsReserved: 'QwerPDF | 全著作権所有',
     securityCompliance: 'セキュリティとコンプライアンス',
 
     // Pricing
@@ -1149,15 +1149,15 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     // Advantages
     advantagesTitle: 'PDF 문서를 쉽게 편집하고 관리하는 궁극적인 솔루션',
-    advantagesSubtitle: 'Files Editor는 PDF 문서 편집 및 관리의 모든 요구 사항을 충족합니다!',
+    advantagesSubtitle: 'QwerPDF는 PDF 문서 편집 및 관리의 모든 요구 사항을 충족합니다!',
     pdfEditingMadeEasy: 'PDF 편집이 쉬워집니다',
     pdfEditingMadeEasyDesc: '직관적인 도구로 PDF를 손쉽게 편집하세요. 텍스트, 이미지, 주석 또는 전자 서명을 추가하세요.',
     safeAndSecure: '100% 안전하고 보안됨',
-    safeAndSecureDesc: 'Files Editor는 문서와 개인 정보를 안전하게 보호합니다. 비밀번호 암호화로 보안을 강화하세요.',
+    safeAndSecureDesc: 'QwerPDF는 문서와 개인 정보를 안전하게 보호합니다. 비밀번호 암호화로 보안을 강화하세요.',
     fastAndEasy: '빠르고 쉬운 온라인 변환',
     fastAndEasyDesc: '파일을 Word, PDF, Excel, PNG, JPG 등의 형식으로 빠르게 변환하세요.',
     noSoftware: '소프트웨어 설치 불필요',
-    noSoftwareDesc: 'Files Editor에서는 다운로드나 브라우저 확장 프로그램이 필요 없습니다. 완전히 웹 기반입니다.',
+    noSoftwareDesc: 'QwerPDF에서는 다운로드나 브라우저 확장 프로그램이 필요 없습니다. 완전히 웹 기반입니다.',
 
     // FAQ
     faqTitle: '자주 묻는 질문',
@@ -1181,7 +1181,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     unsubscribe: '구독 취소',
     termsAndConditions: '이용 약관',
     privacyPolicy: '개인정보 처리방침',
-    allRightsReserved: 'Files Editor | 모든 권리 보유',
+    allRightsReserved: 'QwerPDF | 모든 권리 보유',
     securityCompliance: '보안 및 규정 준수',
 
     // Pricing

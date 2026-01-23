@@ -58,9 +58,9 @@ function SignInInner() {
         <div className="container mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <img
-              src="/assets/brand/logo.svg"
-              alt="Files Editor"
-              className="h-8"
+              src="/logo.png"
+              alt="QwerPDF"
+              className="h-24 md:h-28 w-auto"
             />
           </Link>
           <Select value={language} onValueChange={setLanguage}>

@@ -9,20 +9,20 @@ import {
 
 const faqItems = [
   {
-    question: "What is Files Editor?",
-    answer: "Files Editor is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely. It provides over 50 tools for all your PDF needs.",
+    question: "What is QwerPDF?",
+    answer: "QwerPDF is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely. It provides over 50 tools for all your PDF needs.",
   },
   {
-    question: "Do I need to download or install anything to use Files Editor?",
-    answer: "No, Files Editor is completely web-based. You can use all our tools directly in your browser without downloading any software or installing browser extensions.",
+    question: "Do I need to download or install anything to use QwerPDF?",
+    answer: "No, QwerPDF is completely web-based. You can use all our tools directly in your browser without downloading any software or installing browser extensions.",
   },
   {
-    question: "Can I merge PDF files with Files Editor?",
+    question: "Can I merge PDF files with QwerPDF?",
     answer: "Yes, you can easily merge multiple PDF files into one document using our Merge Documents tool. Simply upload your files and combine them in any order you prefer.",
   },
   {
     question: "Can I convert a Word document into a PDF?",
-    answer: "Absolutely! Files Editor supports converting various file formats including Word (DOC, DOCX), Excel (XLS, XLSX), PowerPoint (PPT, PPTX), and images to PDF format.",
+    answer: "Absolutely! QwerPDF supports converting various file formats including Word (DOC, DOCX), Excel (XLS, XLSX), PowerPoint (PPT, PPTX), and images to PDF format.",
   },
   {
     question: "How do I add, move and rotate pages?",
@@ -30,11 +30,11 @@ const faqItems = [
   },
   {
     question: "Why are certain websites offering PDF editing features for free?",
-    answer: "Some websites offer limited free features but may have restrictions on file size, number of documents, or include watermarks. Files Editor provides full-featured premium tools with no limitations for subscribers.",
+    answer: "Some websites offer limited free features but may have restrictions on file size, number of documents, or include watermarks. QwerPDF provides full-featured premium tools with no limitations for subscribers.",
   },
   {
-    question: "Is Files Editor safe to use?",
-    answer: "Yes, Files Editor uses industry-standard encryption and security measures to protect your documents and personal information. Files are automatically deleted after processing unless you choose to save them.",
+    question: "Is QwerPDF safe to use?",
+    answer: "Yes, QwerPDF uses industry-standard encryption and security measures to protect your documents and personal information. Files are automatically deleted after processing unless you choose to save them.",
   },
 ];
 

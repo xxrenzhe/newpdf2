@@ -503,7 +503,7 @@ export default function PdfEditorTool({
         <div className={titleClassName}>
           {showBrand ? (
             <Link href="/en" className="flex items-center">
-              <img src="/assets/brand/logo.svg" alt="Files Editor" className="h-7" />
+              <img src="/logo.png" alt="QwerPDF" className="h-20 md:h-24 w-auto" />
             </Link>
           ) : (
             <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">

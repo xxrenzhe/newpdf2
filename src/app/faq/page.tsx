@@ -12,18 +12,18 @@ import {
 
 const faqCategories = {
   general: [
-    { question: "What is Files Editor?", answer: "Files Editor is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely." },
-    { question: "Do I need to download or install anything to use Files Editor?", answer: "No, Files Editor is completely web-based. You can use all our tools directly in your browser without downloading any software." },
-    { question: "Can I merge PDF files with Files Editor?", answer: "Yes, you can easily merge multiple PDF files into one document using our Merge Documents tool." },
-    { question: "Can I convert a Word document into a PDF?", answer: "Absolutely! Files Editor supports converting various file formats including Word, Excel, PowerPoint, and images to PDF." },
+    { question: "What is QwerPDF?", answer: "QwerPDF is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely." },
+    { question: "Do I need to download or install anything to use QwerPDF?", answer: "No, QwerPDF is completely web-based. You can use all our tools directly in your browser without downloading any software." },
+    { question: "Can I merge PDF files with QwerPDF?", answer: "Yes, you can easily merge multiple PDF files into one document using our Merge Documents tool." },
+    { question: "Can I convert a Word document into a PDF?", answer: "Absolutely! QwerPDF supports converting various file formats including Word, Excel, PowerPoint, and images to PDF." },
     { question: "How do I add, move and rotate pages?", answer: "Use our Organize Pages tool to add, move, delete, or rotate pages in your PDF documents." },
-    { question: "Why are certain websites offering PDF editing features for free?", answer: "Some websites offer limited free features but may have restrictions on file size, number of documents, or include watermarks. Files Editor provides full-featured premium tools with no limitations." },
+    { question: "Why are certain websites offering PDF editing features for free?", answer: "Some websites offer limited free features but may have restrictions on file size, number of documents, or include watermarks. QwerPDF provides full-featured premium tools with no limitations." },
   ],
   security: [
-    { question: "Is Files Editor safe to use?", answer: "Yes, Files Editor uses industry-standard encryption and security measures to protect your documents and personal information." },
-    { question: "Where does Files Editor store my documents?", answer: "Your documents are stored on secure cloud servers with encryption. Files are automatically deleted after processing unless you choose to save them to your account." },
-    { question: "Does Files Editor support single sign on?", answer: "Yes, we support SSO (Single Sign-On) for enterprise customers through various identity providers." },
-    { question: "How do I Password Protect a PDF?", answer: "Upload your PDF to Files Editor, select the Password Protect tool, set your desired password, and download the secured file." },
+    { question: "Is QwerPDF safe to use?", answer: "Yes, QwerPDF uses industry-standard encryption and security measures to protect your documents and personal information." },
+    { question: "Where does QwerPDF store my documents?", answer: "Your documents are stored on secure cloud servers with encryption. Files are automatically deleted after processing unless you choose to save them to your account." },
+    { question: "Does QwerPDF support single sign on?", answer: "Yes, we support SSO (Single Sign-On) for enterprise customers through various identity providers." },
+    { question: "How do I Password Protect a PDF?", answer: "Upload your PDF to QwerPDF, select the Password Protect tool, set your desired password, and download the secured file." },
   ],
   billing: [
     { question: "Will my subscription renew automatically?", answer: "Yes, subscriptions renew automatically unless you cancel before the renewal date." },

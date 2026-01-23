@@ -34,7 +34,7 @@ function PaymentSuccessContent() {
             Payment Successful!
           </h1>
           <p className="text-gray-600 mb-6">
-            Thank you for subscribing to Files Editor Premium. You now have
+            Thank you for subscribing to QwerPDF Premium. You now have
             unlimited access to all our PDF tools.
           </p>
 

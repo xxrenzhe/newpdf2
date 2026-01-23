@@ -153,9 +153,9 @@ export default function GuestDocumentClient() {
     <main className="min-h-screen bg-white">
       {!showEditor || !isPdfEditor ? (
         <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-          <div className="h-14 px-4 flex items-center gap-3">
+          <div className="h-20 md:h-24 px-4 flex items-center gap-3">
             <Link href="/en" className="flex items-center gap-2">
-              <img src="/assets/brand/logo.svg" alt="Files Editor" className="h-7" />
+              <img src="/logo.png" alt="QwerPDF" className="h-20 md:h-24 w-auto" />
             </Link>
             <div className="flex-1 min-w-0">
               {showEditor && editorFile ? (

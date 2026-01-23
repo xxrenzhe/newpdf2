@@ -31,13 +31,13 @@ const subjects = [
 
 const faqByTab = {
   general: [
-    { question: "What is Files Editor?", answer: "Files Editor is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely." },
-    { question: "Do I need to download or install anything to use Files Editor?", answer: "No, Files Editor is completely web-based." },
-    { question: "Can I merge PDF files with Files Editor?", answer: "Yes, you can easily merge multiple PDF files into one document." },
+    { question: "What is QwerPDF?", answer: "QwerPDF is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely." },
+    { question: "Do I need to download or install anything to use QwerPDF?", answer: "No, QwerPDF is completely web-based." },
+    { question: "Can I merge PDF files with QwerPDF?", answer: "Yes, you can easily merge multiple PDF files into one document." },
     { question: "Can I convert a Word document into a PDF?", answer: "Yes. Our Convert tool currently supports PDF ↔ images/text and images → PDF. Office-to-PDF can be added via a backend conversion service." },
   ],
   security: [
-    { question: "Is Files Editor safe to use?", answer: "Files Editor runs core PDF operations locally in your browser for many tools, so your files don't need to leave your device for basic edits, conversion, and compression." },
+    { question: "Is QwerPDF safe to use?", answer: "QwerPDF runs core PDF operations locally in your browser for many tools, so your files don't need to leave your device for basic edits, conversion, and compression." },
     { question: "Do you store my documents?", answer: "This demo app does not store your documents server-side unless you explicitly upload them to an external service." },
   ],
   billing: [
