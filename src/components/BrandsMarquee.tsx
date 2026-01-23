@@ -15,7 +15,7 @@ export default function BrandsMarquee() {
   return (
     <section className="py-8 md:py-12 bg-white overflow-hidden">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 mb-6">
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-[color:var(--brand-muted)]">
           Trusted by professionals from leading companies worldwide
         </p>
       </div>

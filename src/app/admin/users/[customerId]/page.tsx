@@ -39,44 +39,44 @@ export default async function AdminUserPage({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm">
+        <div className="p-6 border-b border-[color:var(--brand-line)] flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-gray-900 truncate">{customer.email ?? customer.id}</h1>
-            <p className="text-sm text-gray-500 mt-1">{customer.id}</p>
+            <h1 className="text-xl font-semibold text-[color:var(--brand-ink)] truncate">{customer.email ?? customer.id}</h1>
+            <p className="text-sm text-[color:var(--brand-muted)] mt-1">{customer.id}</p>
           </div>
-          <Link href="/admin/users" className="text-sm text-gray-600 hover:text-gray-900">
+          <Link href="/admin/users" className="text-sm text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]">
             Back
           </Link>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-500">Name</p>
-            <p className="text-gray-900 font-medium">{customer.name ?? "-"}</p>
+            <p className="text-[color:var(--brand-muted)]">Name</p>
+            <p className="text-[color:var(--brand-ink)] font-medium">{customer.name ?? "-"}</p>
           </div>
           <div>
-            <p className="text-gray-500">Email</p>
-            <p className="text-gray-900 font-medium">{customer.email ?? "-"}</p>
+            <p className="text-[color:var(--brand-muted)]">Email</p>
+            <p className="text-[color:var(--brand-ink)] font-medium">{customer.email ?? "-"}</p>
           </div>
           <div>
-            <p className="text-gray-500">Created</p>
-            <p className="text-gray-900 font-medium">{formatDateTime(customer.created)}</p>
+            <p className="text-[color:var(--brand-muted)]">Created</p>
+            <p className="text-[color:var(--brand-ink)] font-medium">{formatDateTime(customer.created)}</p>
           </div>
           <div>
-            <p className="text-gray-500">Delinquent</p>
-            <p className="text-gray-900 font-medium">{customer.delinquent ? "Yes" : "No"}</p>
+            <p className="text-[color:var(--brand-muted)]">Delinquent</p>
+            <p className="text-[color:var(--brand-ink)] font-medium">{customer.delinquent ? "Yes" : "No"}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Subscriptions</h2>
+      <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm">
+        <div className="p-6 border-b border-[color:var(--brand-line)]">
+          <h2 className="text-lg font-semibold text-[color:var(--brand-ink)]">Subscriptions</h2>
         </div>
         <div className="p-6 overflow-auto">
           <table className="min-w-[900px] w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-500">
+              <tr className="text-left text-[color:var(--brand-muted)]">
                 <th className="py-2 pr-4 font-medium">Subscription</th>
                 <th className="py-2 pr-4 font-medium">Status</th>
                 <th className="py-2 pr-4 font-medium">Plan</th>
@@ -87,20 +87,20 @@ export default async function AdminUserPage({
             </thead>
             <tbody>
               {subscriptions.map((s) => (
-                <tr key={s.id} className="border-t border-gray-100">
-                  <td className="py-3 pr-4 text-gray-900">{s.id}</td>
-                  <td className="py-3 pr-4 text-gray-900">{s.status}</td>
-                  <td className="py-3 pr-4 text-gray-900">{formatSubPlan(s)}</td>
-                  <td className="py-3 pr-4 text-gray-900">{s.cancel_at_period_end ? "Yes" : "No"}</td>
-                  <td className="py-3 pr-4 text-gray-900">
+                <tr key={s.id} className="border-t border-[color:var(--brand-line)]">
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{s.id}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{s.status}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{formatSubPlan(s)}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{s.cancel_at_period_end ? "Yes" : "No"}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">
                     {formatDateTime(s.items.data[0]?.current_period_end)}
                   </td>
-                  <td className="py-3 pr-4 text-gray-900">{formatDateTime(s.created)}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{formatDateTime(s.created)}</td>
                 </tr>
               ))}
               {subscriptions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-gray-500">
+                  <td colSpan={6} className="py-6 text-center text-[color:var(--brand-muted)]">
                     No subscriptions found.
                   </td>
                 </tr>

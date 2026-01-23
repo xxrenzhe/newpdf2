@@ -80,13 +80,13 @@ const tools: { id: AnnotationTool; label: string; icon: React.ReactNode }[] = [
 ];
 
 const colors = [
-  "#000000",
+  "#1f1a2b",
   "#ef4444",
-  "#f97316",
+  "#f28c28",
   "#eab308",
   "#22c55e",
-  "#3b82f6",
-  "#4f46e5", // New Indigo
+  "#5b4bb7",
+  "#8b6cff",
   "#ec4899",
 ];
 
@@ -107,7 +107,7 @@ export default function AnnotationToolbar({
   const [showStrokeWidth, setShowStrokeWidth] = useState(false);
 
   return (
-    <div className="flex flex-col bg-white border-r border-gray-200 py-3 w-[72px] items-center h-full shadow-sm">
+    <div className="flex flex-col bg-white border-r border-[color:var(--brand-line)] py-3 w-[72px] items-center h-full shadow-sm">
       {/* Tools */}
       <div className="flex flex-col gap-2 w-full px-3">
         {tools.map((tool) => (
@@ -115,8 +115,8 @@ export default function AnnotationToolbar({
             key={tool.id}
             onClick={() => onToolChange(tool.id)}
             className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${activeTool === tool.id
-                ? "bg-primary text-white shadow-md shadow-indigo-200"
-                : "hover:bg-gray-100 text-gray-500 hover:text-gray-900"
+                ? "bg-primary text-white shadow-md shadow-[rgba(91,75,183,0.25)]"
+                : "hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
               }`}
             title={tool.label}
           >
@@ -125,23 +125,23 @@ export default function AnnotationToolbar({
         ))}
       </div>
 
-      <div className="w-8 h-px bg-gray-200 my-4" />
+      <div className="w-8 h-px bg-[color:var(--brand-line)] my-4" />
 
       {/* Color Picker */}
       <div className="relative w-full flex justify-center mb-2">
         <button
           onClick={() => setShowColorPicker(!showColorPicker)}
-          className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+          className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] transition-colors border border-transparent hover:border-[color:var(--brand-line)]"
           title="Color"
         >
           <div
-            className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-gray-200 shadow-sm"
+            className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-[color:var(--brand-line)] shadow-sm"
             style={{ backgroundColor: activeColor }}
           />
         </button>
         {showColorPicker && (
-          <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-50 w-48 animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Stroke Color</div>
+          <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-[color:var(--brand-line)] p-3 z-50 w-48 animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-xs font-semibold text-[color:var(--brand-muted)] mb-2 uppercase tracking-wider">Stroke Color</div>
             <div className="grid grid-cols-4 gap-2">
               {colors.map((color) => (
                 <button
@@ -150,7 +150,7 @@ export default function AnnotationToolbar({
                     onColorChange(color);
                     setShowColorPicker(false);
                   }}
-                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${activeColor === color ? "border-gray-900 ring-2 ring-gray-200" : "border-transparent"
+                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${activeColor === color ? "border-[color:var(--brand-ink)] ring-2 ring-[color:var(--brand-line)]" : "border-transparent"
                     }`}
                   style={{ backgroundColor: color }}
                 />
@@ -164,7 +164,7 @@ export default function AnnotationToolbar({
       <div className="relative w-full flex justify-center">
         <button
           onClick={() => setShowStrokeWidth(!showStrokeWidth)}
-          className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors"
+          className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] transition-colors"
           title="Stroke Width"
         >
           <div className="flex items-center justify-center">
@@ -178,8 +178,8 @@ export default function AnnotationToolbar({
           </div>
         </button>
         {showStrokeWidth && (
-          <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-50 min-w-[120px] animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Stroke Width</div>
+          <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-[color:var(--brand-line)] p-3 z-50 min-w-[120px] animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-xs font-semibold text-[color:var(--brand-muted)] mb-2 uppercase tracking-wider">Stroke Width</div>
             <div className="flex flex-col gap-1">
               {strokeWidths.map((width) => (
                 <button
@@ -188,7 +188,7 @@ export default function AnnotationToolbar({
                     onStrokeWidthChange(width);
                     setShowStrokeWidth(false);
                   }}
-                  className={`px-3 py-2 rounded-lg flex items-center gap-3 hover:bg-gray-50 transition-colors ${strokeWidth === width ? "bg-indigo-50 text-primary" : "text-gray-600"
+                  className={`px-3 py-2 rounded-lg flex items-center gap-3 hover:bg-[color:var(--brand-cream)] transition-colors ${strokeWidth === width ? "bg-[color:var(--brand-lilac)] text-primary" : "text-[color:var(--brand-muted)]"
                     }`}
                 >
                   <div
@@ -203,14 +203,14 @@ export default function AnnotationToolbar({
         )}
       </div>
 
-      <div className="w-8 h-px bg-gray-200 my-4" />
+      <div className="w-8 h-px bg-[color:var(--brand-line)] my-4" />
 
       {/* Actions */}
       <div className="flex flex-col gap-2 w-full px-3">
         {onUndo && (
           <button
             onClick={onUndo}
-            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
             title="Undo"
           >
             <RotateCcw className="w-5 h-5" />
@@ -219,7 +219,7 @@ export default function AnnotationToolbar({
         {onRedo && (
           <button
             onClick={onRedo}
-            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
             title="Redo"
           >
             <RotateCw className="w-5 h-5" />

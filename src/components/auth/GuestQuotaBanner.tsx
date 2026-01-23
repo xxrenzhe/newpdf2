@@ -29,7 +29,7 @@ export default function GuestQuotaBanner() {
       className={
         exhausted
           ? "mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex items-start justify-between gap-4"
-          : "mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 flex items-start justify-between gap-4"
+          : "mb-6 rounded-xl border border-[color:var(--brand-line)] bg-[color:var(--brand-lilac)] p-4 text-sm text-[color:var(--brand-ink)] flex items-start justify-between gap-4"
       }
     >
       <div className="min-w-0">
@@ -42,7 +42,7 @@ export default function GuestQuotaBanner() {
       </div>
       <button
         type="button"
-        className="shrink-0 px-3 py-2 rounded-lg bg-[#2d85de] text-white hover:bg-[#2473c4]"
+        className="shrink-0 px-3 py-2 rounded-lg bg-primary text-white hover:bg-[color:var(--brand-purple-dark)]"
         onClick={() => void signIn("google", { callbackUrl: window.location.href })}
       >
         Continue with Google

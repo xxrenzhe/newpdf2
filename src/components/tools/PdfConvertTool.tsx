@@ -85,17 +85,17 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
   }
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900">Convert</h3>
-          <p className="text-sm text-gray-500 truncate">
+          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Convert</h3>
+          <p className="text-sm text-[color:var(--brand-muted)] truncate">
             {files.length} file(s): {files.map((f) => f.name).join(", ")}
           </p>
         </div>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+          className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
           onClick={() => setFiles([])}
         >
           Reset
@@ -103,9 +103,9 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <label className="text-sm text-gray-600">Mode</label>
+        <label className="text-sm text-[color:var(--brand-muted)]">Mode</label>
         <select
-          className="h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm"
+          className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
           value={mode}
           onChange={(e) => setMode(e.target.value as Mode)}
         >
@@ -119,10 +119,10 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
 
       {inferred === "pdf-to-images" && (
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <label className="text-sm text-gray-600">
+          <label className="text-sm text-[color:var(--brand-muted)]">
             Format
             <select
-              className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm"
+              className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
               value={format}
               onChange={(e) => setFormat(e.target.value as "png" | "jpg")}
             >
@@ -130,25 +130,25 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
               <option value="jpg">JPG</option>
             </select>
           </label>
-          <label className="text-sm text-gray-600">
+          <label className="text-sm text-[color:var(--brand-muted)]">
             DPI
             <input
               type="number"
               min={72}
               max={300}
-              className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+              className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
               value={dpi}
               onChange={(e) => setDpi(Number(e.target.value || 150))}
             />
           </label>
-          <label className="text-sm text-gray-600">
+          <label className="text-sm text-[color:var(--brand-muted)]">
             Quality
             <input
               type="number"
               min={0.1}
               max={1}
               step={0.05}
-              className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+              className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
               value={quality}
               onChange={(e) => setQuality(Number(e.target.value || 0.85))}
             />
@@ -166,7 +166,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
         type="button"
         disabled={busy}
         onClick={run}
-        className="w-full h-12 rounded-xl bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
       >
         {busy ? "Working..." : "Convert & Download"}
       </button>

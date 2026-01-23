@@ -43,27 +43,27 @@ function UploadProgressOverlay({
       aria-modal="true"
       aria-label="Upload progress"
     >
-      <div className="w-[min(840px,calc(100vw-2rem))] rounded-2xl bg-white shadow-2xl border border-gray-100 p-8">
-        <h2 className="text-3xl font-semibold text-gray-900">Loading, please wait...</h2>
-        <div className="mt-5 h-2 w-full rounded-full bg-blue-100 overflow-hidden" role="progressbar" aria-valuenow={clamped}>
+      <div className="w-[min(840px,calc(100vw-2rem))] rounded-2xl bg-white shadow-2xl border border-[color:var(--brand-line)] p-8">
+        <h2 className="text-3xl font-semibold text-[color:var(--brand-ink)]">Loading, please wait...</h2>
+        <div className="mt-5 h-2 w-full rounded-full bg-[color:var(--brand-lilac)] overflow-hidden" role="progressbar" aria-valuenow={clamped}>
           <div
-            className="h-full bg-[#2d85de] transition-[width] duration-200"
+            className="h-full bg-primary transition-[width] duration-200"
             style={{ width: `${clamped}%` }}
           />
         </div>
 
-        <div className="mt-8 rounded-2xl border border-gray-100 bg-[#f8fafb] p-6 flex items-start gap-5">
-          <div className="shrink-0 w-14 h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center">
+        <div className="mt-8 rounded-2xl border border-[color:var(--brand-line)] bg-[color:var(--brand-cream)] p-6 flex items-start gap-5">
+          <div className="shrink-0 w-14 h-14 rounded-2xl bg-white border border-[color:var(--brand-line)] flex items-center justify-center text-primary">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="M7 3h7l3 3v15a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
-                stroke="#2d85de"
+                stroke="currentColor"
                 strokeWidth="1.6"
               />
-              <path d="M14 3v4h4" stroke="#2d85de" strokeWidth="1.6" />
+              <path d="M14 3v4h4" stroke="currentColor" strokeWidth="1.6" />
               <path
                 d="M9 14l2 2 4-5"
-                stroke="#15bb6f"
+                stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -72,12 +72,12 @@ function UploadProgressOverlay({
           </div>
 
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900">
-              <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-blue-50">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-line)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--brand-ink)]">
+              <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-[color:var(--brand-lilac)] text-primary">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     d="M9 18h6m-4 3h2m-6-10a5 5 0 1 1 10 0c0 2-1 3-2 4s-1 2-1 3h-4c0-1 0-2-1-3s-2-2-2-4Z"
-                    stroke="#2d85de"
+                    stroke="currentColor"
                     strokeWidth="1.8"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -86,7 +86,7 @@ function UploadProgressOverlay({
               </span>
               Productivity tip
             </div>
-            <p className="mt-4 text-gray-600 text-base leading-relaxed">{tip}</p>
+            <p className="mt-4 text-[color:var(--brand-muted)] text-base leading-relaxed">{tip}</p>
           </div>
         </div>
 
@@ -94,7 +94,7 @@ function UploadProgressOverlay({
           <div className="mt-7 flex justify-end">
             <button
               type="button"
-              className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
               onClick={onCancel}
             >
               Cancel
@@ -464,12 +464,12 @@ export default function PdfEditorTool({
   const shellClassName =
     variant === "shell"
       ? "bg-white overflow-hidden flex flex-col h-screen h-[100dvh]"
-      : "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden";
+      : "bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm overflow-hidden";
 
   const headerClassName =
     actionsPosition === "top-right"
-      ? "relative flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-white/80 backdrop-blur"
-      : "flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 bg-white/80 backdrop-blur";
+      ? "relative flex items-center gap-3 px-5 py-3 border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur"
+      : "flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur";
 
   const titleClassName =
     actionsPosition === "top-right"
@@ -511,8 +511,8 @@ export default function PdfEditorTool({
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-            <p className="text-xs text-gray-500">{statusText}</p>
+            <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate">{file.name}</p>
+            <p className="text-xs text-[color:var(--brand-muted)]">{statusText}</p>
           </div>
         </div>
 
@@ -539,7 +539,7 @@ export default function PdfEditorTool({
               e.preventDefault();
               fileInputRef.current?.click();
             }}
-            className={`px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 ${
+            className={`px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] ${
               busy ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
             }`}
           >
@@ -547,7 +547,7 @@ export default function PdfEditorTool({
           </label>
           <button
             type="button"
-            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
             onClick={() => void goToConvert()}
             disabled={busy}
           >
@@ -555,7 +555,7 @@ export default function PdfEditorTool({
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded-lg bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
           >
@@ -564,7 +564,7 @@ export default function PdfEditorTool({
           {showChangeFile && (
             <button
               type="button"
-              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
               onClick={onBack}
               disabled={busy}
             >
@@ -581,7 +581,7 @@ export default function PdfEditorTool({
       )}
 
       {toolSwitcher ? (
-        <div className="px-5 py-2 border-b border-gray-100 bg-white">
+        <div className="px-5 py-2 border-b border-[color:var(--brand-line)] bg-white">
           {toolSwitcher}
         </div>
       ) : null}

@@ -23,7 +23,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
+    <header className="sticky top-0 z-50 w-full bg-[color:rgba(255,247,238,0.8)] backdrop-blur-md border-b border-[color:var(--brand-line)]">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24 md:h-28">
           {/* Logo */}
@@ -38,22 +38,22 @@ export default function Header() {
           {/* Right side buttons */}
           <div className="flex items-center gap-2 md:gap-3">
             {status === "loading" ? (
-              <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
+              <div className="w-8 h-8 rounded-full bg-[color:var(--brand-cream)] animate-pulse" />
             ) : session ? (
               <>
                 {/* User Avatar/Menu */}
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#2d85de] flex items-center justify-center text-white font-medium text-sm">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-medium text-sm">
                     {session.user?.email?.[0].toUpperCase() || "U"}
                   </div>
-                  <span className="hidden md:inline text-sm text-gray-700">
+                  <span className="hidden md:inline text-sm text-[color:var(--brand-ink)]">
                     {session.user?.email?.split("@")[0]}
                   </span>
                 </div>
                 <Button
                   variant="outline"
                   onClick={handleSignOut}
-                  className="border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-4 py-2 h-10 rounded-lg"
+                  className="border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-lilac)] font-medium px-4 py-2 h-10 rounded-lg"
                 >
                   Sign out
                 </Button>
@@ -61,7 +61,7 @@ export default function Header() {
             ) : (
               <>
                 <Link href="/app/sign-in">
-                  <Button className="bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium px-4 py-2 h-10 rounded-lg">
+                  <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-4 py-2 h-10 rounded-lg">
                     Continue with Google
                   </Button>
                 </Link>
@@ -74,14 +74,14 @@ export default function Header() {
                 <Button
                   variant="outline"
                   aria-label="Tools"
-                  className="flex items-center gap-2 border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-3 md:px-4 py-2 h-10 rounded-lg"
+                  className="flex items-center gap-2 border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-peach)] font-medium px-3 md:px-4 py-2 h-10 rounded-lg"
                 >
                   <svg
                     width="16"
                     height="16"
                     viewBox="0 0 16 16"
                     fill="none"
-                    className="text-gray-600"
+                    className="text-[color:var(--brand-muted)]"
                   >
                     <rect x="1" y="1" width="5" height="5" rx="1" fill="currentColor" />
                     <rect x="10" y="1" width="5" height="5" rx="1" fill="currentColor" />
@@ -92,7 +92,7 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-full sm:w-[400px] md:w-[500px] p-0 overflow-y-auto">
-                <SheetHeader className="px-6 py-4 border-b border-gray-100">
+                <SheetHeader className="px-6 py-4 border-b border-[color:var(--brand-line)]">
                   <SheetTitle className="text-left text-xl font-semibold">All Tools</SheetTitle>
                 </SheetHeader>
                 <div className="px-4 py-4">
@@ -101,15 +101,15 @@ export default function Header() {
                       <Link
                         key={tool.name}
                         href={tool.href}
-                        className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-4 p-3 rounded-xl hover:bg-[color:rgba(255,241,223,0.6)] transition-colors"
                         onClick={() => setIsToolsOpen(false)}
                       >
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center">
                           <ToolIcon name={tool.iconName} className="w-6 h-6 stroke-[2px]" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900">{tool.name}</h3>
-                          <p className="text-sm text-gray-500">
+                          <h3 className="font-medium text-[color:var(--brand-ink)]">{tool.name}</h3>
+                          <p className="text-sm text-[color:var(--brand-muted)]">
                             {tool.description}
                             {tool.status === "comingSoon" ? " · Coming soon" : ""}
                           </p>

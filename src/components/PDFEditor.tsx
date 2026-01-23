@@ -32,7 +32,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
 
   // Annotation state
   const [activeTool, setActiveTool] = useState<AnnotationTool>("select");
-  const [activeColor, setActiveColor] = useState("#ef4444");
+  const [activeColor, setActiveColor] = useState("#5b4bb7");
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [annotations, setAnnotations] = useState<Record<number, string>>({});
 
@@ -108,12 +108,12 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col">
         {/* Top Toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--brand-cream)] border-b border-[color:var(--brand-line)]">
           <div className="flex items-center gap-4">
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                className="p-2 hover:bg-[color:var(--brand-cream)] rounded-lg transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -121,10 +121,10 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
               </button>
             )}
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#d53b3b] rounded flex items-center justify-center">
+              <div className="w-8 h-8 bg-[color:var(--brand-purple)] rounded flex items-center justify-center">
                 <span className="text-white text-xs font-bold">PDF</span>
               </div>
-              <span className="font-medium text-gray-900 truncate max-w-[200px]">
+              <span className="font-medium text-[color:var(--brand-ink)] truncate max-w-[200px]">
                 {fileName}
               </span>
             </div>
@@ -135,19 +135,19 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
             <button
               onClick={goToPrevPage}
               disabled={pageNumber <= 1}
-              className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
-            <span className="text-sm text-gray-600 min-w-[80px] text-center">
+            <span className="text-sm text-[color:var(--brand-muted)] min-w-[80px] text-center">
               Page {pageNumber} of {numPages}
             </span>
             <button
               onClick={goToNextPage}
               disabled={pageNumber >= numPages}
-              className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 18l6-6-6-6" />
@@ -160,7 +160,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
             <button
               onClick={zoomOut}
               disabled={scale <= 0.5}
-              className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+              className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
               title="Zoom Out"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -171,14 +171,14 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
             </button>
             <button
               onClick={resetZoom}
-              className="text-sm text-gray-600 min-w-[50px] text-center hover:bg-gray-200 px-2 py-1 rounded"
+              className="text-sm text-[color:var(--brand-muted)] min-w-[50px] text-center hover:bg-[color:var(--brand-cream)] px-2 py-1 rounded"
             >
               {Math.round(scale * 100)}%
             </button>
             <button
               onClick={zoomIn}
               disabled={scale >= 3}
-              className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+              className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
               title="Zoom In"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -194,7 +194,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 font-medium text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-[color:var(--brand-line)] rounded-lg hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-ink)] font-medium text-sm"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -205,7 +205,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-[#2d85de] hover:bg-[#2473c4] text-white rounded-lg font-medium text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white rounded-lg font-medium text-sm"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
@@ -220,11 +220,11 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
         {/* PDF Viewer with Annotation Canvas */}
         <div
           ref={containerRef}
-          className="flex-1 overflow-auto bg-gray-200 flex items-start justify-center p-8"
+          className="flex-1 overflow-auto bg-[color:var(--brand-cream)] flex items-start justify-center p-8"
         >
           {loading && (
             <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2d85de]" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           )}
 
@@ -264,10 +264,10 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
         </div>
 
         {/* Bottom Status Bar */}
-        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
+        <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--brand-cream)] border-t border-[color:var(--brand-line)] text-sm text-[color:var(--brand-muted)]">
           <div className="flex items-center gap-4">
             <span>
-              Tool: <span className="font-medium text-gray-700 capitalize">{activeTool}</span>
+              Tool: <span className="font-medium text-[color:var(--brand-ink)] capitalize">{activeTool}</span>
             </span>
             <span>
               Color: <span className="inline-block w-3 h-3 rounded-full align-middle ml-1" style={{ backgroundColor: activeColor }} />

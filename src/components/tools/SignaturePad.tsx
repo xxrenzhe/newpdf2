@@ -55,7 +55,7 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ classN
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#111827";
+    ctx.strokeStyle = "#2c1e4a";
 
     const onPointerDown = (e: PointerEvent) => {
       drawingRef.current = true;
@@ -107,7 +107,7 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(({ classN
         ref={canvasRef}
         width={900}
         height={300}
-        className="w-full h-[120px] bg-white border border-gray-200 rounded-lg touch-none"
+        className="w-full h-[120px] bg-white border border-[color:var(--brand-line)] rounded-lg touch-none"
       />
     </div>
   );

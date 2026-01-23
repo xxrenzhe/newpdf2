@@ -16,14 +16,14 @@ export default function ForgotPasswordPage() {
   return (
     <main className="min-h-screen auth-gradient flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Password reset</h1>
-        <p className="text-gray-600 text-sm mb-6">
+        <h1 className="text-2xl font-bold text-[color:var(--brand-ink)] mb-2">Password reset</h1>
+        <p className="text-[color:var(--brand-muted)] text-sm mb-6">
           Password reset isn’t available because this app only supports Google one‑click sign‑in.
         </p>
 
         <Button
           variant="outline"
-          className="w-full h-12 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-base hover:bg-gray-50"
+          className="w-full h-12 rounded-xl border-2 border-[color:var(--brand-line)] text-[color:var(--brand-ink)] font-semibold text-base hover:bg-[color:var(--brand-cream)]"
           disabled={!googleConfigured}
           onClick={() => void signIn("google", { callbackUrl: "/" })}
         >
@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
         )}
 
         <div className="mt-6 text-center text-sm">
-          <Link href="/sign-in" className="text-[#2d85de] hover:underline font-medium">
+          <Link href="/sign-in" className="text-primary hover:underline font-medium">
             Back to sign in
           </Link>
         </div>

@@ -3,22 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --primary-blue: #4f46e5;
-  /* Indigo 600 */
-  --primary-blue-hover: #4338ca;
-  /* Indigo 700 */
-  --text-dark: #1e293b;
-  /* Slate 800 */
-  --text-muted: #64748b;
-  /* Slate 500 */
-  --text-gray: #475569;
-  /* Slate 600 */
-  --border-color: #e2e8f0;
-  /* Slate 200 */
-  --background-light: #f8fafc;
-  /* Slate 50 */
-  /* Updated gradient to match Indigo/Purple vibe */
-  --gradient-pink: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 50%, #f3e8ff 100%);
+  --brand-purple: #5b4bb7;
+  --brand-purple-dark: #4a3a99;
+  --brand-orange: #f28c28;
+  --brand-orange-dark: #de7a1c;
+  --brand-ink: #2c1e4a;
+  --brand-muted: #6a5f84;
+  --brand-line: #efe2d2;
+  --brand-cream: #fff7ee;
+  --brand-lilac: #f2ecff;
+  --brand-peach: #fff1df;
+  --gradient-sunrise: linear-gradient(135deg, #fff2de 0%, #f3ecff 45%, #ffe6c8 100%);
 }
 
 * {
@@ -28,50 +23,41 @@
 }
 
 body {
-  color: var(--text-dark);
-  background-color: #ffffff;
+  color: var(--brand-ink);
+  background-color: var(--brand-cream);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-body), "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 @layer base {
   :root {
-    --background: 220 30% 98%;
-    /* Very light cool gray/blue */
-    --foreground: 224 71% 4%;
-    /* Deep blue-black */
+    --background: 28 100% 97%;
+    --foreground: 260 42% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 260 42% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
-    --primary: 230 85% 60%;
-    /* Vivid Indigo */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 35 95% 60%;
-    /* Vivid Orange */
-    --secondary-foreground: 224 71% 4%;
-    --muted: 220 20% 96%;
-    --muted-foreground: 220 10% 45%;
-    --accent: 220 20% 96%;
-    --accent-foreground: 224 71% 4%;
+    --popover-foreground: 260 42% 20%;
+    --primary: 252 42% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 29 88% 55%;
+    --secondary-foreground: 260 42% 20%;
+    --muted: 28 40% 94%;
+    --muted-foreground: 260 16% 45%;
+    --accent: 28 65% 92%;
+    --accent-foreground: 260 42% 20%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 230 85% 60%;
-    --radius: 1rem;
-    /* Softer, larger radius */
-    --chart-1: 230 85% 60%;
-    /* Indigo */
-    --chart-2: 35 95% 60%;
-    /* Orange */
-    --chart-3: 190 90% 50%;
-    /* Cyan */
-    --chart-4: 280 80% 60%;
-    /* Purple */
-    --chart-5: 340 80% 60%;
-    /* Pink */
+    --border: 28 55% 88%;
+    --input: 28 55% 88%;
+    --ring: 252 42% 51%;
+    --radius: 1.25rem;
+    --chart-1: 252 42% 51%;
+    --chart-2: 29 88% 55%;
+    --chart-3: 18 80% 58%;
+    --chart-4: 270 50% 60%;
+    --chart-5: 320 55% 60%;
   }
 }
 
@@ -82,6 +68,16 @@ body {
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display), "Helvetica Neue", Helvetica, Arial, sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -97,12 +93,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--brand-line);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #dccbb6;
 }
 
 /* FAQ accordion animation */
@@ -113,19 +109,17 @@ body {
 
 /* File upload dropzone styling */
 .dropzone-active {
-  border-color: var(--primary-blue);
-  background-color: rgba(79, 70, 229, 0.05);
-  /* Indigo tint */
+  border-color: var(--brand-purple);
+  background-color: rgba(91, 75, 183, 0.08);
 }
 
 /* Gradient backgrounds */
 .bg-gradient-pink {
-  /* Updated to a soft Indigo/Purple mesh */
-  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #faf5ff 100%);
+  background: var(--gradient-sunrise);
 }
 
 .bg-gradient-light {
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #fff7ee 0%, #ffffff 100%);
 }
 
 /* Blue blur effect */
@@ -133,18 +127,17 @@ body {
   position: absolute;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(91, 75, 183, 0.18) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(60px);
   pointer-events: none;
 }
 
-/* Pink blur effect -> Now more orange/warm */
 .blur-pink {
   position: absolute;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(242, 140, 40, 0.18) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(60px);
   pointer-events: none;
@@ -157,13 +150,13 @@ body {
 
 .tool-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border-color: rgba(79, 70, 229, 0.1);
+  box-shadow: 0 24px 30px -10px rgba(44, 30, 74, 0.18);
+  border-color: rgba(91, 75, 183, 0.2);
 }
 
 /* Button animations */
 .btn-primary {
-  @apply bg-primary text-primary-foreground font-medium rounded-lg px-6 py-3 transition-all duration-200 shadow-md hover:shadow-lg hover:bg-primary/90;
+  @apply bg-primary text-primary-foreground font-semibold rounded-xl px-6 py-3 transition-all duration-200 shadow-lg;
 }
 
 /* Fallback for hover if not using standard tailwind opacity syntax above (though standard setup usually supports it)
@@ -171,14 +164,13 @@ body {
    Let's just stick to the previous style but updated variables.
 */
 .btn-primary:hover {
-  /* Handled by apply class above mostly, but explicit override if needed */
-  opacity: 0.95;
   transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(91, 75, 183, 0.25);
 }
 
 
 .btn-outline {
-  @apply border border-input bg-background text-foreground font-medium rounded-lg px-6 py-3 transition-all duration-200;
+  @apply border border-input bg-background text-foreground font-medium rounded-xl px-6 py-3 transition-all duration-200;
 }
 
 .btn-outline:hover {
@@ -213,8 +205,7 @@ body {
 
 .faq-item:hover {
   border-left-color: hsl(var(--primary));
-  background-color: hsla(var(--primary), 0.05);
-  /* 5% opacity primary */
+  background-color: hsla(var(--primary), 0.06);
 }
 
 /* Language switcher */
@@ -233,7 +224,7 @@ body {
 
 /* Auth pages gradient background */
 .auth-gradient {
-  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+  background: linear-gradient(135deg, #fff1de 0%, #f3ecff 100%);
 }
 
 /* Form input focus styles */
@@ -260,7 +251,7 @@ body {
 
 /* Cloud button styles */
 .cloud-btn {
-  @apply flex items-center gap-3 px-6 py-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-200 border border-gray-100;
+  @apply flex items-center gap-3 px-6 py-4 bg-[color:var(--brand-cream)] hover:bg-[color:var(--brand-cream)] rounded-xl transition-all duration-200 border border-[color:var(--brand-line)];
 }
 
 /* Smooth page transitions */
@@ -304,7 +295,12 @@ select:focus {
 
 /* Skeleton loading */
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(
+    90deg,
+    var(--brand-cream) 25%,
+    var(--brand-lilac) 50%,
+    var(--brand-peach) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -321,7 +317,9 @@ select:focus {
 
 /* Tooltip styles */
 .tooltip {
-  @apply invisible opacity-0 absolute bg-gray-900 text-white text-xs py-1 px-2 rounded transition-all duration-200 z-50;
+  @apply invisible opacity-0 absolute text-xs py-1 px-2 rounded transition-all duration-200 z-50;
+  background-color: var(--brand-ink);
+  color: var(--brand-cream);
 }
 
 .tooltip-trigger:hover .tooltip {
@@ -339,21 +337,21 @@ select:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--brand-line);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #dccbb6;
 }
 
 /* PDF tool specific styles */
 .pdf-tool-card {
-  @apply bg-white rounded-2xl border border-gray-100 shadow-sm transition-all duration-300;
+  @apply bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm transition-all duration-300;
 }
 
 .pdf-tool-card:hover {
-  @apply shadow-md border-gray-200;
+  @apply shadow-md border-[color:var(--brand-line)];
 }
 
 /* Enhanced button press effect */
@@ -363,8 +361,7 @@ select:focus {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
-  /* Indigo to paler Indigo */
+  background: linear-gradient(135deg, #5b4bb7 0%, #f28c28 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

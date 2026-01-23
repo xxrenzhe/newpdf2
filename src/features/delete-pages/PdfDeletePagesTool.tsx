@@ -245,11 +245,11 @@ export default function PdfDeletePagesTool({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+      <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6 mb-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900">Delete Pages</h3>
-            <p className="text-sm text-gray-500 truncate">
+            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Delete Pages</h3>
+            <p className="text-sm text-[color:var(--brand-muted)] truncate">
               {file.name}
               {numPages ? ` · ${numPages} pages` : ""}
               {deletedCount ? ` · ${deletedCount} marked for deletion` : ""}
@@ -258,7 +258,7 @@ export default function PdfDeletePagesTool({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
               onClick={exit}
               disabled={busy}
             >
@@ -266,7 +266,7 @@ export default function PdfDeletePagesTool({
             </button>
             <button
               type="button"
-              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
               onClick={() => (onExit ? onExit() : setFile(null))}
               disabled={busy}
             >
@@ -275,7 +275,7 @@ export default function PdfDeletePagesTool({
             <button
               type="button"
               disabled={!pdfOk || numPages === 0 || busy}
-              className="px-4 py-2 rounded-lg bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
               onClick={() => void exportPdf()}
             >
               {busy ? "Working..." : "Export PDF"}
@@ -297,27 +297,27 @@ export default function PdfDeletePagesTool({
       </div>
 
       {numPages > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-4">
           <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[color:var(--brand-muted)]">
               Pages {visibleRange.start + 1}-{visibleRange.endExclusive} of {numPages}
             </p>
             {totalThumbPages > 1 && (
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
                   onClick={() => setThumbPage((p) => Math.max(1, p - 1))}
                   disabled={thumbPageClamped <= 1}
                 >
                   Prev
                 </button>
-                <span className="text-sm text-gray-600 tabular-nums">
+                <span className="text-sm text-[color:var(--brand-muted)] tabular-nums">
                   {thumbPageClamped} / {totalThumbPages}
                 </span>
                 <button
                   type="button"
-                  className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
                   onClick={() => setThumbPage((p) => Math.min(totalThumbPages, p + 1))}
                   disabled={thumbPageClamped >= totalThumbPages}
                 >
@@ -384,13 +384,13 @@ const DeletePageCard = memo(function DeletePageCard({
       ref={ref}
       type="button"
       className={`rounded-xl border overflow-hidden text-left ${
-        marked ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white hover:bg-gray-50"
+        marked ? "border-red-400 bg-red-50/30" : "border-[color:var(--brand-line)] bg-white hover:bg-[color:var(--brand-cream)]"
       }`}
       onClick={() => onToggle(pageIndex)}
       title={marked ? "Click to keep this page" : "Click to delete this page"}
     >
-      <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50">
-        <span className="text-xs text-gray-600">Page {pageIndex + 1}</span>
+      <div className="flex items-center justify-between px-2 py-1.5 bg-[color:var(--brand-cream)]">
+        <span className="text-xs text-[color:var(--brand-muted)]">Page {pageIndex + 1}</span>
         {marked && (
           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
             Delete
@@ -399,9 +399,9 @@ const DeletePageCard = memo(function DeletePageCard({
       </div>
       <div className="p-2">
         {thumbUrl ? (
-          <img src={thumbUrl} alt="" className={`w-full rounded-lg border border-gray-100 ${marked ? "opacity-60" : ""}`} />
+          <img src={thumbUrl} alt="" className={`w-full rounded-lg border border-[color:var(--brand-line)] ${marked ? "opacity-60" : ""}`} />
         ) : (
-          <div className="w-full aspect-[3/4] rounded-lg bg-gray-100" />
+          <div className="w-full aspect-[3/4] rounded-lg bg-[color:var(--brand-cream)]" />
         )}
       </div>
     </button>

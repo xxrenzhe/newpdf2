@@ -88,14 +88,14 @@ export default function PlanPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f9fafb]">
+    <main className="min-h-screen bg-[color:var(--brand-cream)]">
       <Header />
 
       <section className="py-12 md:py-16">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-bold text-center mb-10">
-            Plans <span className="text-[#2d85de]">&</span> Pricing
+            Plans <span className="text-primary">&</span> Pricing
           </h1>
 
           {/* Pricing Cards */}
@@ -106,27 +106,27 @@ export default function PlanPage() {
                 onClick={() => setIsAnnual(true)}
                 className={`relative p-6 rounded-2xl border-2 transition-all text-left ${
                   isAnnual
-                    ? "border-[#2d85de] bg-white shadow-lg"
-                    : "border-gray-200 bg-white hover:border-gray-300"
+                    ? "border-primary bg-white shadow-lg"
+                    : "border-[color:var(--brand-line)] bg-white hover:border-[color:var(--brand-line)]"
                 }`}
               >
                 {isAnnual && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#15bb6f] text-white text-xs font-medium px-3 py-1 rounded-full">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary text-white text-xs font-medium px-3 py-1 rounded-full">
                     Save 60%
                   </span>
                 )}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-peach)] flex items-center justify-center">
                     <img src="/assets/same-assets/2242939468.svg" alt="" className="w-5 h-5" />
                   </div>
-                  <span className="text-3xl font-bold text-gray-900">$19.95<span className="text-lg font-normal text-gray-500">/mo</span></span>
+                  <span className="text-3xl font-bold text-[color:var(--brand-ink)]">$19.95<span className="text-lg font-normal text-[color:var(--brand-muted)]">/mo</span></span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Annual</p>
-                  <p className="text-sm text-gray-500">Invoiced every year</p>
+                  <p className="font-semibold text-[color:var(--brand-ink)]">Annual</p>
+                  <p className="text-sm text-[color:var(--brand-muted)]">Invoiced every year</p>
                 </div>
                 <div className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 ${
-                  isAnnual ? "border-[#2d85de] bg-[#2d85de]" : "border-gray-300"
+                  isAnnual ? "border-primary bg-primary" : "border-[color:var(--brand-line)]"
                 }`}>
                   {isAnnual && (
                     <div className="w-full h-full flex items-center justify-center">
@@ -141,22 +141,22 @@ export default function PlanPage() {
                 onClick={() => setIsAnnual(false)}
                 className={`relative p-6 rounded-2xl border-2 transition-all text-left ${
                   !isAnnual
-                    ? "border-[#2d85de] bg-white shadow-lg"
-                    : "border-gray-200 bg-white hover:border-gray-300"
+                    ? "border-primary bg-white shadow-lg"
+                    : "border-[color:var(--brand-line)] bg-white hover:border-[color:var(--brand-line)]"
                 }`}
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-lilac)] flex items-center justify-center">
                     <img src="/assets/same-assets/2774339654.svg" alt="" className="w-5 h-5" />
                   </div>
-                  <span className="text-3xl font-bold text-gray-900">$49.95<span className="text-lg font-normal text-gray-500">/mo</span></span>
+                  <span className="text-3xl font-bold text-[color:var(--brand-ink)]">$49.95<span className="text-lg font-normal text-[color:var(--brand-muted)]">/mo</span></span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Monthly</p>
-                  <p className="text-sm text-gray-500">Invoiced every month</p>
+                  <p className="font-semibold text-[color:var(--brand-ink)]">Monthly</p>
+                  <p className="text-sm text-[color:var(--brand-muted)]">Invoiced every month</p>
                 </div>
                 <div className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 ${
-                  !isAnnual ? "border-[#2d85de] bg-[#2d85de]" : "border-gray-300"
+                  !isAnnual ? "border-primary bg-primary" : "border-[color:var(--brand-line)]"
                 }`}>
                   {!isAnnual && (
                     <div className="w-full h-full flex items-center justify-center">
@@ -170,7 +170,7 @@ export default function PlanPage() {
             <Button
               onClick={handleCheckout}
               disabled={loading}
-              className="w-full mt-6 bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium py-4 h-14 rounded-xl text-lg disabled:opacity-50"
+              className="w-full mt-6 bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium py-4 h-14 rounded-xl text-lg disabled:opacity-50"
             >
               {loading ? "Processing..." : session ? "Buy Now" : "Sign in to Subscribe"}
             </Button>
@@ -178,7 +178,7 @@ export default function PlanPage() {
 
           {/* Features */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)]">
               Unlimited access to premium features
             </h2>
           </div>
@@ -186,18 +186,18 @@ export default function PlanPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl mx-auto mb-16">
             {features.map((feature, index) => (
               <div key={index} className="flex items-start gap-3 p-4">
-                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-cream)] flex items-center justify-center flex-shrink-0">
                   <img src={feature.icon} alt="" className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900 text-sm flex items-center gap-2">
+                  <p className="font-medium text-[color:var(--brand-ink)] text-sm flex items-center gap-2">
                     {feature.title}
                     {feature.isNew && (
-                      <span className="bg-[#15bb6f] text-white text-[10px] px-2 py-0.5 rounded-full">new</span>
+                      <span className="bg-secondary text-white text-[10px] px-2 py-0.5 rounded-full">new</span>
                     )}
                   </p>
                   {feature.subtitle && (
-                    <p className="text-xs text-gray-500">{feature.subtitle}</p>
+                    <p className="text-xs text-[color:var(--brand-muted)]">{feature.subtitle}</p>
                   )}
                 </div>
               </div>
@@ -220,7 +220,7 @@ export default function PlanPage() {
 
           {/* FAQ Section */}
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] text-center mb-8">
               Questions & Answers
             </h2>
             <Accordion type="single" collapsible className="space-y-3">
@@ -230,10 +230,10 @@ export default function PlanPage() {
                   value={`item-${index}`}
                   className="bg-white rounded-xl border-none px-6 shadow-sm"
                 >
-                  <AccordionTrigger className="text-left font-medium text-gray-900 py-5 hover:no-underline">
+                  <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-gray-600 pb-5">
+                  <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>

@@ -145,8 +145,8 @@ export default function FileDropzone({
       <div
         className={`bg-white rounded-2xl border-2 border-dashed transition-all duration-300 ${
           isDragging
-            ? "border-[#2d85de] bg-blue-50/50 scale-[1.02] shadow-lg"
-            : "border-[#2d85de]/30 hover:border-[#2d85de]/50"
+            ? "border-primary bg-[color:rgba(242,236,255,0.5)] scale-[1.02] shadow-lg"
+            : "border-primary/30 hover:border-primary/50"
         } p-10 md:p-12`}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -162,8 +162,8 @@ export default function FileDropzone({
             />
           </div>
 
-          <h3 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">{title}</h3>
-          <p className="text-sm text-gray-500 mb-6">{subtitle}</p>
+          <h3 className="text-xl md:text-2xl font-semibold text-[color:var(--brand-ink)] mb-2">{title}</h3>
+          <p className="text-sm text-[color:var(--brand-muted)] mb-6">{subtitle}</p>
 
           <label
             htmlFor={inputId}
@@ -174,7 +174,7 @@ export default function FileDropzone({
               e.preventDefault();
               inputRef.current?.click();
             }}
-            className="inline-flex items-center justify-center bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium px-10 py-3 rounded-lg transition-all duration-200 hover:shadow-lg btn-press"
+            className="inline-flex items-center justify-center bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-10 py-3 rounded-lg transition-all duration-200 hover:shadow-lg btn-press"
           >
             Browse files
           </label>
@@ -191,7 +191,7 @@ export default function FileDropzone({
           />
 
           {/* File size info */}
-          <p className="text-xs text-gray-400 mt-6 max-w-sm">
+          <p className="text-xs text-[color:var(--brand-muted)] mt-6 max-w-sm">
             Up to 100 MB for PDF and up to 20 MB for DOC, DOCX, PPT, PPTX, XLS, XLSX, BMP, JPG, JPEG, GIF, PNG, or TXT
           </p>
         </div>
@@ -203,19 +203,19 @@ export default function FileDropzone({
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C6.477 2 1.545 6.932 1.545 13s4.932 11 11 11c6.076 0 10.545-4.268 10.545-10.545 0-.707-.082-1.391-.235-2.055l-10.31-.161z" fill="#4285F4"/>
           </svg>
-          <span className="text-gray-500 font-medium text-sm">Google Drive</span>
+          <span className="text-[color:var(--brand-muted)] font-medium text-sm">Google Drive</span>
         </button>
         <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title="Coming soon">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#0061FF">
             <path d="M12 2L6 6.5l6 4.5 6-4.5L12 2zM6 11.5L0 16l6 4.5 6-4.5-6-4.5zm12 0l-6 4.5 6 4.5 6-4.5-6-4.5zM12 14l-6 4.5L12 23l6-4.5L12 14z"/>
           </svg>
-          <span className="text-gray-500 font-medium text-sm">Dropbox</span>
+          <span className="text-[color:var(--brand-muted)] font-medium text-sm">Dropbox</span>
         </button>
         <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title="Coming soon">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#0078D4">
             <path d="M10.5 2.5H2.5v9h8v-9zm11 0h-8v9h8v-9zm-11 11h-8v9h8v-9zm11 0h-8v9h8v-9z"/>
           </svg>
-          <span className="text-gray-500 font-medium text-sm">OneDrive</span>
+          <span className="text-[color:var(--brand-muted)] font-medium text-sm">OneDrive</span>
         </button>
       </div>
     </div>

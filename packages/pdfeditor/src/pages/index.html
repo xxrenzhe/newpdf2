@@ -5,7 +5,55 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><%= htmlWebpackPlugin.options.title %></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <%= htmlWebpackPlugin.tags.headTags %>
+    <style>
+        :root {
+            --brand-purple: #5b4bb7;
+            --brand-orange: #f28c28;
+            --brand-cream: #fff7ee;
+            --brand-line: #efe2d2;
+            --brand-ink: #2c1e4a;
+            --brand-muted: #6a5f84;
+        }
+
+        body {
+            background: var(--brand-cream);
+            color: var(--brand-ink);
+            font-family: "Plus Jakarta Sans", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .pdf-header {
+            background: rgba(255, 247, 238, 0.9);
+            border-bottom: 1px solid var(--brand-line);
+        }
+
+        .tab-item {
+            color: var(--brand-muted);
+        }
+
+        .tab-item.active {
+            color: var(--brand-purple);
+            border-bottom: 2px solid var(--brand-purple);
+        }
+
+        .pdf-toolbar {
+            background: #ffffff;
+            border-bottom: 1px solid var(--brand-line);
+        }
+
+        .tool-item {
+            border-color: var(--brand-line);
+        }
+
+        .tool-item.active,
+        .tool-item:hover {
+            background: rgba(242, 236, 255, 0.6);
+            color: var(--brand-purple);
+        }
+    </style>
 </head>
 
 <body>

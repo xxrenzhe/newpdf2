@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 const stats = [
   {
     icon: (
-      <svg className="w-7 h-7 text-[#2d85de]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
         <line x1="16" y1="13" x2="8" y2="13" />
@@ -18,7 +18,7 @@ const stats = [
   },
   {
     icon: (
-      <svg className="w-7 h-7 text-[#2d85de]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="3" width="7" height="7" />
         <rect x="14" y="3" width="7" height="7" />
         <rect x="14" y="14" width="7" height="7" />
@@ -31,7 +31,7 @@ const stats = [
   },
   {
     icon: (
-      <svg className="w-7 h-7 text-[#2d85de]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
       </svg>
     ),
@@ -76,17 +76,17 @@ export default function StatsSection() {
               }`}
               style={{ transitionDelay: `${index * 150}ms` }}
             >
-              <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-[color:var(--brand-lilac)] flex items-center justify-center shadow-sm">
                 {stat.icon}
               </div>
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 flex items-baseline gap-1">
+                <div className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] flex items-baseline gap-1">
                   <span className={isVisible ? "stat-number" : ""}>{stat.value}</span>
                   {stat.suffix && (
-                    <span className="text-[#2d85de] text-2xl font-bold">{stat.suffix}</span>
+                    <span className="text-secondary text-2xl font-bold">{stat.suffix}</span>
                   )}
                 </div>
-                <div className="text-base text-gray-600 font-medium">{stat.label}</div>
+                <div className="text-base text-[color:var(--brand-muted)] font-medium">{stat.label}</div>
               </div>
             </div>
           ))}

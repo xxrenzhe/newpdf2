@@ -26,10 +26,10 @@ export default async function AdminUsersPage() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-      <div className="p-6 border-b border-gray-100">
-        <h1 className="text-xl font-semibold text-gray-900">Users</h1>
-        <p className="text-sm text-gray-500 mt-1">Stripe customers + subscription summary</p>
+    <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm">
+      <div className="p-6 border-b border-[color:var(--brand-line)]">
+        <h1 className="text-xl font-semibold text-[color:var(--brand-ink)]">Users</h1>
+        <p className="text-sm text-[color:var(--brand-muted)] mt-1">Stripe customers + subscription summary</p>
       </div>
 
       {error ? (
@@ -40,7 +40,7 @@ export default async function AdminUsersPage() {
         <div className="p-6 overflow-auto">
           <table className="min-w-[900px] w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-500">
+              <tr className="text-left text-[color:var(--brand-muted)]">
                 <th className="py-2 pr-4 font-medium">Customer</th>
                 <th className="py-2 pr-4 font-medium">Email</th>
                 <th className="py-2 pr-4 font-medium">Name</th>
@@ -52,28 +52,28 @@ export default async function AdminUsersPage() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.customerId} className="border-t border-gray-100">
+                <tr key={r.customerId} className="border-t border-[color:var(--brand-line)]">
                   <td className="py-3 pr-4">
                     <Link
                       href={`/admin/users/${r.customerId}`}
-                      className="text-[#2d85de] hover:underline font-medium"
+                      className="text-primary hover:underline font-medium"
                     >
                       {r.customerId}
                     </Link>
                   </td>
-                  <td className="py-3 pr-4 text-gray-900">{r.email ?? "-"}</td>
-                  <td className="py-3 pr-4 text-gray-900">{r.name ?? "-"}</td>
-                  <td className="py-3 pr-4 text-gray-900">{r.subscription?.status ?? "-"}</td>
-                  <td className="py-3 pr-4 text-gray-900">{formatPlan(r)}</td>
-                  <td className="py-3 pr-4 text-gray-900">
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{r.email ?? "-"}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{r.name ?? "-"}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{r.subscription?.status ?? "-"}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{formatPlan(r)}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">
                     {formatDateTime(r.subscription?.currentPeriodEnd)}
                   </td>
-                  <td className="py-3 pr-4 text-gray-900">{formatDateTime(r.created)}</td>
+                  <td className="py-3 pr-4 text-[color:var(--brand-ink)]">{formatDateTime(r.created)}</td>
                 </tr>
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-gray-500">
+                  <td colSpan={7} className="py-6 text-center text-[color:var(--brand-muted)]">
                     No users found.
                   </td>
                 </tr>

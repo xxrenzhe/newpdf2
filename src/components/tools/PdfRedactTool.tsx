@@ -241,45 +241,45 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
 
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--brand-cream)] border-b border-[color:var(--brand-line)]">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setFile(null)}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            className="p-2 hover:bg-[color:var(--brand-cream)] rounded-lg transition-colors"
             title="Back"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="font-medium text-gray-900 truncate max-w-[260px]">{file.name}</span>
+          <span className="font-medium text-[color:var(--brand-ink)] truncate max-w-[260px]">{file.name}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setMode("redact")}
-            className={`px-3 py-2 rounded-lg border ${mode === "redact" ? "border-[#2d85de] bg-blue-50" : "border-gray-200 bg-white"} text-sm`}
+            className={`px-3 py-2 rounded-lg border ${mode === "redact" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-sm`}
           >
             Redact
           </button>
           <button
             type="button"
             onClick={() => setMode("select")}
-            className={`px-3 py-2 rounded-lg border ${mode === "select" ? "border-[#2d85de] bg-blue-50" : "border-gray-200 bg-white"} text-sm`}
+            className={`px-3 py-2 rounded-lg border ${mode === "select" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-sm`}
           >
             Select
           </button>
           <button
             type="button"
             onClick={clearPage}
-            className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm hover:bg-gray-50"
+            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm hover:bg-[color:var(--brand-cream)]"
           >
             Clear page
           </button>
           <select
-            className="h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm"
+            className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
             value={preset}
             onChange={(e) => setPreset(e.target.value as PdfRasterPreset)}
             title="Output quality"
@@ -292,7 +292,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             type="button"
             disabled={busy}
             onClick={exportRedacted}
-            className="px-4 py-2 rounded-lg bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
           >
             {busy ? "Exporting..." : "Export redacted PDF"}
           </button>
@@ -301,13 +301,13 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
 
       {error && <div className="m-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">{error}</div>}
 
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 text-sm text-gray-600">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[color:var(--brand-line)] text-sm text-[color:var(--brand-muted)]">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
             disabled={pageNumber <= 1}
-            className="px-2 py-1 rounded border border-gray-200 bg-white disabled:opacity-50"
+            className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white disabled:opacity-50"
           >
             Prev
           </button>
@@ -318,26 +318,26 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             type="button"
             onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
             disabled={pageNumber >= numPages}
-            className="px-2 py-1 rounded border border-gray-200 bg-white disabled:opacity-50"
+            className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white disabled:opacity-50"
           >
             Next
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" className="px-2 py-1 rounded border border-gray-200 bg-white" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}>
+          <button type="button" className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}>
             -
           </button>
           <span className="min-w-[52px] text-center">{Math.round(scale * 100)}%</span>
-          <button type="button" className="px-2 py-1 rounded border border-gray-200 bg-white" onClick={() => setScale((s) => Math.min(3, s + 0.25))}>
+          <button type="button" className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white" onClick={() => setScale((s) => Math.min(3, s + 0.25))}>
             +
           </button>
         </div>
       </div>
 
-      <div className="bg-gray-200 p-6 flex items-start justify-center min-h-[640px]">
+      <div className="bg-[color:var(--brand-line)] p-6 flex items-start justify-center min-h-[640px]">
         {loading && (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2d85de]" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
         )}
 
@@ -372,7 +372,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
         </div>
       </div>
 
-      <div className="px-4 py-3 text-xs text-gray-500 bg-gray-50 border-t border-gray-200">
+      <div className="px-4 py-3 text-xs text-[color:var(--brand-muted)] bg-[color:var(--brand-cream)] border-t border-[color:var(--brand-line)]">
         Redaction export rasterizes pages to permanently remove underlying text/vectors.
       </div>
     </div>

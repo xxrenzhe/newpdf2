@@ -95,7 +95,7 @@ export default function ContactUsPage() {
           {/* Contact Form */}
           <div className="max-w-2xl mx-auto mb-16">
             <div className="bg-white rounded-2xl shadow-lg p-8">
-              <p className="text-gray-600 mb-6">
+              <p className="text-[color:var(--brand-muted)] mb-6">
                 Need assistance? Fill out the form below, and our team will get back to you as soon as we can.
               </p>
 
@@ -111,7 +111,7 @@ export default function ContactUsPage() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
                     Full Name <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -119,13 +119,13 @@ export default function ContactUsPage() {
                     placeholder="John Newman"
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    className="h-12 rounded-lg border-gray-200"
+                    className="h-12 rounded-lg border-[color:var(--brand-line)]"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
                     Your email address <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -133,20 +133,20 @@ export default function ContactUsPage() {
                     placeholder="example@mail.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="h-12 rounded-lg border-gray-200"
+                    className="h-12 rounded-lg border-[color:var(--brand-line)]"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
                     Subject <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.subject}
                     onValueChange={(value) => setFormData({ ...formData, subject: value })}
                   >
-                    <SelectTrigger className="h-12 rounded-lg border-gray-200">
+                    <SelectTrigger className="h-12 rounded-lg border-[color:var(--brand-line)]">
                       <SelectValue placeholder="Choose subject" />
                     </SelectTrigger>
                     <SelectContent>
@@ -160,7 +160,7 @@ export default function ContactUsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
                     Description <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -168,11 +168,11 @@ export default function ContactUsPage() {
                       placeholder="Please enter the details of your request. A member of our support staff will respond as soon as possible."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full h-32 p-4 rounded-lg border border-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-[#2d85de] focus:border-transparent"
+                      className="w-full h-32 p-4 rounded-lg border border-[color:var(--brand-line)] resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       maxLength={2000}
                       required
                     />
-                    <span className="absolute bottom-2 right-3 text-xs text-gray-400">
+                    <span className="absolute bottom-2 right-3 text-xs text-[color:var(--brand-muted)]">
                       {formData.description.length}/2000
                     </span>
                   </div>
@@ -181,7 +181,7 @@ export default function ContactUsPage() {
                 <Button
                   type="submit"
                   disabled={status === "sending"}
-                  className="w-full bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium h-12 rounded-lg"
+                  className="w-full bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium h-12 rounded-lg"
                 >
                   {status === "sending" ? "Sending..." : "Send"}
                 </Button>
@@ -191,11 +191,11 @@ export default function ContactUsPage() {
 
           {/* FAQ Section */}
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] text-center mb-8">
               Frequently Asked Questions
             </h2>
 
-            <div className="flex justify-center gap-4 md:gap-8 mb-8 border-b border-gray-200">
+            <div className="flex justify-center gap-4 md:gap-8 mb-8 border-b border-[color:var(--brand-line)]">
               {(
                 [
                   { key: "general", label: "General" },
@@ -209,8 +209,8 @@ export default function ContactUsPage() {
                   onClick={() => setActiveTab(tab.key)}
                   className={`pb-3 px-2 font-medium transition-all ${
                     activeTab === tab.key
-                      ? "text-[#2d85de] border-b-2 border-[#2d85de]"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
                   }`}
                 >
                   {tab.label}
@@ -225,10 +225,10 @@ export default function ContactUsPage() {
                   value={`${activeTab}-${index}`}
                   className="bg-white rounded-xl border-none px-6 shadow-sm"
                 >
-                  <AccordionTrigger className="text-left font-medium text-gray-900 py-5 hover:no-underline">
+                  <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-gray-600 pb-5">
+                  <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>

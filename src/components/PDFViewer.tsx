@@ -53,8 +53,8 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
 
   if (!file) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
-        <p className="text-gray-500">No PDF file selected</p>
+      <div className="flex items-center justify-center h-full bg-[color:var(--brand-cream)] rounded-lg">
+        <p className="text-[color:var(--brand-muted)]">No PDF file selected</p>
       </div>
     );
   }
@@ -62,24 +62,24 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Controls */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--brand-cream)] border-b border-[color:var(--brand-line)]">
         <div className="flex items-center gap-2">
           <button
             onClick={goToPrevPage}
             disabled={pageNumber <= 1}
-            className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-[color:var(--brand-muted)]">
             Page {pageNumber} of {numPages}
           </span>
           <button
             onClick={goToNextPage}
             disabled={pageNumber >= numPages}
-            className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 18l6-6-6-6" />
@@ -91,7 +91,7 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
           <button
             onClick={zoomOut}
             disabled={scale <= 0.5}
-            className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
@@ -99,13 +99,13 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
               <line x1="8" y1="11" x2="14" y2="11" />
             </svg>
           </button>
-          <span className="text-sm text-gray-600 min-w-[50px] text-center">
+          <span className="text-sm text-[color:var(--brand-muted)] min-w-[50px] text-center">
             {Math.round(scale * 100)}%
           </span>
           <button
             onClick={zoomIn}
             disabled={scale >= 3}
-            className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
@@ -118,10 +118,10 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
       </div>
 
       {/* PDF Document */}
-      <div className="flex-1 overflow-auto bg-gray-200 flex items-start justify-center p-4">
+      <div className="flex-1 overflow-auto bg-[color:var(--brand-cream)] flex items-start justify-center p-4">
         {loading && (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2d85de]" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
         )}
 

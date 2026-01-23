@@ -43,22 +43,22 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
   }
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-gradient-to-br from-indigo-50 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg className="w-7 h-7 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="w-14 h-14 bg-gradient-to-br from-[color:var(--brand-lilac)] to-[color:var(--brand-peach)] rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900">Add Watermark</h3>
-            <p className="text-sm text-gray-500 truncate">{file.name}</p>
+            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Add Watermark</h3>
+            <p className="text-sm text-[color:var(--brand-muted)] truncate">{file.name}</p>
           </div>
         </div>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm flex items-center gap-2 transition-colors"
+          className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center gap-2 transition-colors"
           onClick={() => setFile(null)}
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -79,7 +79,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
       )}
 
       {/* Watermark Preview */}
-      <div className="mb-6 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 relative overflow-hidden">
+      <div className="mb-6 p-6 bg-gradient-to-br from-[color:var(--brand-cream)] to-[color:var(--brand-lilac)] rounded-xl border border-[color:var(--brand-line)] relative overflow-hidden">
         <div
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
           style={{
@@ -87,7 +87,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
           }}
         >
           <span
-            className="text-gray-400 font-bold whitespace-nowrap"
+            className="text-[color:var(--brand-muted)] font-bold whitespace-nowrap"
             style={{
               fontSize: `${Math.min(fontSize, 48)}px`,
               opacity: Math.max(opacity, 0.3),
@@ -97,24 +97,24 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
           </span>
         </div>
         <div className="relative z-10 text-center py-8">
-          <p className="text-sm text-gray-500">Watermark Preview</p>
+          <p className="text-sm text-[color:var(--brand-muted)]">Watermark Preview</p>
         </div>
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Watermark Text</label>
+        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">Watermark Text</label>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Enter watermark text..."
-          className="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#2d85de] focus:ring-2 focus:ring-blue-100 transition-all text-lg"
+          className="w-full h-12 px-4 rounded-xl border border-[color:var(--brand-line)] focus:border-primary focus:ring-2 focus:ring-[color:var(--brand-lilac)] transition-all text-lg"
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <label className="block">
-          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <span className="text-sm font-medium text-[color:var(--brand-ink)] flex items-center gap-2">
+            <svg className="w-4 h-4 text-[color:var(--brand-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <path d="M12 6v6l4 2" />
             </svg>
@@ -127,13 +127,13 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
             step={0.01}
             value={opacity}
             onChange={(e) => setOpacity(Number(e.target.value))}
-            className="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2d85de]"
+            className="mt-2 w-full h-2 bg-[color:var(--brand-line)] rounded-lg appearance-none cursor-pointer accent-primary"
           />
-          <span className="text-xs text-gray-500 mt-1 block">{Math.round(opacity * 100)}%</span>
+          <span className="text-xs text-[color:var(--brand-muted)] mt-1 block">{Math.round(opacity * 100)}%</span>
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <span className="text-sm font-medium text-[color:var(--brand-ink)] flex items-center gap-2">
+            <svg className="w-4 h-4 text-[color:var(--brand-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 7V4h16v3M9 20h6M12 4v16" />
             </svg>
             Font Size
@@ -145,13 +145,13 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
             step={4}
             value={fontSize}
             onChange={(e) => setFontSize(Number(e.target.value))}
-            className="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2d85de]"
+            className="mt-2 w-full h-2 bg-[color:var(--brand-line)] rounded-lg appearance-none cursor-pointer accent-primary"
           />
-          <span className="text-xs text-gray-500 mt-1 block">{fontSize}pt</span>
+          <span className="text-xs text-[color:var(--brand-muted)] mt-1 block">{fontSize}pt</span>
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <span className="text-sm font-medium text-[color:var(--brand-ink)] flex items-center gap-2">
+            <svg className="w-4 h-4 text-[color:var(--brand-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
             </svg>
             Rotation
@@ -163,9 +163,9 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
             step={5}
             value={rotation}
             onChange={(e) => setRotation(Number(e.target.value))}
-            className="mt-2 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2d85de]"
+            className="mt-2 w-full h-2 bg-[color:var(--brand-line)] rounded-lg appearance-none cursor-pointer accent-primary"
           />
-          <span className="text-xs text-gray-500 mt-1 block">{rotation}°</span>
+          <span className="text-xs text-[color:var(--brand-muted)] mt-1 block">{rotation}°</span>
         </label>
       </div>
 
@@ -183,7 +183,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
         type="button"
         disabled={!isPdf || busy}
         onClick={run}
-        className="w-full h-12 rounded-xl bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-all flex items-center justify-center gap-2"
       >
         {busy ? (
           <>
@@ -204,4 +204,3 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
     </div>
   );
 }
-

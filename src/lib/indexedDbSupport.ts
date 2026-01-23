@@ -11,7 +11,7 @@ export function isIndexedDbWritable(): Promise<boolean> {
       return;
     }
 
-    const dbName = "files-editor-storage-check";
+    const dbName = "qwerpdf-storage-check";
     const storeName = "t";
 
     let request: IDBOpenDBRequest;
@@ -64,4 +64,3 @@ export function isIndexedDbWritable(): Promise<boolean> {
 
   return cachedWritable;
 }
-

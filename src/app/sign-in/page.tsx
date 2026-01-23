@@ -66,7 +66,7 @@ function SignInInner() {
           <Select value={language} onValueChange={setLanguage}>
             <SelectTrigger className="w-[140px] bg-transparent border-none">
               <div className="flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[color:var(--brand-muted)]">
                   <circle cx="12" cy="12" r="10" />
                   <line x1="2" y1="12" x2="22" y2="12" />
                   <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -89,8 +89,8 @@ function SignInInner() {
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-8">
         <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-10 md:p-12">
           <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">Sign in</h1>
-            <p className="text-gray-600 text-lg">Continue with Google to unlock higher free usage.</p>
+            <h1 className="text-4xl font-bold text-[color:var(--brand-ink)] mb-3">Sign in</h1>
+            <p className="text-[color:var(--brand-muted)] text-lg">Continue with Google to unlock higher free usage.</p>
           </div>
 
           {error && (
@@ -102,7 +102,7 @@ function SignInInner() {
           <div className="space-y-4">
             <Button
               variant="outline"
-              className="w-full h-14 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-base hover:bg-gray-50"
+              className="w-full h-14 rounded-xl border-2 border-[color:var(--brand-line)] text-[color:var(--brand-ink)] font-semibold text-base hover:bg-[color:var(--brand-cream)]"
               onClick={() => void handleGoogleSignIn()}
               disabled={loading || !googleConfigured}
             >
@@ -121,9 +121,9 @@ function SignInInner() {
               </div>
             )}
 
-            <div className="text-center text-sm text-gray-500">
+            <div className="text-center text-sm text-[color:var(--brand-muted)]">
               Prefer not to sign in?{" "}
-              <Link href="/tools/annotate" className="text-[#2d85de] hover:underline font-medium">
+              <Link href="/tools/annotate" className="text-primary hover:underline font-medium">
                 Continue as guest
               </Link>
             </div>

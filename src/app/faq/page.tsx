@@ -47,7 +47,7 @@ export default function FAQPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f9fafb]">
+    <main className="min-h-screen bg-[color:var(--brand-cream)]">
       <Header />
 
       <section className="py-12 md:py-16">
@@ -58,15 +58,15 @@ export default function FAQPage() {
           </h1>
 
           {/* Tabs */}
-          <div className="flex justify-center gap-4 md:gap-8 mb-12 border-b border-gray-200">
+          <div className="flex justify-center gap-4 md:gap-8 mb-12 border-b border-[color:var(--brand-line)]">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`pb-4 px-2 font-medium transition-all ${
                   activeTab === tab.key
-                    ? "text-[#2d85de] border-b-2 border-[#2d85de]"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
                 }`}
               >
                 {tab.label}
@@ -79,7 +79,7 @@ export default function FAQPage() {
             {/* General Section */}
             {activeTab === "general" && (
               <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-gray-900">General</h2>
+                <h2 className="text-2xl font-bold text-[color:var(--brand-ink)]">General</h2>
                 <Accordion type="single" collapsible className="space-y-3">
                   {faqCategories.general.map((item, index) => (
                     <AccordionItem
@@ -87,10 +87,10 @@ export default function FAQPage() {
                       value={`general-${index}`}
                       className="bg-white rounded-xl border-none px-6 shadow-sm"
                     >
-                      <AccordionTrigger className="text-left font-medium text-gray-900 py-5 hover:no-underline">
+                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
                         {item.question}
                       </AccordionTrigger>
-                      <AccordionContent className="text-gray-600 pb-5">
+                      <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
                         {item.answer}
                       </AccordionContent>
                     </AccordionItem>
@@ -102,7 +102,7 @@ export default function FAQPage() {
             {/* Security Section */}
             {activeTab === "security" && (
               <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-gray-900">Security</h2>
+                <h2 className="text-2xl font-bold text-[color:var(--brand-ink)]">Security</h2>
                 <Accordion type="single" collapsible className="space-y-3">
                   {faqCategories.security.map((item, index) => (
                     <AccordionItem
@@ -110,10 +110,10 @@ export default function FAQPage() {
                       value={`security-${index}`}
                       className="bg-white rounded-xl border-none px-6 shadow-sm"
                     >
-                      <AccordionTrigger className="text-left font-medium text-gray-900 py-5 hover:no-underline">
+                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
                         {item.question}
                       </AccordionTrigger>
-                      <AccordionContent className="text-gray-600 pb-5">
+                      <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
                         {item.answer}
                       </AccordionContent>
                     </AccordionItem>
@@ -125,7 +125,7 @@ export default function FAQPage() {
             {/* Billing Section */}
             {activeTab === "billing" && (
               <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-gray-900">Account & Billing</h2>
+                <h2 className="text-2xl font-bold text-[color:var(--brand-ink)]">Account & Billing</h2>
                 <Accordion type="single" collapsible className="space-y-3">
                   {faqCategories.billing.map((item, index) => (
                     <AccordionItem
@@ -133,10 +133,10 @@ export default function FAQPage() {
                       value={`billing-${index}`}
                       className="bg-white rounded-xl border-none px-6 shadow-sm"
                     >
-                      <AccordionTrigger className="text-left font-medium text-gray-900 py-5 hover:no-underline">
+                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
                         {item.question}
                       </AccordionTrigger>
-                      <AccordionContent className="text-gray-600 pb-5">
+                      <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
                         {item.answer}
                       </AccordionContent>
                     </AccordionItem>

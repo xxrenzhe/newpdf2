@@ -17,7 +17,7 @@ export type GuestDocumentRecord = {
   files: StoredFile[];
 };
 
-const DB_NAME = "files-editor";
+const DB_NAME = "qwerpdf";
 const DB_VERSION = 2;
 const STORE_NAME = "guest-documents";
 

@@ -38,15 +38,15 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900">Crop Pages</h3>
-          <p className="text-sm text-gray-500 truncate">{file.name}</p>
+          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Crop Pages</h3>
+          <p className="text-sm text-[color:var(--brand-muted)] truncate">{file.name}</p>
         </div>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+          className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
           onClick={() => setFile(null)}
         >
           Change file
@@ -60,44 +60,44 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-[color:var(--brand-muted)]">
           Left (pt)
           <input
             type="number"
             min={0}
             value={marginLeft}
             onChange={(e) => setMarginLeft(Number(e.target.value || 0))}
-            className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+            className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
           />
         </label>
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-[color:var(--brand-muted)]">
           Right (pt)
           <input
             type="number"
             min={0}
             value={marginRight}
             onChange={(e) => setMarginRight(Number(e.target.value || 0))}
-            className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+            className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
           />
         </label>
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-[color:var(--brand-muted)]">
           Top (pt)
           <input
             type="number"
             min={0}
             value={marginTop}
             onChange={(e) => setMarginTop(Number(e.target.value || 0))}
-            className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+            className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
           />
         </label>
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-[color:var(--brand-muted)]">
           Bottom (pt)
           <input
             type="number"
             min={0}
             value={marginBottom}
             onChange={(e) => setMarginBottom(Number(e.target.value || 0))}
-            className="mt-1 w-full h-10 px-3 rounded-lg border border-gray-200"
+            className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
           />
         </label>
       </div>
@@ -108,7 +108,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
         type="button"
         disabled={!isPdf || busy}
         onClick={run}
-        className="w-full h-12 rounded-xl bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium disabled:opacity-50"
+        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
       >
         {busy ? "Working..." : "Crop & Download"}
       </button>

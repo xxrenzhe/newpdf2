@@ -30,30 +30,30 @@ function PaymentSuccessContent() {
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-[color:var(--brand-ink)] mb-2">
             Payment Successful!
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-[color:var(--brand-muted)] mb-6">
             Thank you for subscribing to QwerPDF Premium. You now have
             unlimited access to all our PDF tools.
           </p>
 
           {sessionId && (
-            <p className="text-xs text-gray-400 mb-6">
+            <p className="text-xs text-[color:var(--brand-muted)] mb-6">
               Order ID: {sessionId.slice(0, 20)}...
             </p>
           )}
 
           <div className="space-y-3">
             <Link href="/">
-              <Button className="w-full bg-[#2d85de] hover:bg-[#2473c4] text-white font-medium h-12 rounded-lg">
+              <Button className="w-full bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium h-12 rounded-lg">
                 Start Editing PDFs
               </Button>
             </Link>
             <Link href="/plan">
               <Button
                 variant="outline"
-                className="w-full border-gray-200 text-gray-700 h-12 rounded-lg"
+                className="w-full border-[color:var(--brand-line)] text-[color:var(--brand-ink)] h-12 rounded-lg"
               >
                 View Subscription
               </Button>
@@ -70,7 +70,7 @@ export default function PaymentSuccessPage() {
     <Suspense
       fallback={
         <main className="min-h-screen bg-gradient-pink flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2d85de]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </main>
       }
     >
