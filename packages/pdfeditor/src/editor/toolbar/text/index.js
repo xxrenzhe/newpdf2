@@ -17,8 +17,8 @@ class Text extends ToolbarItemBase {
             bold: false,
             italic: false,
             rotate: undefined,
-            fontFamily: 'Helvetica',
-            fontFile: 'fonts/NotoSansCJKsc-Regular.otf'
+            fontFamily: 'NotoSansCJKkr',
+            fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
         };
         if (Text.attrs) {
             attrs = Object.assign(attrs, Text.attrs);

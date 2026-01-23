@@ -17,8 +17,8 @@ class TextElement extends BaseElement {
             bold: false,
             italic: false,
             rotate: undefined,
-            fontFamily: 'NotoSansCJKsc',
-            fontFile: 'fonts/NotoSansCJKsc-Regular.otf'
+            fontFamily: 'NotoSansCJKkr',
+            fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
         };
         this.attrs = Object.assign(attrs, this.attrs);
         this.options.draggableOptions.isCancelDefaultEvent = false;

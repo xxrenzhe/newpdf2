@@ -24,7 +24,7 @@ class TextBoxElement extends TextElement {
             bold: false,
             italic: false,
             fontFamily: null,
-            fontFile: 'fonts/NotoSansCJKsc-Regular.otf'
+            fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
         };
         this.attrs = Object.assign(attrs, this.attrs);
         this.options.draggableOptions.isCancelDefaultEvent = false;

@@ -5,7 +5,7 @@ const CHARS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 
 // Offline CJK fallback font (served from `ASSETS_URL + "fonts/..."`).
 // This font supports CJK + Hangul + Kana; we use it as a safe Unicode fallback
 // when the original PDF font can't be embedded/encoded.
-const UNICODE_FONT = 'fonts/NotoSansCJKsc-Regular.otf';
+const UNICODE_FONT = 'fonts/NotoSansCJKkr-Regular.otf';
 // Include: Hangul Jamo/Compatibility/Syllables, Hiragana/Katakana, CJK ideographs.
 const CJK_RANGE = '[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]';
 

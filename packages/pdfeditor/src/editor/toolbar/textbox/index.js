@@ -22,8 +22,8 @@ class TextBox extends Rect {
             underline: false,
             bold: false,
             italic: false,
-            fontFamily: 'Helvetica',
-            fontFile: 'fonts/NotoSansCJKsc-Regular.otf'
+            fontFamily: 'NotoSansCJKkr',
+            fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
         };
         if (TextBox.attrs) {
             attrs = Object.assign(attrs, TextBox.attrs);

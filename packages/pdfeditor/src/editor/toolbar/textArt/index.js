@@ -23,9 +23,9 @@ class TextArt extends ToolbarItemBase {
             bold: false,
             italic: false,
             rotate: undefined,
-            fontFamily: 'Helvetica', 
+            fontFamily: 'NotoSansCJKkr', 
             textArtType:'one',
-            fontFile: 'fonts/NotoSansCJKsc-Regular.otf',
+            fontFile: 'fonts/NotoSansCJKkr-Regular.otf',
             isGradient:'false',
             gradientType:null,
             gradientColor:null,
@@ -59,8 +59,8 @@ class TextArt extends ToolbarItemBase {
                 el.classList.add('active');
                 this.textArtSelect = 'text';
                 this.isAdd = true;
-                this.attrs.fontFamily='Helvetica', 
-                this.attrs.fontFile='fonts/NotoSansCJKsc-Regular.otf',
+                this.attrs.fontFamily='NotoSansCJKkr', 
+                this.attrs.fontFile='fonts/NotoSansCJKkr-Regular.otf',
                 this.attrs.isGradient = el.getAttribute('data-gradient');
                 if(this.attrs.isGradient == 'true'){
                     this.attrs.gradientColor = el.getAttribute('data-gradientColor');
@@ -343,8 +343,8 @@ class TextArt extends ToolbarItemBase {
                     },100)
                 },  (err)=>{
                     loadDom.style.display = 'none';
-                    this.attrs.fontFamily= 'Helvetica';
-                    this.attrs.fontFile='fonts/NotoSansCJKsc-Regular.otf';
+                    this.attrs.fontFamily= 'NotoSansCJKkr';
+                    this.attrs.fontFile='fonts/NotoSansCJKkr-Regular.otf';
                     let _element = document.createElement('div');
                     let readerScale = this.editor.reader.scale;
                     let scale = window.devicePixelRatio || 1;

@@ -38,7 +38,7 @@ const FONT_URLS = {
   ethiopic: `${FONT_BASE_URL}NotoSansEthiopic.woff`,
   tibetan: `${FONT_BASE_URL}NotoSerifTibetan.woff`,
   symbols: `${FONT_BASE_URL}NotoSansSymbols2.woff`,
-  cjk: `${FONT_BASE_URL}NotoSansCJKsc-Regular.otf`,
+  cjk: `${FONT_BASE_URL}NotoSansCJKkr-Regular.otf`,
 } as const;
 
 export type PreparedRun = { text: string; font: PDFFont };

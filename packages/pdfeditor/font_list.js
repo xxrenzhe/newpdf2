@@ -7,6 +7,11 @@ const fontDomain = '../assets/';
 
 const fontList = [
     {
+        fontFamily: 'NotoSansCJKkr',
+        showName: 'Noto Sans KR',
+        fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
+    },
+    {
         fontFamily: 'Arial',
         showName: 'Arial',
         fontFile: 'fonts/Lato-Regular.ttf'
