@@ -5,7 +5,6 @@ import Link from "@/components/AppLink";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FileDropzone from "@/components/tools/FileDropzone";
-import GuestQuotaBanner from "@/components/auth/GuestQuotaBanner";
 import { toolByKey } from "@/lib/tools";
 import { createGuestDocument, loadGuestDocument, updateGuestDocumentFiles, updateGuestDocumentTool } from "@/lib/guestDocumentStore";
 import { chosenToolFromToolKey, displayToolKeyFromChosenTool, pdfEditorInitialTool, toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
@@ -137,8 +136,8 @@ export default function GuestDocumentClient() {
               onClick={() => onSwitchTool(t.chosenTool)}
               className={
                 active
-                  ? "shrink-0 px-3 py-2 rounded-lg bg-blue-50 text-[#2d85de] border border-blue-100 text-sm font-medium"
-                  : "shrink-0 px-3 py-2 rounded-lg bg-white text-gray-700 border border-gray-200 text-sm hover:bg-gray-50"
+                  ? "shrink-0 px-3 py-2 rounded-lg bg-[color:var(--brand-lilac)] text-primary border border-[color:var(--brand-line)] text-sm font-medium"
+                  : "shrink-0 px-3 py-2 rounded-lg bg-white text-[color:var(--brand-ink)] border border-[color:var(--brand-line)] text-sm hover:bg-[color:var(--brand-cream)]"
               }
             >
               {t.label}
@@ -152,37 +151,34 @@ export default function GuestDocumentClient() {
   return (
     <main className="min-h-screen bg-white">
       {!showEditor || !isPdfEditor ? (
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
+        <header className="sticky top-0 z-40 bg-white border-b border-[color:var(--brand-line)]">
           <div className="h-20 md:h-24 px-4 flex items-center gap-3">
             <Link href="/en" className="flex items-center gap-2">
               <img src="/logo.png" alt="QwerPDF" className="h-20 md:h-24 w-auto" />
             </Link>
             <div className="flex-1 min-w-0">
               {showEditor && editorFile ? (
-                <p className="text-sm font-medium text-gray-900 truncate">{editorFile.name}</p>
+                <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate">{editorFile.name}</p>
               ) : (
-                <p className="text-sm font-medium text-gray-900 truncate">Upload Document</p>
+                <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate">Upload Document</p>
               )}
             </div>
-            <Link href="/app/sign-in" className="text-sm text-gray-600 hover:text-gray-900 hidden sm:inline">
+            <Link href="/app/sign-in" className="text-sm text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] hidden sm:inline">
               Sign in
             </Link>
-            <Link href="/app/sign-in" className="text-sm px-3 py-2 rounded-lg bg-[#2d85de] text-white hover:bg-[#2473c4] hidden sm:inline">
+            <Link href="/app/sign-in" className="text-sm px-3 py-2 rounded-lg bg-primary text-white hover:bg-[color:var(--brand-purple-dark)] hidden sm:inline">
               Continue with Google
             </Link>
           </div>
-          {documentId ? <div className="px-3 py-2 border-t border-gray-100">{switcher}</div> : null}
+          {documentId ? <div className="px-3 py-2 border-t border-[color:var(--brand-line)]">{switcher}</div> : null}
         </header>
       ) : null}
 
       <div className={showEditor && isPdfEditor ? "p-0" : showEditor ? "py-4 px-2 md:px-4 lg:px-6" : "py-12 px-4"}>
-        <div className={showEditor && isPdfEditor ? "p-4" : "max-w-3xl mx-auto"}>
-          <GuestQuotaBanner />
-        </div>
         {!documentId && (
           <div className="max-w-2xl mx-auto text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{toolDef.name}</h1>
-            <p className="text-gray-600">{toolDef.description}</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3">{toolDef.name}</h1>
+            <p className="text-[color:var(--brand-muted)]">{toolDef.description}</p>
           </div>
         )}
 
@@ -194,7 +190,7 @@ export default function GuestDocumentClient() {
 
         {documentId && loading && files.length === 0 ? (
           <div className="max-w-3xl mx-auto">
-            <div className="h-[70vh] rounded-2xl border border-gray-100 bg-gray-50 animate-pulse" />
+            <div className="h-[70vh] rounded-2xl border border-[color:var(--brand-line)] bg-[color:var(--brand-cream)] animate-pulse" />
           </div>
         ) : !showEditor ? (
           <div className="max-w-3xl mx-auto">
@@ -242,9 +238,9 @@ export default function GuestDocumentClient() {
             ) : toolKey === "redact" ? (
               <PdfRedactTool initialFile={files[0]!} />
             ) : (
-              <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Tool not available</h2>
-                <p className="text-sm text-gray-600">This tool isn’t implemented in the guest workspace yet.</p>
+              <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-[color:var(--brand-ink)] mb-2">Tool not available</h2>
+                <p className="text-sm text-[color:var(--brand-muted)]">This tool isn’t implemented in the guest workspace yet.</p>
               </div>
             )}
           </div>
