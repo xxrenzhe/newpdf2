@@ -2,6 +2,22 @@
 
 import { useState } from "react";
 import type { AnnotationTool } from "./PDFAnnotationCanvas";
+import {
+  MousePointer2,
+  Type,
+  Highlighter,
+  PenTool,
+  Square,
+  Circle,
+  MoveRight,
+  Minus,
+  Eraser,
+  Palette,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+  ChevronDown
+} from "lucide-react";
 
 interface AnnotationToolbarProps {
   activeTool: AnnotationTool;
@@ -19,93 +35,47 @@ const tools: { id: AnnotationTool; label: string; icon: React.ReactNode }[] = [
   {
     id: "select",
     label: "Select",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
-        <path d="M13 13l6 6" />
-      </svg>
-    ),
+    icon: <MousePointer2 className="w-5 h-5" />,
   },
   {
     id: "text",
     label: "Text",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 7V4h16v3" />
-        <path d="M9 20h6" />
-        <path d="M12 4v16" />
-      </svg>
-    ),
+    icon: <Type className="w-5 h-5" />,
   },
   {
     id: "highlight",
     label: "Highlight",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5z" />
-        <path d="M2 17l10 5 10-5" />
-        <path d="M2 12l10 5 10-5" />
-      </svg>
-    ),
+    icon: <Highlighter className="w-5 h-5" />,
   },
   {
     id: "freehand",
     label: "Draw",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 19l7-7 3 3-7 7-3-3z" />
-        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-        <path d="M2 2l7.586 7.586" />
-        <circle cx="11" cy="11" r="2" />
-      </svg>
-    ),
+    icon: <PenTool className="w-5 h-5" />,
   },
   {
     id: "rectangle",
     label: "Rectangle",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-      </svg>
-    ),
+    icon: <Square className="w-5 h-5" />,
   },
   {
     id: "circle",
     label: "Circle",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10" />
-      </svg>
-    ),
+    icon: <Circle className="w-5 h-5" />,
   },
   {
     id: "arrow",
     label: "Arrow",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <line x1="5" y1="12" x2="19" y2="12" />
-        <polyline points="12 5 19 12 12 19" />
-      </svg>
-    ),
+    icon: <MoveRight className="w-5 h-5" />,
   },
   {
     id: "line",
     label: "Line",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <line x1="5" y1="19" x2="19" y2="5" />
-      </svg>
-    ),
+    icon: <Minus className="w-5 h-5" />,
   },
   {
     id: "eraser",
     label: "Eraser",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M20 20H9L3.5 14.5a2.121 2.121 0 0 1 0-3l9-9a2.121 2.121 0 0 1 3 0L20 7" />
-        <path d="M5.5 16.5L14 8" />
-      </svg>
-    ),
+    icon: <Eraser className="w-5 h-5" />,
   },
 ];
 
@@ -116,7 +86,7 @@ const colors = [
   "#eab308",
   "#22c55e",
   "#3b82f6",
-  "#8b5cf6",
+  "#4f46e5", // New Indigo
   "#ec4899",
 ];
 
@@ -137,18 +107,17 @@ export default function AnnotationToolbar({
   const [showStrokeWidth, setShowStrokeWidth] = useState(false);
 
   return (
-    <div className="flex flex-col bg-white border-r border-gray-200 py-2">
+    <div className="flex flex-col bg-white border-r border-gray-200 py-3 w-[72px] items-center h-full shadow-sm">
       {/* Tools */}
-      <div className="flex flex-col gap-1 px-2">
+      <div className="flex flex-col gap-2 w-full px-3">
         {tools.map((tool) => (
           <button
             key={tool.id}
             onClick={() => onToolChange(tool.id)}
-            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-              activeTool === tool.id
-                ? "bg-[#2d85de] text-white"
-                : "hover:bg-gray-100 text-gray-600"
-            }`}
+            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${activeTool === tool.id
+                ? "bg-primary text-white shadow-md shadow-indigo-200"
+                : "hover:bg-gray-100 text-gray-500 hover:text-gray-900"
+              }`}
             title={tool.label}
           >
             {tool.icon}
@@ -156,23 +125,24 @@ export default function AnnotationToolbar({
         ))}
       </div>
 
-      <div className="border-t border-gray-200 my-2" />
+      <div className="w-8 h-px bg-gray-200 my-4" />
 
       {/* Color Picker */}
-      <div className="relative px-2">
+      <div className="relative w-full flex justify-center mb-2">
         <button
           onClick={() => setShowColorPicker(!showColorPicker)}
-          className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100"
+          className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
           title="Color"
         >
           <div
-            className="w-6 h-6 rounded-full border-2 border-gray-300"
+            className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-gray-200 shadow-sm"
             style={{ backgroundColor: activeColor }}
           />
         </button>
         {showColorPicker && (
-          <div className="absolute left-12 top-0 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-50">
-            <div className="grid grid-cols-4 gap-1">
+          <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-50 w-48 animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Stroke Color</div>
+            <div className="grid grid-cols-4 gap-2">
               {colors.map((color) => (
                 <button
                   key={color}
@@ -180,9 +150,8 @@ export default function AnnotationToolbar({
                     onColorChange(color);
                     setShowColorPicker(false);
                   }}
-                  className={`w-8 h-8 rounded-full border-2 ${
-                    activeColor === color ? "border-gray-800" : "border-transparent"
-                  }`}
+                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${activeColor === color ? "border-gray-900 ring-2 ring-gray-200" : "border-transparent"
+                    }`}
                   style={{ backgroundColor: color }}
                 />
               ))}
@@ -192,24 +161,25 @@ export default function AnnotationToolbar({
       </div>
 
       {/* Stroke Width */}
-      <div className="relative px-2">
+      <div className="relative w-full flex justify-center">
         <button
           onClick={() => setShowStrokeWidth(!showStrokeWidth)}
-          className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100"
+          className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors"
           title="Stroke Width"
         >
           <div className="flex items-center justify-center">
             <div
-              className="rounded-full bg-gray-600"
+              className="rounded-full bg-current"
               style={{
-                width: Math.min(strokeWidth * 3, 20),
-                height: Math.min(strokeWidth * 3, 20),
+                width: Math.min(strokeWidth * 2.5 + 4, 18),
+                height: Math.min(strokeWidth * 2.5 + 4, 18),
               }}
             />
           </div>
         </button>
         {showStrokeWidth && (
-          <div className="absolute left-12 top-0 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-50">
+          <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-50 min-w-[120px] animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Stroke Width</div>
             <div className="flex flex-col gap-1">
               {strokeWidths.map((width) => (
                 <button
@@ -218,15 +188,14 @@ export default function AnnotationToolbar({
                     onStrokeWidthChange(width);
                     setShowStrokeWidth(false);
                   }}
-                  className={`px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-100 ${
-                    strokeWidth === width ? "bg-blue-50" : ""
-                  }`}
+                  className={`px-3 py-2 rounded-lg flex items-center gap-3 hover:bg-gray-50 transition-colors ${strokeWidth === width ? "bg-indigo-50 text-primary" : "text-gray-600"
+                    }`}
                 >
                   <div
-                    className="rounded-full bg-gray-600"
-                    style={{ width: width * 2, height: width * 2 }}
+                    className="rounded-full bg-current"
+                    style={{ width: width + 4, height: width + 4 }}
                   />
-                  <span className="text-sm text-gray-700">{width}px</span>
+                  <span className="text-sm font-medium">{width}px</span>
                 </button>
               ))}
             </div>
@@ -234,44 +203,35 @@ export default function AnnotationToolbar({
         )}
       </div>
 
-      <div className="border-t border-gray-200 my-2" />
+      <div className="w-8 h-px bg-gray-200 my-4" />
 
       {/* Actions */}
-      <div className="flex flex-col gap-1 px-2">
+      <div className="flex flex-col gap-2 w-full px-3">
         {onUndo && (
           <button
             onClick={onUndo}
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-600"
+            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
             title="Undo"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 7v6h6" />
-              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-            </svg>
+            <RotateCcw className="w-5 h-5" />
           </button>
         )}
         {onRedo && (
           <button
             onClick={onRedo}
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-600"
+            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
             title="Redo"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 7v6h-6" />
-              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
-            </svg>
+            <RotateCw className="w-5 h-5" />
           </button>
         )}
         {onClear && (
           <button
             onClick={onClear}
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100 text-red-500"
+            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors mt-2"
             title="Clear All"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
+            <Trash2 className="w-5 h-5" />
           </button>
         )}
       </div>

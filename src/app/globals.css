@@ -3,14 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --primary-blue: #2d85de;
-  --primary-blue-hover: #2473c4;
-  --text-dark: #08090c;
-  --text-muted: #9ea6ab;
-  --text-gray: #5a5d60;
-  --border-color: #e5e7eb;
-  --background-light: #f8fafb;
-  --gradient-pink: linear-gradient(135deg, #fce4ec 0%, #fce8e8 50%, #e8f4fd 100%);
+  --primary-blue: #4f46e5;
+  /* Indigo 600 */
+  --primary-blue-hover: #4338ca;
+  /* Indigo 700 */
+  --text-dark: #1e293b;
+  /* Slate 800 */
+  --text-muted: #64748b;
+  /* Slate 500 */
+  --text-gray: #475569;
+  /* Slate 600 */
+  --border-color: #e2e8f0;
+  /* Slate 200 */
+  --background-light: #f8fafc;
+  /* Slate 50 */
+  /* Updated gradient to match Indigo/Purple vibe */
+  --gradient-pink: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 50%, #f3e8ff 100%);
 }
 
 * {
@@ -29,26 +37,41 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 9% 5%;
+    --background: 220 30% 98%;
+    /* Very light cool gray/blue */
+    --foreground: 224 71% 4%;
+    /* Deep blue-black */
     --card: 0 0% 100%;
-    --card-foreground: 220 9% 5%;
+    --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 9% 5%;
-    --primary: 210 70% 53%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 5% 96%;
-    --secondary-foreground: 220 9% 5%;
-    --muted: 210 5% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 210 5% 96%;
-    --accent-foreground: 220 9% 5%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 230 85% 60%;
+    /* Vivid Indigo */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 35 95% 60%;
+    /* Vivid Orange */
+    --secondary-foreground: 224 71% 4%;
+    --muted: 220 20% 96%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 220 20% 96%;
+    --accent-foreground: 224 71% 4%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 9% 90%;
-    --input: 220 9% 90%;
-    --ring: 210 70% 53%;
-    --radius: 0.75rem;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 230 85% 60%;
+    --radius: 1rem;
+    /* Softer, larger radius */
+    --chart-1: 230 85% 60%;
+    /* Indigo */
+    --chart-2: 35 95% 60%;
+    /* Orange */
+    --chart-3: 190 90% 50%;
+    /* Cyan */
+    --chart-4: 280 80% 60%;
+    /* Purple */
+    --chart-5: 340 80% 60%;
+    /* Pink */
   }
 }
 
@@ -56,6 +79,7 @@ body {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -68,17 +92,17 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: #94a3b8;
 }
 
 /* FAQ accordion animation */
@@ -90,16 +114,18 @@ body {
 /* File upload dropzone styling */
 .dropzone-active {
   border-color: var(--primary-blue);
-  background-color: rgba(45, 133, 222, 0.05);
+  background-color: rgba(79, 70, 229, 0.05);
+  /* Indigo tint */
 }
 
 /* Gradient backgrounds */
 .bg-gradient-pink {
-  background: linear-gradient(135deg, #fdf6f4 0%, #fdf6f6 30%, #f5f8fc 60%, #f0f6fc 100%);
+  /* Updated to a soft Indigo/Purple mesh */
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #faf5ff 100%);
 }
 
 .bg-gradient-light {
-  background: linear-gradient(180deg, #f8fafb 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
 }
 
 /* Blue blur effect */
@@ -107,18 +133,18 @@ body {
   position: absolute;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(45, 133, 222, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(60px);
   pointer-events: none;
 }
 
-/* Pink blur effect */
+/* Pink blur effect -> Now more orange/warm */
 .blur-pink {
   position: absolute;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(255, 200, 200, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.15) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(60px);
   pointer-events: none;
@@ -126,29 +152,37 @@ body {
 
 /* Tool card hover effect */
 .tool-card {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tool-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: rgba(79, 70, 229, 0.1);
 }
 
 /* Button animations */
 .btn-primary {
-  @apply bg-[#2d85de] text-white font-medium rounded-lg px-6 py-3 transition-all duration-200;
+  @apply bg-primary text-primary-foreground font-medium rounded-lg px-6 py-3 transition-all duration-200 shadow-md hover:shadow-lg hover:bg-primary/90;
 }
 
+/* Fallback for hover if not using standard tailwind opacity syntax above (though standard setup usually supports it)
+   safeguard with explicit var usage if needed, but standard bg-primary/90 is best.
+   Let's just stick to the previous style but updated variables.
+*/
 .btn-primary:hover {
-  @apply bg-[#2473c4];
+  /* Handled by apply class above mostly, but explicit override if needed */
+  opacity: 0.95;
+  transform: translateY(-1px);
 }
+
 
 .btn-outline {
-  @apply border border-gray-300 bg-white text-gray-700 font-medium rounded-lg px-6 py-3 transition-all duration-200;
+  @apply border border-input bg-background text-foreground font-medium rounded-lg px-6 py-3 transition-all duration-200;
 }
 
 .btn-outline:hover {
-  @apply bg-gray-50 border-gray-400;
+  @apply bg-accent text-accent-foreground border-accent;
 }
 
 /* Running marquee for brands */
@@ -156,6 +190,7 @@ body {
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -177,16 +212,18 @@ body {
 }
 
 .faq-item:hover {
-  @apply border-l-[#2d85de] bg-blue-50/50;
+  border-left-color: hsl(var(--primary));
+  background-color: hsla(var(--primary), 0.05);
+  /* 5% opacity primary */
 }
 
 /* Language switcher */
 .language-switcher {
-  @apply flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg cursor-pointer transition-all duration-200;
+  @apply flex items-center gap-2 px-4 py-2 border border-input rounded-lg cursor-pointer transition-all duration-200;
 }
 
 .language-switcher:hover {
-  @apply border-gray-300 bg-gray-50;
+  @apply border-accent bg-accent;
 }
 
 /* Compliance badges */
@@ -196,12 +233,12 @@ body {
 
 /* Auth pages gradient background */
 .auth-gradient {
-  background: linear-gradient(135deg, #fce8e8 0%, #fef4f0 30%, #fdf6f4 60%, #fcf0f0 100%);
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
 }
 
 /* Form input focus styles */
 .form-input:focus {
-  @apply ring-2 ring-[#2d85de] ring-opacity-30 border-[#2d85de];
+  @apply ring-2 ring-primary ring-opacity-30 border-primary;
 }
 
 /* Stats counter animation */
@@ -210,6 +247,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -235,6 +273,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -257,6 +296,7 @@ select:focus {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -273,6 +313,7 @@ select:focus {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -322,7 +363,8 @@ select:focus {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #2d85de 0%, #5ba3eb 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
+  /* Indigo to paler Indigo */
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { TOOLS } from "@/lib/tools";
+import { ToolIcon } from "@/lib/toolIcons";
 
 export default function Header() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -103,8 +104,8 @@ export default function Header() {
                         className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
                         onClick={() => setIsToolsOpen(false)}
                       >
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
-                          <img src={tool.icon} alt="" className="w-6 h-6" />
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                          <ToolIcon name={tool.iconName} className="w-6 h-6 stroke-[2px]" />
                         </div>
                         <div>
                           <h3 className="font-medium text-gray-900">{tool.name}</h3>

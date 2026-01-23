@@ -3,11 +3,11 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { chromium } from "playwright";
 
-const ORIGIN = "https://files-editor.com";
+const ORIGIN = "https://qwerpdf.com";
 const START_URLS = [
-  "https://files-editor.com/en",
+  "https://qwerpdf.com/en",
   // Representative PDF editor sample provided by user:
-  "https://files-editor.com/app/guest/document?documentId=6453bfa3-d333-4d60-883a-1483c00f5b37",
+  "https://qwerpdf.com/app/guest/document?documentId=6453bfa3-d333-4d60-883a-1483c00f5b37",
 ];
 
 const OUT_DIR = path.resolve("reports/files-editor-audit");
@@ -281,7 +281,7 @@ async function main() {
 
   const outMd = path.join(OUT_DIR, "summary.md");
   const md = [
-    `# files-editor.com frontend audit (automated)`,
+    `# qwerpdf.com frontend audit (automated)`,
     ``,
     `- Origin: ${ORIGIN}`,
     `- Pages captured: ${results.length} (limit ${MAX_PAGES})`,

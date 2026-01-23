@@ -18,11 +18,11 @@ export default function PrivacyPolicyPage() {
             </p>
 
             <p className="text-gray-600 mb-6">
-              Visit our website at: https://files-editor.com Access to our website can be done without the need to provide any information. If you decide to register and / or contract one of our plans you will need to provide us with some personal information.
+              Visit our website at: https://qwerpdf.com Access to our website can be done without the need to provide any information. If you decide to register and / or contract one of our plans you will need to provide us with some personal information.
             </p>
 
             <p className="text-gray-600 mb-8">
-              Questions or concerns? Reading this privacy notice will help you understand your privacy rights and choices. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at support@files-editor.com.
+              Questions or concerns? Reading this privacy notice will help you understand your privacy rights and choices. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at support@qwerpdf.com.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">1. Information Collected</h2>
@@ -115,7 +115,7 @@ export default function PrivacyPolicyPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Cookie Policy</h1>
 
             <p className="text-gray-600 mb-6">
-              This Cookie Policy explains how QwerPDF ("Company", "Site", "Website", "Application", "we", "us", or "our") uses cookies and similar technologies to recognize you when you visit our website at https://files-editor.com ("Website"). It explains what these technologies are and why we use them.
+              This Cookie Policy explains how QwerPDF ("Company", "Site", "Website", "Application", "we", "us", or "our") uses cookies and similar technologies to recognize you when you visit our website at https://qwerpdf.com ("Website"). It explains what these technologies are and why we use them.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">1. What are cookies?</h2>
@@ -136,8 +136,8 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">4. Where can I get additional information?</h2>
             <p className="text-gray-600 mb-6">
               If you have any questions about our Privacy Policy or our Cookie Policy, please email us at{" "}
-              <a href="mailto:support@files-editor.com" className="text-[#2d85de] hover:underline">
-                support@files-editor.com
+              <a href="mailto:support@qwerpdf.com" className="text-[#2d85de] hover:underline">
+                support@qwerpdf.com
               </a>
             </p>
           </div>

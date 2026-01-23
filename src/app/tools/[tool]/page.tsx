@@ -10,6 +10,7 @@ import { toolByKey, TOOLS } from "@/lib/tools";
 import { clearPdfEditorCache, loadPdfEditorInput, loadPdfEditorOutput } from "@/lib/pdfEditorCache";
 import { isIndexedDbWritable } from "@/lib/indexedDbSupport";
 import GuestQuotaBanner from "@/components/auth/GuestQuotaBanner";
+import { ToolIcon } from "@/lib/toolIcons";
 
 const PdfEditorTool = dynamic(() => import("@/features/pdf-editor/PdfEditorTool"), { ssr: false });
 const PdfCompressTool = dynamic(() => import("@/components/tools/PdfCompressTool"), { ssr: false });
@@ -199,8 +200,8 @@ function ToolContent() {
           {/* Tool Header */}
           {!(isPdfEditor && files.length > 0) && (
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-6 shadow-sm">
-              <img src={tool.icon} alt="" className="w-8 h-8" />
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <ToolIcon name={tool.iconName} className="w-8 h-8 stroke-[2px]" />
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               {tool.name}
@@ -357,8 +358,8 @@ function ToolContent() {
                     href={relatedTool.href}
                     className="flex flex-col items-center p-4 bg-white rounded-xl border border-gray-100 hover:shadow-md hover:border-gray-200 transition-all group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <img src={relatedTool.icon} alt="" className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <ToolIcon name={relatedTool.iconName} className="w-5 h-5 stroke-[2px]" />
                     </div>
                     <span className="text-xs font-medium text-gray-700 text-center group-hover:text-[#2d85de] transition-colors">
                       {relatedTool.name}

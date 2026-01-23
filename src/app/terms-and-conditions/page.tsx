@@ -28,7 +28,7 @@ export default function TermsAndConditionsPage() {
             </p>
 
             <p className="text-gray-600 mb-6">
-              Visit our website at: https://files-editor.com
+              Visit our website at: https://qwerpdf.com
             </p>
 
             <p className="text-gray-600 mb-8">
@@ -104,7 +104,7 @@ export default function TermsAndConditionsPage() {
 
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">11. Contact</h2>
             <p className="text-gray-600 mb-6">
-              If you want to send any notice under these Terms or have any questions regarding the Service, you may contact us at: support@files-editor.com.
+              If you want to send any notice under these Terms or have any questions regarding the Service, you may contact us at: support@qwerpdf.com.
             </p>
 
             <p className="text-gray-600 font-medium mt-8">

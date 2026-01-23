@@ -35,19 +35,34 @@ export default function PDFAnnotationCanvas({
 }: PDFAnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const initialSizeRef = useRef({ width, height });
+  const initialToolRef = useRef(activeTool);
+  const onAnnotationsChangeRef = useRef(onAnnotationsChange);
   const [isDrawing, setIsDrawing] = useState(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const currentShapeRef = useRef<fabric.Object | null>(null);
 
+  useEffect(() => {
+    onAnnotationsChangeRef.current = onAnnotationsChange;
+  }, [onAnnotationsChange]);
+
+  const saveAnnotations = useCallback(() => {
+    if (!fabricCanvasRef.current || !onAnnotationsChangeRef.current) return;
+    const json = JSON.stringify(fabricCanvasRef.current.toJSON());
+    onAnnotationsChangeRef.current(json);
+  }, []);
+
   // Initialize fabric canvas
   useEffect(() => {
     if (!canvasRef.current) return;
+    const { width: initialWidth, height: initialHeight } = initialSizeRef.current;
+    const initialTool = initialToolRef.current;
 
     const canvas = new fabric.Canvas(canvasRef.current, {
-      width,
-      height,
-      selection: activeTool === "select",
-      isDrawingMode: activeTool === "freehand",
+      width: initialWidth,
+      height: initialHeight,
+      selection: initialTool === "select",
+      isDrawingMode: initialTool === "freehand",
     });
 
     fabricCanvasRef.current = canvas;
@@ -64,7 +79,7 @@ export default function PDFAnnotationCanvas({
     return () => {
       canvas.dispose();
     };
-  }, []);
+  }, [saveAnnotations]);
 
   // Load per-page annotations
   useEffect(() => {
@@ -132,12 +147,6 @@ export default function PDFAnnotationCanvas({
         canvas.defaultCursor = "crosshair";
     }
   }, [activeTool, activeColor, strokeWidth]);
-
-  const saveAnnotations = useCallback(() => {
-    if (!fabricCanvasRef.current || !onAnnotationsChange) return;
-    const json = JSON.stringify(fabricCanvasRef.current.toJSON());
-    onAnnotationsChange(json);
-  }, [onAnnotationsChange]);
 
   // Handle mouse events for shape drawing
   useEffect(() => {

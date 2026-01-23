@@ -8,16 +8,17 @@ export type ToolDefinition = {
   description: string;
   href: string;
   icon: string;
+  iconName: string; // New field for Lucide icon name
   status: ToolStatus;
   category: ToolCategory;
 };
 
 export const TOOL_CATEGORIES: { key: ToolCategory; label: string; icon: string }[] = [
-  { key: "all", label: "All Tools", icon: "grid" },
-  { key: "edit", label: "Edit & Sign", icon: "edit" },
-  { key: "convert", label: "Convert", icon: "convert" },
-  { key: "organize", label: "Organize", icon: "organize" },
-  { key: "security", label: "Security", icon: "security" },
+  { key: "all", label: "All Tools", icon: "LayoutGrid" },
+  { key: "edit", label: "Edit & Sign", icon: "PenTool" },
+  { key: "convert", label: "Convert", icon: "ArrowRightLeft" },
+  { key: "organize", label: "Organize", icon: "Layers" },
+  { key: "security", label: "Security", icon: "ShieldCheck" },
 ];
 
 export const TOOLS: ToolDefinition[] = [
@@ -28,6 +29,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Add text, shapes, drawings, highlights, and more.",
     href: "/tools/annotate",
     icon: "/assets/icons/tools/annotate.svg",
+    iconName: "Highlighter",
     status: "ready",
     category: "edit",
   },
@@ -37,6 +39,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Overlay edits with text, shapes, and annotations.",
     href: "/tools/edit",
     icon: "/assets/icons/tools/edit.svg",
+    iconName: "FilePenLine",
     status: "ready",
     category: "edit",
   },
@@ -46,6 +49,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Draw and apply your signature to a PDF.",
     href: "/tools/sign",
     icon: "/assets/icons/tools/sign.svg",
+    iconName: "Signature",
     status: "ready",
     category: "edit",
   },
@@ -55,6 +59,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Permanently remove sensitive information (rasterize-based).",
     href: "/tools/redact",
     icon: "/assets/icons/tools/redact.svg",
+    iconName: "Eraser",
     status: "ready",
     category: "edit",
   },
@@ -64,6 +69,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Add a text watermark to all pages.",
     href: "/tools/watermark",
     icon: "/assets/icons/tools/watermark.svg",
+    iconName: "Stamp",
     status: "ready",
     category: "edit",
   },
@@ -75,6 +81,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Convert PDF ↔ images/text, images → PDF, Office → PDF.",
     href: "/tools/convert",
     icon: "/assets/icons/tools/convert.svg",
+    iconName: "ArrowRightLeft",
     status: "ready",
     category: "convert",
   },
@@ -84,6 +91,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Reduce file size (rasterize-based compression).",
     href: "/tools/compress",
     icon: "/assets/icons/tools/compress.svg",
+    iconName: "Minimize2",
     status: "ready",
     category: "convert",
   },
@@ -93,6 +101,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Combine multiple PDFs into one.",
     href: "/tools/merge",
     icon: "/assets/icons/tools/merge.svg",
+    iconName: "Files",
     status: "ready",
     category: "convert",
   },
@@ -104,6 +113,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Split into PDFs or extract specific pages.",
     href: "/tools/split",
     icon: "/assets/icons/tools/split.svg",
+    iconName: "Scissors",
     status: "ready",
     category: "organize",
   },
@@ -113,6 +123,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Reorder, rotate, delete, and export pages.",
     href: "/tools/organize",
     icon: "/assets/icons/tools/organize.svg",
+    iconName: "LayoutList",
     status: "ready",
     category: "organize",
   },
@@ -122,6 +133,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Rotate pages (uses Organize Pages).",
     href: "/tools/rotate",
     icon: "/assets/icons/tools/rotate.svg",
+    iconName: "RotateCw",
     status: "ready",
     category: "organize",
   },
@@ -131,6 +143,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Delete pages from PDFs by page order.",
     href: "/tools/delete",
     icon: "/assets/icons/tools/delete.svg",
+    iconName: "Trash2",
     status: "ready",
     category: "organize",
   },
@@ -140,6 +153,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Crop pages by margins.",
     href: "/tools/crop",
     icon: "/assets/icons/tools/crop.svg",
+    iconName: "Crop",
     status: "ready",
     category: "organize",
   },
@@ -151,6 +165,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Encrypt a PDF with a password.",
     href: "/tools/password",
     icon: "/assets/icons/tools/password.svg",
+    iconName: "Lock",
     status: "ready",
     category: "security",
   },
@@ -160,6 +175,7 @@ export const TOOLS: ToolDefinition[] = [
     description: "Remove PDF passwords (requires password).",
     href: "/tools/unlock",
     icon: "/assets/icons/tools/unlock.svg",
+    iconName: "Unlock",
     status: "ready",
     category: "security",
   },
