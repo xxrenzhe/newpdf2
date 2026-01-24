@@ -956,7 +956,6 @@ input[type=number]::-webkit-outer-spin-button{
     justify-content: center;
     align-items: center;
     height: auto;
-    /* font-family: Allura,cursive; */
 }
 .sign_img{
     width: 100%;
@@ -1081,14 +1080,6 @@ input[type=number]::-webkit-outer-spin-button{
 }
 .sp-palette .sp-thumb-dark.sp-thumb-active .sp-thumb-inner {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAadEVYdFNvZnR3YXJlAFBhaW50Lk5FVCB2My41LjEwMPRyoQAAAMdJREFUOE+tkgsNwzAMRMugEAahEAahEAZhEAqlEAZhEAohEAYh81X2dIm8fKpEspLGvudPOsUYpxE2BIJCroJmEW9qJ+MKaBFhEMNabSy9oIcIPwrB+afvAUFoK4H0tMaQ3XtlrggDhOVVMuT4E5MMG0FBbCEYzjYT7OxLEvIHQLY2zWwQ3D+9luyOQTfKDiFD3iUIfPk8VqrKjgAiSfGFPecrg6HN6m/iBcwiDAo7WiBeawa+Kwh7tZoSCGLMqwlSAzVDhoK+6vH4G0P5wdkAAAAASUVORK5CYII=);
-}
-
-@font-face {
-    font-family: 'Allura';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(../assets/fonts/Allura-Regular.ttf) format('truetype');
 }
 
 /* 色卡 */

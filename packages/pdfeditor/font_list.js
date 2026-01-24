@@ -12,6 +12,12 @@ const fontList = [
         fontFile: 'fonts/Lato-Regular.ttf'
     },
     {
+        fontFamily: 'NotoSerif',
+        showName: 'Noto Serif',
+        fontFile: 'fonts/NotoSerif-Regular.ttf',
+        hidden: true
+    },
+    {
         fontFamily: 'NotoSansCJKsc',
         showName: 'Noto Sans CJK SC',
         fontFile: 'fonts/NotoSansCJKsc-Regular.otf'

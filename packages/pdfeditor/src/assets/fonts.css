@@ -6,6 +6,13 @@
     src: url(../assets/fonts/Lato-Regular.ttf) format('truetype');
 }
 @font-face {
+    font-family: 'NotoSerif';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(../assets/fonts/NotoSerif-Regular.ttf) format('truetype');
+}
+@font-face {
     font-family: 'NotoSansCJKsc';
     font-style: normal;
     font-weight: 400;

@@ -5,6 +5,8 @@ import { trimSpace } from './misc';
 const CHARS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 's', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'S', 'Y', 'Z', ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '~', '!', '@', '#', '$', '%', '^', '&', '(', ')', '_', '+', '-', '=', '{', '}', '|', '[', ']', ';', "'", ':', '"', ',', '.', '/', '<', '>', '?', '*'];
 const DEFAULT_LATIN_FONT_FILE = 'fonts/Lato-Regular.ttf';
 const DEFAULT_LATIN_FONT_FAMILY = 'Lato';
+const DEFAULT_SERIF_FONT_FILE = 'fonts/NotoSerif-Regular.ttf';
+const DEFAULT_SERIF_FONT_FAMILY = 'NotoSerif';
 const CJK_FONT_FILES = Object.freeze({
     sc: 'fonts/NotoSansCJKsc-Regular.otf',
     tc: 'fonts/NotoSansCJKtc-Regular.otf',
@@ -17,8 +19,10 @@ const CJK_FONT_FAMILIES = Object.freeze({
     jp: 'NotoSansCJKjp',
     kr: 'NotoSansCJKkr'
 });
+const CJK_FONT_FILE_SET = new Set(Object.values(CJK_FONT_FILES));
 const FONT_DISPLAY_NAMES = Object.freeze({
     Lato: 'Lato',
+    NotoSerif: 'Noto Serif',
     NotoSansCJKsc: 'Noto Sans CJK SC',
     NotoSansCJKtc: 'Noto Sans CJK TC',
     NotoSansCJKjp: 'Noto Sans CJK JP',
@@ -26,6 +30,7 @@ const FONT_DISPLAY_NAMES = Object.freeze({
 });
 const SAFE_FONT_FAMILIES = new Set([
     DEFAULT_LATIN_FONT_FAMILY,
+    DEFAULT_SERIF_FONT_FAMILY,
     ...Object.values(CJK_FONT_FAMILIES)
 ]);
 const SAFE_FONT_FILE_PREFIXES = ['fonts/notosans', 'fonts/notoserif'];
@@ -58,6 +63,16 @@ const FONT_NAME_ALIASES = [
         fontFile: DEFAULT_LATIN_FONT_FILE
     },
     {
+        test: /times new roman|times-roman|times roman|timesnewroman|times\b/i,
+        fontFamily: DEFAULT_SERIF_FONT_FAMILY,
+        fontFile: DEFAULT_SERIF_FONT_FILE
+    },
+    {
+        test: /georgia/i,
+        fontFamily: DEFAULT_SERIF_FONT_FAMILY,
+        fontFile: DEFAULT_SERIF_FONT_FILE
+    },
+    {
         test: /simsun|songti/i,
         fontFamily: CJK_FONT_FAMILIES.sc,
         fontFile: CJK_FONT_FILES.sc
@@ -78,8 +93,12 @@ const FONT_NAME_ALIASES = [
         fontFile: CJK_FONT_FILES.kr
     }
 ];
-// Include: Hangul Jamo/Compatibility/Syllables, Hiragana/Katakana, CJK ideographs.
-const CJK_RANGE = '[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]';
+// Include: Hangul Jamo/Compatibility/Syllables, Hiragana/Katakana, Bopomofo, CJK ideographs.
+const CJK_RANGE = '[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u3040-\u30FF\u31F0-\u31FF\u3100-\u312F\u31A0-\u31BF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]';
+const TRADITIONAL_CHAR_PATTERN = /[\u4F86\u570B\u9AD4\u81FA\u8207\u70BA\u6703\u9577\u9580\u9EDE\u8AAA\u9032\u5169\u8B8A\u8B93\u986F\u7E7C\u9304\u8B80\u8F49\u8F09\u7DB2\u8CC7\u8B49\u7DE8\u8A18\u7E3D\u6A19\u6E96]/;
+const KANA_PATTERN = /[\u3040-\u30FF\u31F0-\u31FF\uFF66-\uFF9D]/;
+const HANGUL_PATTERN = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
+const BOPOMOFO_PATTERN = /[\u3100-\u312F\u31A0-\u31BF]/;
 
 const FALLBACK_FONTS = Object.freeze({
     latin: 'fonts/NotoSans-latin.woff',
@@ -125,6 +144,8 @@ export class Font {
     static FALLBACK_FONTS = FALLBACK_FONTS;
     static DEFAULT_LATIN_FONT_FILE = DEFAULT_LATIN_FONT_FILE;
     static DEFAULT_LATIN_FONT_FAMILY = DEFAULT_LATIN_FONT_FAMILY;
+    static DEFAULT_SERIF_FONT_FILE = DEFAULT_SERIF_FONT_FILE;
+    static DEFAULT_SERIF_FONT_FAMILY = DEFAULT_SERIF_FONT_FAMILY;
     static CJK_FONT_FILES = CJK_FONT_FILES;
     static CJK_FONT_FAMILIES = CJK_FONT_FAMILIES;
     static FONT_DISPLAY_NAMES = FONT_DISPLAY_NAMES;
@@ -178,13 +199,33 @@ export class Font {
         return 'sc';
     }
 
+    static getCjkVariantForText(text, locale = Font.getLocaleCode()) {
+        const sample = String(text || '');
+        if (sample) {
+            if (KANA_PATTERN.test(sample)) return 'jp';
+            if (HANGUL_PATTERN.test(sample)) return 'kr';
+            if (BOPOMOFO_PATTERN.test(sample) || TRADITIONAL_CHAR_PATTERN.test(sample)) return 'tc';
+        }
+        return Font.getCjkVariant(locale);
+    }
+
     static getCjkFontFile(locale = Font.getLocaleCode()) {
         const variant = Font.getCjkVariant(locale);
         return CJK_FONT_FILES[variant] || CJK_FONT_FILES.sc;
     }
 
+    static getCjkFontFileForText(text, locale = Font.getLocaleCode()) {
+        const variant = Font.getCjkVariantForText(text, locale);
+        return CJK_FONT_FILES[variant] || CJK_FONT_FILES.sc;
+    }
+
     static getCjkFontFamily(locale = Font.getLocaleCode()) {
         const variant = Font.getCjkVariant(locale);
+        return CJK_FONT_FAMILIES[variant] || CJK_FONT_FAMILIES.sc;
+    }
+
+    static getCjkFontFamilyForText(text, locale = Font.getLocaleCode()) {
+        const variant = Font.getCjkVariantForText(text, locale);
         return CJK_FONT_FAMILIES[variant] || CJK_FONT_FAMILIES.sc;
     }
 
@@ -223,10 +264,10 @@ export class Font {
 
     static getDefaultFontForText(text) {
         if (Font.hasCjk(text)) {
-            const family = Font.getCjkFontFamily();
+            const family = Font.getCjkFontFamilyForText(text);
             return {
                 fontFamily: family,
-                fontFile: Font.getFontFileForFamily(family),
+                fontFile: Font.getCjkFontFileForText(text),
                 showName: Font.getFontDisplayName(family)
             };
         }
@@ -237,6 +278,8 @@ export class Font {
         switch (fontFamily) {
             case DEFAULT_LATIN_FONT_FAMILY:
                 return DEFAULT_LATIN_FONT_FILE;
+            case DEFAULT_SERIF_FONT_FAMILY:
+                return DEFAULT_SERIF_FONT_FILE;
             case CJK_FONT_FAMILIES.sc:
                 return CJK_FONT_FILES.sc;
             case CJK_FONT_FAMILIES.tc:
@@ -261,6 +304,10 @@ export class Font {
         if (SAFE_FONT_FILES.has(value)) return true;
         const lower = value.toLowerCase();
         return SAFE_FONT_FILE_PREFIXES.some(prefix => lower.startsWith(prefix));
+    }
+
+    static isCjkFontFile(fontFile) {
+        return CJK_FONT_FILE_SET.has(String(fontFile || ''));
     }
 
     static isSafeFontFamily(fontFamily) {
@@ -631,8 +678,12 @@ export class Font {
         );
     }
 
-    static getFontFileForCodePoint(codePoint, preferredFontFile) {
-        if (Font.#isCJK(codePoint)) return Font.getCjkFontFile();
+    static getFontFileForCodePoint(codePoint, preferredFontFile, cjkFontFile) {
+        if (Font.#isCJK(codePoint)) {
+            if (cjkFontFile) return cjkFontFile;
+            if (Font.isCjkFontFile(preferredFontFile)) return preferredFontFile;
+            return Font.getCjkFontFile();
+        }
         if (Font.#isArabic(codePoint)) return FALLBACK_FONTS.arabic;
         if (Font.#isHebrew(codePoint)) return FALLBACK_FONTS.hebrew;
         if (Font.#isDevanagari(codePoint)) return FALLBACK_FONTS.devanagari;
@@ -667,6 +718,7 @@ export class Font {
 
     static splitTextByFont(text, preferredFontFile) {
         const safePreferred = Font.normalizeFontFile(preferredFontFile, null, text);
+        const cjkFontFile = Font.hasCjk(text) ? Font.getCjkFontFileForText(text) : null;
         const runs = [];
         let currentFontFile = null;
         let currentText = '';
@@ -689,7 +741,7 @@ export class Font {
                 continue;
             }
 
-            const nextFontFile = Font.getFontFileForCodePoint(codePoint, safePreferred);
+            const nextFontFile = Font.getFontFileForCodePoint(codePoint, safePreferred, cjkFontFile);
             if (currentFontFile && nextFontFile !== currentFontFile) {
                 flush();
             }

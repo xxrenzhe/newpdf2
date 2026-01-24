@@ -48,7 +48,14 @@ let plugins = [
             {
                 from: path.resolve(__dirname, 'src/assets'),
                 to: 'assets',
-                noErrorOnMissing: true
+                noErrorOnMissing: true,
+                globOptions: {
+                    ignore: [
+                        '**/art_font/**',
+                        '**/temp.otf',
+                        '**/fonts/Allura-Regular.ttf'
+                    ]
+                }
             }
         ]
     }),

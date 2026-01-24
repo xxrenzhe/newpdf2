@@ -125,7 +125,7 @@ export class PDFDocument {
             //如果包含CJK并需要补字体
             let isIncludeCJK = new RegExp(Font.CJK_RANGE);
             if (isIncludeCJK.test(text) && _text) {
-                arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFile());
+                arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFileForText(text.join('')));
                 return this.setFont(pageId, fontFile, arrayBuffer);
             } else {
                 if (!isFetchFont) {
@@ -158,7 +158,7 @@ export class PDFDocument {
                         return this.setFont(pageId, fontFile, arrayBuffer);
                     }
                 } else {
-                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFile());
+                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFileForText(text.join('')));
                     return this.setFont(pageId, fontFile, arrayBuffer);
                 }
             }
