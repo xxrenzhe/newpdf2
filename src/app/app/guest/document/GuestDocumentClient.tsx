@@ -131,7 +131,7 @@ export default function GuestDocumentClient() {
       <div className="flex items-center gap-2 overflow-x-auto">
         {TOOL_SWITCHER.map((chosen) => {
           const active = activeChosenTool === chosen;
-          const mappedKey = toolKeyFromChosenTool(chosen);
+          const mappedKey = displayToolKeyFromChosenTool(chosen, toolKeyFromChosenTool(chosen));
           const mappedTool = toolByKey[mappedKey] ?? toolByKey.annotate;
           return (
             <button
