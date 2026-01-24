@@ -40,7 +40,8 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
   const toolLabels = useMemo(
     () => ({
       select: t("toolSelect", "Select"),
-      text: t("toolText", "Text"),
+      editText: t("toolEditText", "Edit Text"),
+      addText: t("toolAddText", "Add Text"),
       highlight: t("toolHighlight", "Highlight"),
       rectangle: t("toolRectangle", "Rectangle"),
       circle: t("toolCircle", "Circle"),

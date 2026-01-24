@@ -5,6 +5,7 @@ import type { AnnotationTool } from "./PDFAnnotationCanvas";
 import {
   MousePointer2,
   Type,
+  TextCursorInput,
   Highlighter,
   PenTool,
   Square,
@@ -59,71 +60,105 @@ export default function AnnotationToolbar({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showStrokeWidth, setShowStrokeWidth] = useState(false);
   const { t } = useLanguage();
-  const tools: { id: AnnotationTool; label: string; icon: React.ReactNode }[] = [
-    {
-      id: "select",
-      label: t("toolSelect", "Select"),
-      icon: <MousePointer2 className="w-5 h-5" />,
-    },
-    {
-      id: "text",
-      label: t("toolText", "Text"),
-      icon: <Type className="w-5 h-5" />,
-    },
-    {
-      id: "highlight",
-      label: t("toolHighlight", "Highlight"),
-      icon: <Highlighter className="w-5 h-5" />,
-    },
-    {
-      id: "freehand",
-      label: t("toolDraw", "Draw"),
-      icon: <PenTool className="w-5 h-5" />,
-    },
-    {
-      id: "rectangle",
-      label: t("toolRectangle", "Rectangle"),
-      icon: <Square className="w-5 h-5" />,
-    },
-    {
-      id: "circle",
-      label: t("toolCircle", "Circle"),
-      icon: <Circle className="w-5 h-5" />,
-    },
-    {
-      id: "arrow",
-      label: t("toolArrow", "Arrow"),
-      icon: <MoveRight className="w-5 h-5" />,
-    },
-    {
-      id: "line",
-      label: t("toolLine", "Line"),
-      icon: <Minus className="w-5 h-5" />,
-    },
-    {
-      id: "eraser",
-      label: t("toolEraser", "Eraser"),
-      icon: <Eraser className="w-5 h-5" />,
-    },
+  const toolRows: { id: AnnotationTool; label: string; icon: React.ReactNode }[][] = [
+    [
+      {
+        id: "select",
+        label: t("toolSelect", "Select"),
+        icon: <MousePointer2 className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "editText",
+        label: t("toolEditText", "Edit Text"),
+        icon: <TextCursorInput className="w-5 h-5" />,
+      },
+      {
+        id: "addText",
+        label: t("toolAddText", "Add Text"),
+        icon: <Type className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "highlight",
+        label: t("toolHighlight", "Highlight"),
+        icon: <Highlighter className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "freehand",
+        label: t("toolDraw", "Draw"),
+        icon: <PenTool className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "rectangle",
+        label: t("toolRectangle", "Rectangle"),
+        icon: <Square className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "circle",
+        label: t("toolCircle", "Circle"),
+        icon: <Circle className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "arrow",
+        label: t("toolArrow", "Arrow"),
+        icon: <MoveRight className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "line",
+        label: t("toolLine", "Line"),
+        icon: <Minus className="w-5 h-5" />,
+      },
+    ],
+    [
+      {
+        id: "eraser",
+        label: t("toolEraser", "Eraser"),
+        icon: <Eraser className="w-5 h-5" />,
+      },
+    ],
   ];
 
   return (
-    <div className="flex flex-col bg-white border-r border-[color:var(--brand-line)] py-3 w-[72px] items-center h-full shadow-sm">
+    <div className="flex flex-col bg-white border-r border-[color:var(--brand-line)] py-3 w-[104px] items-center h-full shadow-sm">
       {/* Tools */}
-      <div className="flex flex-col gap-2 w-full px-3">
-        {tools.map((tool) => (
-          <button
-            key={tool.id}
-            onClick={() => onToolChange(tool.id)}
-            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${activeTool === tool.id
-                ? "bg-primary text-white shadow-md shadow-[rgba(91,75,183,0.25)]"
-                : "hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
-              }`}
-            title={tool.label}
-          >
-            {tool.icon}
-          </button>
-        ))}
+      <div className="flex flex-col gap-2 w-full px-2 items-center">
+        {toolRows.map((row, rowIndex) => {
+          const isGroupedRow = row.length > 1;
+          return (
+            <div
+              key={`tool-row-${rowIndex}`}
+              className={isGroupedRow ? "grid grid-cols-2 gap-2 w-full" : "flex w-full justify-center"}
+            >
+              {row.map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => onToolChange(tool.id)}
+                  className={`${isGroupedRow ? "h-10 w-full" : "w-12 h-12"
+                    } rounded-xl flex items-center justify-center transition-all duration-200 ${activeTool === tool.id
+                      ? "bg-primary text-white shadow-md shadow-[rgba(91,75,183,0.25)]"
+                      : "hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
+                    }`}
+                  title={tool.label}
+                >
+                  {tool.icon}
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </div>
 
       <div className="w-8 h-px bg-[color:var(--brand-line)] my-4" />

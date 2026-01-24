@@ -6,7 +6,8 @@ import { useLanguage } from "@/components/LanguageProvider";
 
 export type AnnotationTool =
   | "select"
-  | "text"
+  | "editText"
+  | "addText"
   | "highlight"
   | "rectangle"
   | "circle"
@@ -43,6 +44,8 @@ export default function PDFAnnotationCanvas({
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const currentShapeRef = useRef<fabric.Object | null>(null);
   const { t } = useLanguage();
+  const isTextObject = (target: fabric.Object | null) =>
+    !!target && (target.type === "i-text" || target.type === "textbox");
 
   useEffect(() => {
     onAnnotationsChangeRef.current = onAnnotationsChange;
@@ -139,7 +142,8 @@ export default function PDFAnnotationCanvas({
       case "select":
         canvas.defaultCursor = "default";
         break;
-      case "text":
+      case "editText":
+      case "addText":
         canvas.defaultCursor = "text";
         break;
       case "eraser":
@@ -159,11 +163,23 @@ export default function PDFAnnotationCanvas({
       if (activeTool === "select" || activeTool === "freehand") return;
 
       const pointer = canvas.getViewportPoint(opt.e);
-      startPointRef.current = { x: pointer.x, y: pointer.y };
-      setIsDrawing(true);
 
-      if (activeTool === "text") {
-        // Add text at click position
+      if (activeTool === "editText") {
+        const target = canvas.findTarget(opt.e) as unknown as fabric.Object | null;
+        if (isTextObject(target)) {
+          const textObject = target as fabric.IText;
+          canvas.setActiveObject(textObject);
+          textObject.enterEditing();
+          textObject.selectAll();
+          canvas.requestRenderAll();
+        } else {
+          canvas.discardActiveObject();
+          canvas.requestRenderAll();
+        }
+        return;
+      }
+
+      if (activeTool === "addText") {
         const text = new fabric.IText(t("annotationClickToEdit", "Click to edit"), {
           left: pointer.x,
           top: pointer.y,
@@ -174,11 +190,11 @@ export default function PDFAnnotationCanvas({
         canvas.add(text);
         canvas.setActiveObject(text);
         text.enterEditing();
+        text.selectAll();
         return;
       }
 
       if (activeTool === "eraser") {
-        // Find and remove object at click position
         const target = canvas.findTarget(opt.e) as unknown as fabric.Object | null;
         if (target) {
           canvas.remove(target);
@@ -237,6 +253,8 @@ export default function PDFAnnotationCanvas({
       }
 
       if (shape) {
+        startPointRef.current = { x: pointer.x, y: pointer.y };
+        setIsDrawing(true);
         canvas.add(shape);
         currentShapeRef.current = shape;
       }
@@ -244,7 +262,13 @@ export default function PDFAnnotationCanvas({
 
     const handleMouseMove = (opt: fabric.TPointerEventInfo) => {
       if (!isDrawing || !startPointRef.current || !currentShapeRef.current) return;
-      if (activeTool === "select" || activeTool === "freehand" || activeTool === "text" || activeTool === "eraser") return;
+      const isShapeTool =
+        activeTool === "rectangle" ||
+        activeTool === "circle" ||
+        activeTool === "highlight" ||
+        activeTool === "line" ||
+        activeTool === "arrow";
+      if (!isShapeTool) return;
 
       const pointer = canvas.getViewportPoint(opt.e);
       const startX = startPointRef.current.x;
