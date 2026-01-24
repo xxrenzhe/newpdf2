@@ -19,9 +19,10 @@ import {
   Stamp,
   Trash2,
   Unlock,
+  type LucideProps,
 } from "lucide-react";
 
-type IconComponent = ComponentType<{ className?: string }>;
+type IconComponent = ComponentType<LucideProps>;
 
 export const TOOL_ICON_MAP: Record<string, IconComponent> = {
   LayoutGrid,
@@ -63,5 +64,5 @@ export function ToolIcon({
   className?: string;
 }) {
   const Icon = getToolIcon(name);
-  return createElement(Icon, { className, "aria-hidden": "true" });
+  return createElement(Icon, { className, "aria-hidden": true });
 }
