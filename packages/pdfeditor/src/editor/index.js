@@ -745,6 +745,12 @@ export class PDFEditor {
                 tabItem.classList.add('active');
                 let id = tabItem.getAttribute('data-for');
                 document.querySelector('#' + id).classList.add('active');
+                if (id === 'edit-tools') {
+                    const activeTool = this.toolbar?.toolActive;
+                    if (activeTool && activeTool.name === 'delete_pages') {
+                        this.toolbar.get('mouse')?.click();
+                    }
+                }
             });
         });
     }
