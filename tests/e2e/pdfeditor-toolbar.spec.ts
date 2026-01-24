@@ -227,6 +227,39 @@ test("pdfeditor toolbar: delete pages removes a page and export reflects it", as
   await expect.poll(() => loadPdfPageCount(outBytes)).toBe(1);
 });
 
+test("pdfeditor toolbar: inserted page shows as thumbnail in delete mode and can be removed", async ({ page }) => {
+  test.setTimeout(240_000);
+  const pdfBytes = await makePdfBytes("toolbar-insert-delete", 1);
+  const { frameLocator, exportButton } = await openEditor(page, pdfBytes, "toolbar-insert-delete.pdf");
+
+  await frameLocator.locator(".tab-item", { hasText: "Insert" }).click();
+  await frameLocator.locator("#tool_insert_pages").click();
+  await frameLocator.getByRole("button", { name: "OK" }).click();
+
+  const newPage = frameLocator.locator('#pdf-main .__pdf_page_preview[data-page="2"]');
+  await expect(newPage).toBeVisible({ timeout: 120_000 });
+
+  await frameLocator.locator("#tool_delete_pages").click();
+  await expect(frameLocator.locator("#pdf-main.view_page_2")).toBeVisible();
+
+  const page1 = frameLocator.locator('#pdf-main .__pdf_page_preview[data-page="1"]');
+  await expect(page1).toBeVisible();
+  await expect(newPage).toBeVisible();
+
+  const page1Width = await page1.evaluate((el) => el.getBoundingClientRect().width);
+  const page2Width = await newPage.evaluate((el) => el.getBoundingClientRect().width);
+  expect(Math.abs(page1Width - page2Width)).toBeLessThan(20);
+
+  await newPage.locator(".remove_page").click();
+  await expect(newPage).toHaveCount(0, { timeout: 120_000 });
+
+  const downloadPromise = page.waitForEvent("download");
+  await exportButton.click();
+  const download = await downloadPromise;
+  const outBytes = await readDownloadBytes(download);
+  await expect.poll(() => loadPdfPageCount(outBytes)).toBe(1);
+});
+
 test("pdfeditor toolbar: watermark can add text watermark", async ({ page }) => {
   test.setTimeout(240_000);
   const pdfBytes = await makePdfBytes("toolbar-watermark", 1);

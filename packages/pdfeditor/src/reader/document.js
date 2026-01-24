@@ -35,6 +35,10 @@ export class PDFDocument {
             for (let i = start; i <= end; i++) {
                 this.getPage(i).zoom(scale, renderType, force);
             }
+            this.pages.forEach(page => {
+                if (!page || !page.isNewPage) return;
+                page.zoom(scale, renderType, force);
+            });
         }, 1);
     }
 

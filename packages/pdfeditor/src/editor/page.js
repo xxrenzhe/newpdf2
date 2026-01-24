@@ -93,6 +93,7 @@ export class PDFPage {
             this.newPagesize = [width, height];
         }
         
+        newReaderPage.newPageSize = this.newPagesize;
         newReaderPage.elWrapper.style.width = prevWrapper.style.width;
         newReaderPage.elWrapper.style.height = prevWrapper.style.height;
         newReaderPage.elDrawLayer.style.width = prevWrapper.style.width;
@@ -141,6 +142,7 @@ export class PDFPage {
             this.newPagesize = [width, height];
         }
 
+        newReaderPage.newPageSize = this.newPagesize;
         newReaderPage.elWrapper.style.width = prevWrapper.style.width;
         newReaderPage.elWrapper.style.height = prevWrapper.style.height;
         newReaderPage.elDrawLayer.style.width = prevWrapper.style.width;
