@@ -222,6 +222,13 @@ class BaseElement {
         return rect;
     }
 
+    applyAttrs(attrs) {
+        this.attrs = Object.assign({}, attrs);
+        this.setStyle(this.attrs);
+        this.el.classList.toggle('__pdf_el_hidden', Boolean(this.attrs.hidden));
+        this.zoom(this.scale);
+    }
+
     edit(attrs) {
         const oriAttrs = Object.assign({}, this.attrs);
         PDFEvent.dispatch(Events.ELEMENT_UPDATE_BEFORE, {

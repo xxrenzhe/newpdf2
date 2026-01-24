@@ -62,8 +62,9 @@ class TextElement extends BaseElement {
     }
 
     setStyle() {
-        if (!this.elText.textContent) {
-            this.elText.textContent = this.attrs.text;
+        const nextText = typeof this.attrs.text === 'string' ? this.attrs.text : '';
+        if (this.elText.textContent !== nextText) {
+            this.elText.textContent = nextText;
         }
         this.elText.style.color = this.attrs.color;
         this.elText.style.fontSize = this.attrs.size + 'px';
@@ -129,6 +130,13 @@ class TextElement extends BaseElement {
             this.attrs.text = this.elText.innerText;
         });
 
+        this.elText.addEventListener('focus', () => {
+            this._historyTextSnapshot = {
+                text: this.attrs.text ?? '',
+                hidden: Boolean(this.attrs.hidden)
+            };
+        });
+
         this.elText.setAttribute('contenteditable', true);
         //禁用在选中文本时的可拖放事件
         this.elText.setAttribute('draggable', false);
@@ -145,6 +153,9 @@ class TextElement extends BaseElement {
         // });
 
         this.elText.addEventListener('blur', e => {
+            const historySnapshot = this._historyTextSnapshot;
+            this._historyTextSnapshot = null;
+
             if (!trimSpace(this.attrs.text)) {
                 // For newly-created text, an empty value means the element should be removed.
                 // For converted existing PDF text, we keep an empty element so export can still
@@ -172,6 +183,41 @@ class TextElement extends BaseElement {
             PDFEvent.dispatch(Events.ELEMENT_BLUR, {
                 page: this.page,
                 element: this
+            });
+
+            if (!historySnapshot) {
+                return;
+            }
+            const beforeText = typeof historySnapshot.text === 'string' ? historySnapshot.text : '';
+            const afterText = typeof this.attrs.text === 'string' ? this.attrs.text : '';
+            const beforeHidden = Boolean(historySnapshot.hidden);
+            const afterHidden = Boolean(this.attrs.hidden);
+            if (beforeText === afterText && beforeHidden === afterHidden) {
+                return;
+            }
+
+            const beforeAttrs = Object.assign({}, this.attrs, {
+                text: beforeText,
+                hidden: beforeHidden
+            });
+            const afterAttrs = Object.assign({}, this.attrs, {
+                text: afterText,
+                hidden: afterHidden
+            });
+            const element = this;
+            const applyAttrs = (attrs) => {
+                element.applyAttrs(attrs);
+                if (element.elHistory) {
+                    const elHistoryText = element.elHistory.querySelector('.history-item-text');
+                    if (elHistoryText) {
+                        elHistoryText.textContent = element.attrs.text ?? '';
+                    }
+                }
+            };
+
+            PDFEvent.dispatch(Events.HISTORY_PUSH, {
+                undo: () => applyAttrs(beforeAttrs),
+                redo: () => applyAttrs(afterAttrs)
             });
         });
 

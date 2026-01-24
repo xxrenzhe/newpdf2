@@ -123,6 +123,14 @@ export class Elements {
     remove(id) {
         const element = this.get(id);
         if (!element) return;
+        if (element.el && element.el.parentElement) {
+            const prev = element.el.previousElementSibling;
+            const next = element.el.nextElementSibling;
+            element.__historyAnchor = {
+                prevId: prev ? prev.id : null,
+                nextId: next ? next.id : null
+            };
+        }
 
         // Converted original PDF text needs a "soft delete" so export can still cover/redact
         // the original glyphs. Removing the element outright would make the deleted text

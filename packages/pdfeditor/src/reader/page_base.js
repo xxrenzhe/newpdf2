@@ -9,6 +9,7 @@ const ELEMENT_LAYER_CLASS = 'elementLayer';
 const DRAW_LAYER_CLASS = 'drawLayer';
 const TEXT_LAYER_CLASS = 'textLayer';
 const ANNOTATION_LAYER_CLASS= 'annotationLayer';
+const TEXT_MARKUP_LAYER_CLASS = 'textMarkupLayer';
 
 const textContentOptions = {
     // Keep items separate so text highlights don't span large whitespace gaps.
@@ -35,10 +36,13 @@ export class PDFPageBase {
     elElementLayer = null;
     elTextLayer = null;
     elAnnotationLayer = null;
+    elMarkupLayer = null;
     elDrawLayer = null;
     content = null;
     #canvasImage = null;
     renderPromise = null;
+    textMarkups = null;
+    textMarkupEls = null;
 
     constructor(pdfDocument, pageNum, scale) {
         this.pdfDocument = pdfDocument;
@@ -73,6 +77,15 @@ export class PDFPageBase {
         // this.elElementLayer.style.top = '0px';
         // this.elElementLayer.style.zIndex = 1;
         this.elElementLayer.classList.add(ELEMENT_LAYER_CLASS);
+        this.elMarkupLayer = document.createElement('div');
+        this.elMarkupLayer.classList.add(TEXT_MARKUP_LAYER_CLASS);
+        this.elMarkupLayer.style.position = 'absolute';
+        this.elMarkupLayer.style.left = '0px';
+        this.elMarkupLayer.style.top = '0px';
+        this.elMarkupLayer.style.pointerEvents = 'none';
+        this.elElementLayer.appendChild(this.elMarkupLayer);
+        this.textMarkups = new Map();
+        this.textMarkupEls = new Map();
         
         
         this.elWrapper = document.createElement('div');
@@ -133,6 +146,11 @@ export class PDFPageBase {
             this.elAnnotationLayer.style.width = widthPx;
             this.elAnnotationLayer.style.height = heightPx;
         }
+        if (this.elMarkupLayer) {
+            this.elMarkupLayer.style.width = widthPx;
+            this.elMarkupLayer.style.height = heightPx;
+        }
+        this.renderTextMarkups();
         return true;
     }
 
@@ -168,6 +186,7 @@ export class PDFPageBase {
             this.elDrawLayer.style.height = this.content.style.height;
             this.elWrapper.style.width = this.content.style.width;
             this.elWrapper.style.height = this.content.style.height;
+            this.renderTextMarkups();
             PDFEvent.dispatch(Events.PAGE_RENDERED, this);
             return this.content;
         })();
@@ -237,6 +256,113 @@ export class PDFPageBase {
             pdfjsLib.AnnotationLayer.update(params);
         }
         return canvas;
+    }
+
+    addTextMarkup(markup) {
+        if (!markup || !markup.id) return null;
+        if (!this.textMarkups) {
+            this.textMarkups = new Map();
+        }
+        const entry = Object.assign({
+            hidden: false
+        }, markup);
+        this.textMarkups.set(entry.id, entry);
+        this.renderTextMarkups();
+        return entry;
+    }
+
+    removeTextMarkup(id) {
+        if (!this.textMarkups) return;
+        this.textMarkups.delete(id);
+        if (this.textMarkupEls?.has(id)) {
+            this.textMarkupEls.get(id).remove();
+            this.textMarkupEls.delete(id);
+        }
+    }
+
+    setTextMarkupVisible(id, visible) {
+        if (!this.textMarkups) return;
+        const markup = this.textMarkups.get(id);
+        if (!markup) return;
+        markup.hidden = !visible;
+        const el = this.textMarkupEls?.get(id);
+        if (el) {
+            el.style.display = markup.hidden ? 'none' : '';
+        }
+        this.scheduleThumbRefresh({ refreshImage: false, delay: 120 });
+    }
+
+    getTextMarkups() {
+        if (!this.textMarkups) return [];
+        return Array.from(this.textMarkups.values());
+    }
+
+    renderTextMarkups() {
+        if (!this.textMarkups || this.textMarkups.size === 0) {
+            if (this.elMarkupLayer) {
+                this.elMarkupLayer.innerHTML = '';
+            }
+            if (this.textMarkupEls) {
+                this.textMarkupEls.clear();
+            }
+            return;
+        }
+        if (!this.elMarkupLayer) {
+            this.elMarkupLayer = document.createElement('div');
+            this.elMarkupLayer.classList.add(TEXT_MARKUP_LAYER_CLASS);
+            this.elMarkupLayer.style.position = 'absolute';
+            this.elMarkupLayer.style.left = '0px';
+            this.elMarkupLayer.style.top = '0px';
+            this.elMarkupLayer.style.pointerEvents = 'none';
+            this.elElementLayer.appendChild(this.elMarkupLayer);
+        }
+        if (!this.textMarkupEls) {
+            this.textMarkupEls = new Map();
+        }
+
+        const width = this.content?.style?.width || this.elWrapper?.style?.width;
+        const height = this.content?.style?.height || this.elWrapper?.style?.height;
+        if (width) this.elMarkupLayer.style.width = width;
+        if (height) this.elMarkupLayer.style.height = height;
+
+        for (const [id, el] of this.textMarkupEls.entries()) {
+            if (!this.textMarkups.has(id)) {
+                el.remove();
+                this.textMarkupEls.delete(id);
+            }
+        }
+
+        const scale = this.scale || 1;
+        for (const markup of this.textMarkups.values()) {
+            let el = this.textMarkupEls.get(markup.id);
+            if (!el) {
+                el = document.createElement('div');
+                el.classList.add('__pdf_text_markup', '__pdf_text_markup_' + markup.type);
+                el.style.position = 'absolute';
+                el.style.pointerEvents = 'none';
+                el.style.zIndex = '0';
+                this.elMarkupLayer.appendChild(el);
+                this.textMarkupEls.set(markup.id, el);
+            }
+            const x = (markup.x || 0) * scale;
+            const y = (markup.y || 0) * scale;
+            const widthPx = (markup.width || 0) * scale;
+            const heightPx = (markup.height || 0) * scale;
+            el.style.left = x + 'px';
+            el.style.width = widthPx + 'px';
+            el.style.background = markup.background || '';
+            el.style.opacity = markup.opacity == null ? '' : markup.opacity;
+            if (markup.type === 'underline' || markup.type === 'strikethrough') {
+                const thickness = (markup.thickness || 0) * scale;
+                const offset = (markup.offset || 0) * scale;
+                el.style.top = (y + offset) + 'px';
+                el.style.height = thickness + 'px';
+            } else {
+                el.style.top = y + 'px';
+                el.style.height = heightPx + 'px';
+            }
+            el.style.display = markup.hidden ? 'none' : '';
+        }
     }
 
 
@@ -442,11 +568,13 @@ export class PDFPageBase {
         const elementLayer = this.elElementLayer;
         const drawLayer = this.elDrawLayer;
         const textLayer = this.elTextLayer;
+        const markupLayer = this.elMarkupLayer;
         const highlightSelector = '.text_highlight:not(.__removed), .text_underline:not(.__removed), .text_strike:not(.__removed)';
         const hasElements = Boolean(elementLayer && elementLayer.querySelector('.__pdf_editor_element:not(.__pdf_el_hidden)'));
         const hasDraw = Boolean(drawLayer && drawLayer.childElementCount > 0);
         const hasHighlights = Boolean(textLayer && textLayer.querySelector(highlightSelector));
-        if (!hasElements && !hasDraw && !hasHighlights) {
+        const hasMarkups = Boolean(markupLayer && markupLayer.childElementCount > 0);
+        if (!hasElements && !hasDraw && !hasHighlights && !hasMarkups) {
             return null;
         }
 
@@ -483,6 +611,9 @@ export class PDFPageBase {
         }
         if (hasHighlights && textLayer) {
             overlay.appendChild(textLayer.cloneNode(true));
+        }
+        if (hasMarkups && markupLayer && !hasElements) {
+            overlay.appendChild(markupLayer.cloneNode(true));
         }
 
         this.#stripThumbOverlay(overlay);

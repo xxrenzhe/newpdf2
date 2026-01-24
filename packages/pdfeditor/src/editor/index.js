@@ -685,8 +685,12 @@ export class PDFEditor {
 
         PDFEvent.on(Events.ELEMENT_UPDATE_AFTER, e => {
             const element = e.data.element;
-            if (element.dataType == 'text') {
+            if (element.dataType == 'text' && element.elHistory) {
                 element.elHistory.style.fontFamily = element.attrs.fontFamily;
+                const elHistoryText = element.elHistory.querySelector('.history-item-text');
+                if (elHistoryText) {
+                    elHistoryText.textContent = element.attrs.text ?? '';
+                }
             }
             scheduleThumbRefresh(e.data.page, { refreshImage: false });
         });

@@ -3,6 +3,7 @@ import rangy from 'rangy';
 import 'rangy/lib/rangy-classapplier';
 import 'rangy/lib/rangy-highlighter';
 import { Events, PDFEvent } from '../../../event';
+import { createId } from '../../../misc';
 
 const HIGHLIGHT_CLASS = 'text_strike';
 const REMOVED_CLASS = '__removed';
@@ -35,20 +36,37 @@ class Strikethrough extends ToolbarItemBase {
                     const mainRect = page.elWrapper.getBoundingClientRect();
                     rect.x -= mainRect.x;
                     rect.y -= mainRect.y;
-                    
+
                     el.setAttribute('data-x', rect.x);
                     el.setAttribute('data-y', rect.y);
                     el.setAttribute('data-w', rect.width);
                     el.setAttribute('data-h', rect.height);
 
+                    const scale = page.scale || 1;
+                    const markupId = createId('tm_');
+                    const thicknessPx = 2;
+                    page.addTextMarkup({
+                        id: markupId,
+                        type: 'strikethrough',
+                        x: rect.x / scale,
+                        y: rect.y / scale,
+                        width: rect.width / scale,
+                        height: rect.height / scale,
+                        thickness: thicknessPx / scale,
+                        offset: (rect.height / 2 - thicknessPx / 2) / scale,
+                        background: this.attrs.background,
+                        opacity: this.attrs.opacity
+                    });
+                    el.setAttribute('data-markup-id', markupId);
+                    el.classList.add(REMOVED_CLASS);
+                    el.style.display = 'none';
+
                     PDFEvent.dispatch(Events.HISTORY_PUSH, {
                         undo: () => {
-                            el.classList.add(REMOVED_CLASS);
-                            el.style.display = 'none';
+                            page.setTextMarkupVisible(markupId, false);
                         },
                         redo: () => {
-                            el.classList.remove(REMOVED_CLASS);
-                            el.style.display = 'inline';
+                            page.setTextMarkupVisible(markupId, true);
                         }
                     });
 
@@ -79,32 +97,35 @@ class Strikethrough extends ToolbarItemBase {
             }
         });
 
-        PDFEvent.on(Events.SAVE_BEFORE, e => {
-            this.reader.mainBox.querySelectorAll('.' + HIGHLIGHT_CLASS).forEach(el => {
-                if (el.classList.contains(REMOVED_CLASS)) {
+        PDFEvent.on(Events.SAVE_BEFORE, () => {
+            const pages = this.reader.pdfDocument?.pages || [];
+            pages.forEach(readerPage => {
+                if (!readerPage || typeof readerPage.getTextMarkups !== 'function') {
                     return;
                 }
-                const rect = {
-                    x: parseFloat(el.getAttribute('data-x')),
-                    y: parseFloat(el.getAttribute('data-y')),
-                    width: parseFloat(el.getAttribute('data-w')),
-                    height: parseFloat(el.getAttribute('data-h'))
-                };
-
-                const pageId = el.getAttribute('data-pageid');
-                const page = this.editor.pdfDocument.getPageForId(pageId);
-                // let thickness = rect.height * 0.1;
-                let thickness = 2;
-                page.elements.add('rect', {
-                    width: rect.width,
-                    height: thickness,
-                    opacity: this.attrs.opacity,
-                    background: this.attrs.background
-                }, {
-                    pos: {
-                        x: rect.x,
-                        y: rect.y + rect.height / 2 - thickness / 2
-                    }
+                const markups = readerPage.getTextMarkups().filter(item => item.type === 'strikethrough' && !item.hidden);
+                if (!markups.length) {
+                    return;
+                }
+                const page = this.editor.pdfDocument.getPageForId(readerPage.id);
+                if (!page) {
+                    return;
+                }
+                const scale = readerPage.scale || 1;
+                markups.forEach(markup => {
+                    const thickness = (markup.thickness || 0) * scale;
+                    const offset = (markup.offset || 0) * scale;
+                    page.elements.add('rect', {
+                        width: (markup.width || 0) * scale,
+                        height: thickness,
+                        opacity: markup.opacity,
+                        background: markup.background
+                    }, {
+                        pos: {
+                            x: (markup.x || 0) * scale,
+                            y: (markup.y || 0) * scale + offset
+                        }
+                    });
                 });
             });
         });
