@@ -27,6 +27,17 @@ const PdfCropTool = dynamic(() => import("@/components/tools/PdfCropTool"), { ss
 const PdfRedactTool = dynamic(() => import("@/components/tools/PdfRedactTool"), { ssr: false });
 
 const prefetched = new Set<string>();
+const EDITOR_SWITCHER_KEYS = [
+  "annotate",
+  "edit",
+  "sign",
+  "redact",
+  "watermark",
+  "delete",
+  "convert",
+  "merge",
+  "compress",
+] as const;
 
 function prefetchResource(
   href: string,
@@ -189,6 +200,33 @@ function ToolContent() {
     return ".pdf,application/pdf";
   }, [toolKey]);
 
+  const editorSwitcher = useMemo(() => {
+    if (!isPdfEditor) return null;
+    return (
+      <div className="flex items-center gap-2 overflow-x-auto">
+        {EDITOR_SWITCHER_KEYS.map((key) => {
+          const toolDef = toolByKey[key];
+          if (!toolDef) return null;
+          const active = toolKey === toolDef.key;
+          return (
+            <Link
+              key={toolDef.key}
+              href={toolDef.href}
+              aria-current={active ? "page" : undefined}
+              className={
+                active
+                  ? "shrink-0 px-3 py-2 rounded-lg bg-[color:var(--brand-lilac)] text-primary border border-[color:var(--brand-line)] text-sm font-medium"
+                  : "shrink-0 px-3 py-2 rounded-lg bg-white text-[color:var(--brand-ink)] border border-[color:var(--brand-line)] text-sm hover:bg-[color:var(--brand-cream)]"
+              }
+            >
+              {t(toolDef.nameKey, toolDef.name)}
+            </Link>
+          );
+        })}
+      </div>
+    );
+  }, [isPdfEditor, t, toolKey]);
+
   // Get related tools (excluding current)
   const relatedTools = useMemo(() => {
     return TOOLS.filter(t => t.key !== toolKey).slice(0, 6);
@@ -307,7 +345,12 @@ function ToolContent() {
           ) : (
             <div className={isPdfEditor ? "w-full" : "max-w-6xl mx-auto"}>
               {toolKey === "annotate" || toolKey === "edit" ? (
-                <PdfEditorTool file={files[0]!} onBack={reset} onReplaceFile={(next) => setFiles([next])} />
+                <PdfEditorTool
+                  file={files[0]!}
+                  onBack={reset}
+                  onReplaceFile={(next) => setFiles([next])}
+                  toolSwitcher={editorSwitcher}
+                />
               ) : toolKey === "sign" ? (
                 <PdfSignTool initialFile={files[0]!} />
               ) : toolKey === "compress" ? (
