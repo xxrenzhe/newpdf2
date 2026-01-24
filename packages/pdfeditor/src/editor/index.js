@@ -605,6 +605,14 @@ export class PDFEditor {
             this.btnFormsSlider.addEventListener('click', toggleForms);
         }
 
+        const scheduleThumbRefresh = (page, opts = {}) => {
+            const readerPage = page?.readerPage;
+            if (!readerPage || typeof readerPage.scheduleThumbRefresh !== 'function') {
+                return;
+            }
+            readerPage.scheduleThumbRefresh(opts);
+        };
+
         
         PDFEvent.on(Events.ELEMENT_CREATE, e => {
             this.elHistoryBtn.style.display = 'block';
@@ -671,6 +679,8 @@ export class PDFEditor {
                 elItem.style.fontFamily = element.attrs.fontFamily;
                 elTextInput.style.fontFamily = element.attrs.fontFamily;
             }
+
+            scheduleThumbRefresh(page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_UPDATE_AFTER, e => {
@@ -678,6 +688,7 @@ export class PDFEditor {
             if (element.dataType == 'text') {
                 element.elHistory.style.fontFamily = element.attrs.fontFamily;
             }
+            scheduleThumbRefresh(e.data.page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_ACTIVE, e => {
@@ -693,6 +704,7 @@ export class PDFEditor {
             let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
             elHistoryPage.querySelector('[data-id="'+ element.id +'"]')?.remove();
             // this.hideElActions();
+            scheduleThumbRefresh(page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_BLUR, e => {
@@ -703,6 +715,22 @@ export class PDFEditor {
             if (element.dataType == 'text') {
                 let elText = element.elHistory.querySelector('.history-item-text');
                 elText.textContent = element.attrs.text;
+            }
+            scheduleThumbRefresh(e.data.page, { refreshImage: false });
+        });
+
+        PDFEvent.on(Events.ELEMENT_MOVE, e => {
+            scheduleThumbRefresh(e.data.page, { refreshImage: false, delay: 140 });
+        });
+
+        PDFEvent.on(Events.ELEMENT_RESIZE_END, e => {
+            scheduleThumbRefresh(e.data.page, { refreshImage: false });
+        });
+
+        PDFEvent.on(Events.HISTORY_PUSH, () => {
+            const page = this.pdfDocument?.getPageActive();
+            if (page) {
+                scheduleThumbRefresh(page, { refreshImage: false, delay: 260 });
             }
         });
 

@@ -22,6 +22,8 @@ export class PDFPageBase {
     id = null;
     index = 0;
     pageNum = 1;
+    isNewPage = false;
+    newPageSize = null;
     scale = 1;
     rendered = false;
     textDivs = [];
@@ -93,6 +95,10 @@ export class PDFPageBase {
     }
 
     async zoom(scale, renderType, force) {
+        if (this.isNewPage) {
+            this.applyVirtualScale(scale, force);
+            return;
+        }
         if (!this.rendered) return;
         // scale = computeScale(scale, this.pageProxy.view[2], this.pageProxy.view[3], this.reader.mainBox, this.outputScale);
         scale = computeScale(scale, this.pageProxy.view[2], this.pageProxy.view[3], this.reader.mainBox, 1);
@@ -103,6 +109,31 @@ export class PDFPageBase {
             PDFEvent.dispatch(Events.PAGE_ZOOM, this);
             PDFEvent.dispatch(Events.SET_SCALE, this.scale);
         });
+    }
+
+    applyVirtualScale(viewMode, force) {
+        if (!this.newPageSize || !this.reader?.mainBox) return false;
+        const [pdfWidth, pdfHeight] = this.newPageSize;
+        if (!pdfWidth || !pdfHeight) return false;
+        const nextScale = computeScale(viewMode, pdfWidth, pdfHeight, this.reader.mainBox, 1);
+        if (this.scale === nextScale && !force) return false;
+        this.scale = nextScale;
+
+        const widthPx = Math.max(1, Math.round(pdfWidth * nextScale)) + 'px';
+        const heightPx = Math.max(1, Math.round(pdfHeight * nextScale)) + 'px';
+        this.elWrapper.style.width = widthPx;
+        this.elWrapper.style.height = heightPx;
+        this.elDrawLayer.style.width = widthPx;
+        this.elDrawLayer.style.height = heightPx;
+        if (this.elTextLayer) {
+            this.elTextLayer.style.width = widthPx;
+            this.elTextLayer.style.height = heightPx;
+        }
+        if (this.elAnnotationLayer) {
+            this.elAnnotationLayer.style.width = widthPx;
+            this.elAnnotationLayer.style.height = heightPx;
+        }
+        return true;
     }
 
     /**
@@ -230,6 +261,28 @@ export class PDFPageBase {
         const width = typeof opts.width === 'number' ? opts.width : 140;
         const quality = typeof opts.quality === 'number' ? opts.quality : 0.78;
 
+        if (this.isNewPage && this.newPageSize) {
+            const [pdfWidth, pdfHeight] = this.newPageSize;
+            const scale = width / Math.max(1, pdfWidth || 1);
+            const viewportWidth = Math.ceil(Math.max(1, pdfWidth * scale));
+            const viewportHeight = Math.ceil(Math.max(1, pdfHeight * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = viewportWidth;
+            canvas.height = viewportHeight;
+
+            const ctx = canvas.getContext('2d', { alpha: false });
+            if (ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            const image = new Image();
+            image.classList.add(CAVANS_CLASS);
+            image.src = canvas.toDataURL('image/jpeg', quality);
+            return image;
+        }
+
         await this.getPageProxy();
         const viewport0 = this.pageProxy.getViewport({ scale: 1 });
         const scale = width / Math.max(1, viewport0.width);
@@ -250,6 +303,63 @@ export class PDFPageBase {
         image.classList.add(CAVANS_CLASS);
         image.src = canvas.toDataURL('image/jpeg', quality);
         return image;
+    }
+
+    scheduleThumbRefresh(opts = {}) {
+        this._thumbDirty = true;
+        if (!this.elThumbs || !this.elThumbs.isConnected) {
+            return;
+        }
+        const delay = typeof opts.delay === 'number' ? opts.delay : 120;
+        const includeOverlays = opts.includeOverlays !== false;
+        const refreshImage = opts.refreshImage === true;
+        clearTimeout(this._thumbRefreshTimer);
+        this._thumbRefreshTimer = setTimeout(() => {
+            this.refreshThumb({ includeOverlays, refreshImage }).catch(() => {});
+        }, delay);
+    }
+
+    async refreshThumb(opts = {}) {
+        if (!this.elThumbs || !this.elThumbs.isConnected) {
+            return;
+        }
+        const wrapper = this.elThumbs.querySelector('.' + WRAPPER_CLASS);
+        if (!wrapper) return;
+
+        const includeOverlays = opts.includeOverlays !== false;
+        const refreshImage = opts.refreshImage !== false;
+        const width = typeof opts.width === 'number' ? opts.width : 140;
+        const quality = typeof opts.quality === 'number' ? opts.quality : 0.78;
+        const token = (this._thumbRefreshToken = (this._thumbRefreshToken || 0) + 1);
+
+        let image = null;
+        if (!refreshImage) {
+            image = wrapper.querySelector('.' + CAVANS_CLASS);
+        }
+        if (!image) {
+            image = await this.renderThumbImage({ width, quality });
+            if (token !== this._thumbRefreshToken) return;
+        }
+
+        if (!this.elThumbs || !this.elThumbs.isConnected) {
+            return;
+        }
+
+        if (refreshImage) {
+            wrapper.querySelectorAll('.' + CAVANS_CLASS).forEach(el => el.remove());
+            wrapper.appendChild(image);
+        } else if (image && !wrapper.contains(image)) {
+            wrapper.appendChild(image);
+        }
+
+        wrapper.querySelectorAll('.__pdf_thumb_overlay').forEach(el => el.remove());
+        if (includeOverlays) {
+            const overlay = this.#buildThumbOverlay(wrapper);
+            if (overlay) {
+                wrapper.appendChild(overlay);
+            }
+            this._thumbDirty = false;
+        }
     }
 
     /**
@@ -325,6 +435,69 @@ export class PDFPageBase {
             this.id = this.pageProxy.ref.num + '_' + this.pageProxy.ref.gen;
         }
         return this.pageProxy;
+    }
+
+    #buildThumbOverlay(wrapper) {
+        if (!wrapper) return null;
+        const elementLayer = this.elElementLayer;
+        const drawLayer = this.elDrawLayer;
+        const textLayer = this.elTextLayer;
+        const highlightSelector = '.text_highlight:not(.__removed), .text_underline:not(.__removed), .text_strike:not(.__removed)';
+        const hasElements = Boolean(elementLayer && elementLayer.querySelector('.__pdf_editor_element:not(.__pdf_el_hidden)'));
+        const hasDraw = Boolean(drawLayer && drawLayer.childElementCount > 0);
+        const hasHighlights = Boolean(textLayer && textLayer.querySelector(highlightSelector));
+        if (!hasElements && !hasDraw && !hasHighlights) {
+            return null;
+        }
+
+        const baseRect = this.elWrapper?.getBoundingClientRect?.();
+        let baseWidth = baseRect?.width || 0;
+        let baseHeight = baseRect?.height || 0;
+        if ((!baseWidth || !baseHeight) && this.content) {
+            const contentRect = this.content.getBoundingClientRect();
+            baseWidth = contentRect.width || baseWidth;
+            baseHeight = contentRect.height || baseHeight;
+        }
+        if (!baseWidth || !baseHeight) {
+            return null;
+        }
+
+        const thumbRect = wrapper.getBoundingClientRect();
+        const scaleX = thumbRect.width / baseWidth;
+        const scaleY = thumbRect.height / baseHeight;
+        if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) {
+            return null;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.classList.add('__pdf_thumb_overlay');
+        overlay.style.width = baseWidth + 'px';
+        overlay.style.height = baseHeight + 'px';
+        overlay.style.transform = 'scale(' + scaleX + ',' + scaleY + ')';
+
+        if (hasElements && elementLayer) {
+            overlay.appendChild(elementLayer.cloneNode(true));
+        }
+        if (hasDraw && drawLayer) {
+            overlay.appendChild(drawLayer.cloneNode(true));
+        }
+        if (hasHighlights && textLayer) {
+            overlay.appendChild(textLayer.cloneNode(true));
+        }
+
+        this.#stripThumbOverlay(overlay);
+        return overlay;
+    }
+
+    #stripThumbOverlay(overlay) {
+        if (!overlay) return;
+        overlay.querySelectorAll('.__pdf_el_actions_wrapper').forEach(el => el.remove());
+        overlay.querySelectorAll('.resizable-handle').forEach(el => el.remove());
+        overlay.querySelectorAll('.__resizable').forEach(el => el.classList.remove('__resizable'));
+        overlay.querySelectorAll('.__resizable-border').forEach(el => el.classList.remove('__resizable-border'));
+        overlay.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+        overlay.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+        overlay.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     }
 
     #clearWrapper() {

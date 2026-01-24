@@ -489,8 +489,10 @@ export class PDFReader {
                     if (!entry.target.querySelector('.__pdf_item_render')) {
                         let pageNum = entry.target.getAttribute('data-page');
                         let page = this.pdfDocument.getPage(pageNum);
-                        page.renderThumbImage({ width: 140, quality: 0.78 }).then(el => {
-                            entry.target.firstChild.appendChild(el);
+                        const includeOverlays = Boolean(page?._thumbDirty);
+                        page.refreshThumb({ includeOverlays, refreshImage: true }).then(() => {
+                            observer.unobserve(entry.target);
+                        }).catch(() => {
                             observer.unobserve(entry.target);
                         });
                     }

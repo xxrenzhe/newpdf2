@@ -562,10 +562,40 @@ html.embed .pdf-footer-right {
     width: 100%;
     height: 150px;
     box-shadow: var(--pdf-preview-box-shadow);
+    position: relative;
+    overflow: hidden;
 }
 
 .pdf-thumbs-wrapper .active .__pdf_page_preview_wrapper {
     outline: var(--pdf-thumbs-preview-wrapper-border);
+}
+
+.pdf-thumbs-wrapper .elementLayer,
+.pdf-thumbs-wrapper .drawLayer,
+.pdf-thumbs-wrapper .textLayer,
+.pdf-thumbs-wrapper .annotationLayer {
+    display: none;
+}
+
+.pdf-thumbs-wrapper .__pdf_thumb_overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: top left;
+    pointer-events: none;
+}
+
+.pdf-thumbs-wrapper .__pdf_thumb_overlay .elementLayer,
+.pdf-thumbs-wrapper .__pdf_thumb_overlay .drawLayer,
+.pdf-thumbs-wrapper .__pdf_thumb_overlay .textLayer,
+.pdf-thumbs-wrapper .__pdf_thumb_overlay .annotationLayer {
+    display: block;
+}
+
+.pdf-thumbs-wrapper .__pdf_thumb_overlay .__pdf_el_actions_wrapper,
+.pdf-thumbs-wrapper .__pdf_thumb_overlay .resizable-handle,
+.pdf-thumbs-wrapper .__pdf_thumb_overlay .__resizable-border {
+    display: none !important;
 }
 
 .pdf-thumbs-wrapper .insert_page_box {
