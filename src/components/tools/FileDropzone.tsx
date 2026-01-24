@@ -2,6 +2,13 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
+import {
+  validateFileType,
+  validatePdfStructure,
+  validateFileSize as validateFileSizeSecurity,
+  type FileValidationResult,
+  type PdfValidationResult,
+} from "@/lib/security/fileValidation";
 
 // 文件大小限制常量
 const MAX_PDF_SIZE = 100 * 1024 * 1024; // 100MB for PDF
@@ -13,7 +20,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function validateFileSize(file: File, t: (key: string, fallback?: string) => string): { valid: boolean; error?: string } {
+function validateFileSizeBasic(file: File, t: (key: string, fallback?: string) => string): { valid: boolean; error?: string } {
   const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   const maxSize = isPdf ? MAX_PDF_SIZE : MAX_OTHER_SIZE;
 
@@ -32,6 +39,15 @@ function validateFileSize(file: File, t: (key: string, fallback?: string) => str
   return { valid: true };
 }
 
+// 验证类型
+type ValidationLevel = "basic" | "standard" | "strict";
+
+interface FileValidationOptions {
+  level?: ValidationLevel;
+  validateMagicBytes?: boolean;
+  validatePdfStructure?: boolean;
+}
+
 type FileDropzoneProps = {
   accept?: string;
   multiple?: boolean;
@@ -40,6 +56,7 @@ type FileDropzoneProps = {
   onFiles: (files: File[]) => void;
   title?: string;
   subtitle?: string;
+  validation?: FileValidationOptions; // 新增：文件验证选项
 };
 
 export default function FileDropzone({
@@ -50,61 +67,130 @@ export default function FileDropzone({
   onFiles,
   title,
   subtitle,
+  validation = { level: "basic" }, // 默认使用 basic 级别，避免误报影响用户
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const { t } = useLanguage();
   const resolvedTitle = title ?? t("dropFileHere", "Drop your file here");
   const resolvedSubtitle = subtitle ?? t("dropzoneSubtitle", "Or choose a file from your computer");
 
-  const emitFiles = useCallback(
-    (list: FileList | File[]) => {
-      const files = Array.from(list);
-      const limited = typeof maxFiles === "number" ? files.slice(0, maxFiles) : files;
-
-      // 验证文件大小
+  // 增强的文件验证函数
+  const validateFile = useCallback(
+    async (
+      file: File
+    ): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> => {
       const errors: string[] = [];
-      const validFiles: File[] = [];
+      const warnings: string[] = [];
 
-      for (const file of limited) {
-        // 如果提供了自定义 maxSize，使用它；否则使用默认验证
-        if (maxSize) {
-          if (file.size > maxSize) {
-            errors.push(
-              t(
-                "fileTooLarge",
-                'File "{name}" ({size}) exceeds the {limit} limit.'
-              )
-                .replace("{name}", file.name)
-                .replace("{size}", formatFileSize(file.size))
-                .replace("{limit}", formatFileSize(maxSize))
-            );
-          } else {
-            validFiles.push(file);
-          }
-        } else {
-          const result = validateFileSize(file, t);
-          if (result.valid) {
-            validFiles.push(file);
-          } else if (result.error) {
-            errors.push(result.error);
-          }
+      // 1. 基础大小验证
+      if (maxSize) {
+        if (file.size > maxSize) {
+          errors.push(
+            t("fileTooLarge", 'File "{name}" ({size}) exceeds the {limit} limit.')
+              .replace("{name}", file.name)
+              .replace("{size}", formatFileSize(file.size))
+              .replace("{limit}", formatFileSize(maxSize))
+          );
+        }
+      } else {
+        const result = validateFileSizeBasic(file, t);
+        if (!result.valid && result.error) {
+          errors.push(result.error);
         }
       }
 
-      if (errors.length > 0) {
-        setError(errors.join(" "));
-        // 3秒后清除错误
+      // 2. 魔数验证 (standard 或 strict 级别)
+      if (validation.level !== "basic" && validation.validateMagicBytes !== false) {
+        try {
+          const typeResult = await validateFileType(file);
+          if (!typeResult.valid && typeResult.error) {
+            if (validation.level === "strict") {
+              errors.push(
+                t("invalidFileType", 'File "{name}" has invalid content type.')
+                  .replace("{name}", file.name) + ` (${typeResult.error})`
+              );
+            } else {
+              warnings.push(`${file.name}: ${typeResult.error}`);
+            }
+          }
+        } catch {
+          // 验证失败不阻止上传
+          warnings.push(`${file.name}: Unable to verify file type`);
+        }
+      }
+
+      // 3. PDF 结构验证 (仅 PDF 文件)
+      if (
+        (validation.level === "strict" || validation.validatePdfStructure) &&
+        (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))
+      ) {
+        try {
+          const pdfResult = await validatePdfStructure(file);
+          if (!pdfResult.valid && pdfResult.error) {
+            if (validation.level === "strict") {
+              errors.push(
+                t("invalidPdf", 'File "{name}" is not a valid PDF.')
+                  .replace("{name}", file.name) + ` (${pdfResult.error})`
+              );
+            } else {
+              warnings.push(`${file.name}: ${pdfResult.error}`);
+            }
+          }
+        } catch {
+          warnings.push(`${file.name}: Unable to verify PDF structure`);
+        }
+      }
+
+      return { valid: errors.length === 0, errors, warnings };
+    },
+    [maxSize, t, validation]
+  );
+
+  const emitFiles = useCallback(
+    async (list: FileList | File[]) => {
+      const files = Array.from(list);
+      const limited = typeof maxFiles === "number" ? files.slice(0, maxFiles) : files;
+
+      setIsValidating(true);
+      const allErrors: string[] = [];
+      const allWarnings: string[] = [];
+      const validFiles: File[] = [];
+
+      // 并行验证所有文件
+      const results = await Promise.all(limited.map((file) => validateFile(file)));
+
+      for (let i = 0; i < limited.length; i++) {
+        const file = limited[i]!;
+        const result = results[i]!;
+
+        if (result.valid) {
+          validFiles.push(file);
+        }
+        allErrors.push(...result.errors);
+        allWarnings.push(...result.warnings);
+      }
+
+      setIsValidating(false);
+
+      // 显示错误
+      if (allErrors.length > 0) {
+        setError(allErrors.join(" "));
         setTimeout(() => setError(null), 5000);
+      } else if (allWarnings.length > 0) {
+        // 警告不阻止上传，但显示提示
+        console.warn("File validation warnings:", allWarnings);
+        setError(null);
       } else {
         setError(null);
       }
 
       if (validFiles.length > 0) onFiles(validFiles);
     },
-    [maxFiles, maxSize, onFiles, t]
+    [maxFiles, onFiles, validateFile]
   );
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -183,7 +269,16 @@ export default function FileDropzone({
           <h3 className="text-xl md:text-2xl font-semibold text-[color:var(--brand-ink)] mb-2">{resolvedTitle}</h3>
           <p className="text-sm text-[color:var(--brand-muted)] mb-6">{resolvedSubtitle}</p>
 
-          <label
+          {isValidating ? (
+            <div className="inline-flex items-center justify-center gap-2 bg-gray-100 text-gray-600 font-medium px-10 py-3 rounded-lg">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span>{t("validatingFiles", "Validating files...")}</span>
+            </div>
+          ) : (
+            <label
             htmlFor={inputId}
             role="button"
             tabIndex={0}
@@ -196,6 +291,7 @@ export default function FileDropzone({
           >
             Browse files
           </label>
+          )}
           <input
             ref={inputRef}
             id={inputId}

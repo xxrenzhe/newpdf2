@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { SecurityInitializer } from "@/components/SecurityInitializer";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pdftools.app";
 
@@ -109,6 +110,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${jakarta.variable} ${spaceGrotesk.variable} antialiased`} suppressHydrationWarning>
+        <SecurityInitializer />
         <Providers>
           <LanguageProvider>{children}</LanguageProvider>
         </Providers>
