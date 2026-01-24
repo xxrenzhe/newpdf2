@@ -6,7 +6,8 @@ import { getPixelColor, trimSpace } from '../misc';
 import { Locale } from '../locale';
 
 const textContentOptions = {
-    disableCombineTextItems: false,
+    // Keep items separate so text highlights don't span large whitespace gaps.
+    disableCombineTextItems: true,
     includeMarkedContent: false
 };
 const INSERT_PAGE_CLASS= 'insert_page_box';
@@ -114,6 +115,7 @@ export class PDFPage extends PDFPageBase {
                     textDiv.style.backgroundColor = data.backgroundColor;
                 });
 
+                this.textParts = [];
                 let text = '';
                 let textWidth = 0;
                 let elements = [];
@@ -162,7 +164,8 @@ export class PDFPage extends PDFPageBase {
                     if ((i+1) == this.textContentItems.length) {
                         this.textParts[n] = {
                             text: text,
-                            elements: elements
+                            elements: elements,
+                            width: textWidth
                         };
                         this.#filterDiv(n);
                         break;
@@ -186,6 +189,7 @@ export class PDFPage extends PDFPageBase {
                         n++;
                     }
                 }
+                this.#groupTextPartsIntoParagraphs();
             });
         });
 
@@ -224,8 +228,10 @@ export class PDFPage extends PDFPageBase {
 
         let id = this.pageNum + '_' + idx + '_' + elDiv.getAttribute('data-l');
         const textPart = this.textParts[idx];
-        let x = parseFloat(elDiv.style.left);
-        let y = parseFloat(elDiv.style.top);
+        const baseElement = this.#getTextPartElement(textPart, elDiv);
+        if (!textPart || !baseElement) {
+            return;
+        }
         // PDF.js already selects the correct font face (regular/bold/italic) for the text layer.
         // Applying CSS bold/italic on top of that causes "synthetic" styling and can make text
         // appear thicker than the original PDF.
@@ -233,20 +239,27 @@ export class PDFPage extends PDFPageBase {
         const italic = false;
 
         // Keep the historical width tweak for italic PDF fonts so the cover box doesn't clip.
-        const rawFontName = textPart.elements[0].getAttribute('data-fontname');
+        const rawFontName = baseElement.getAttribute('data-fontname');
         const fontName = typeof rawFontName === 'string' ? rawFontName.toLowerCase() : '';
         const isItalicFont = fontName.includes('oblique') || fontName.includes('italic');
         if (isItalicFont) {
-            elDiv.style.width = (parseFloat(elDiv.style.width) + 3) + 'px';
+            this.#applyItalicWidthPadding(textPart);
         }
+        const bounds = this.#getTextPartBounds(textPart, baseElement, isItalicFont);
+        if (!bounds) {
+            return;
+        }
+        let x = bounds.left;
+        let y = bounds.top;
 
-        let fontSize = parseFloat(elDiv.getAttribute('data-fontsize'));
-        let color = elDiv.getAttribute('data-fontcolor');
-        let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), x * this.outputScale, y * this.outputScale);
-        let fontFamily = elDiv.getAttribute('data-loadedname') || 'Helvetica';
-        const coverRect = elDiv.getBoundingClientRect();
-        const coverWidth = coverRect.width;
-        const coverHeight = coverRect.height;
+        let fontSize = parseFloat(baseElement.getAttribute('data-fontsize'));
+        let color = baseElement.getAttribute('data-fontcolor');
+        let bgColor = baseElement.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), bounds.left * this.outputScale, bounds.top * this.outputScale);
+        let fontFamily = baseElement.getAttribute('data-loadedname') || 'Helvetica';
+        const coverWidth = bounds.width;
+        const coverHeight = bounds.height;
+        const lineHeightPx = (typeof textPart.lineHeight === 'number' && Number.isFinite(textPart.lineHeight)) ? textPart.lineHeight : null;
+        const lineHeight = lineHeightPx ? lineHeightPx / this.scale : null;
 
         // Store a stable "cover box" in PDF units for export-time redaction.
         // This avoids relying on edited text metrics (which shrink when deleting text),
@@ -281,10 +294,11 @@ export class PDFPage extends PDFPageBase {
                 size: fontSize / this.scale,
                 color: color,
                 text: textPart.text,
-                lineHeight: null,
+                lineHeight: lineHeight,
+                lineHeightMeasured: Boolean(lineHeight),
                 fontFamily: fontFamily,
                 fontFile: fontFamily,
-                fontName: elDiv.getAttribute('data-fontname'),
+                fontName: baseElement.getAttribute('data-fontname'),
                 opacity: 1,
                 underline: null,
                 // Cover the original glyphs when exporting without relying on PDF.js worker patches.
@@ -307,15 +321,17 @@ export class PDFPage extends PDFPageBase {
             pageNum: this.pageNum
         }, () => {
             this.isConvertWidget.push(idx);
-            elDiv.style.cursor = 'default';
+            baseElement.style.cursor = 'default';
             textPart.elements.forEach(async (element, i) => {
                 element.classList.remove('text-border');
                 element.classList.add('text-hide');
                 element.style.backgroundColor = bgColor;
                 element.style.userSelect = 'none';
                 element.style.padding = '3px 0 3px 0';
-                element.style.top = (y - 2) + 'px';
-                element.style.left = (x - 2) + 'px';
+                const elementTop = this.#parsePx(element.style.top);
+                const elementLeft = this.#parsePx(element.style.left);
+                element.style.top = (elementTop - 2) + 'px';
+                element.style.left = (elementLeft - 2) + 'px';
     
                 let textItemIdx = element.getAttribute('data-idx');
                 if (this.hideOriginElements.findIndex(data => data.idx == textItemIdx) === -1) {
@@ -364,5 +380,264 @@ export class PDFPage extends PDFPageBase {
         } else {
             return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
         }
+    }
+
+    #groupTextPartsIntoParagraphs() {
+        const lineParts = this.textParts.filter(Boolean);
+        if (lineParts.length <= 1) {
+            lineParts.forEach((part, index) => {
+                this.#getConnectedElements(part).forEach(el => el.setAttribute('data-parts', index));
+            });
+            return;
+        }
+
+        const paragraphs = [];
+        let current = null;
+        for (const linePart of lineParts) {
+            const line = this.#getLineInfo(linePart);
+            if (!line) continue;
+
+            if (!current) {
+                current = this.#startParagraph(linePart, line);
+                continue;
+            }
+
+            const join = this.#canJoinParagraph(current, line);
+            if (!join) {
+                paragraphs.push(this.#finishParagraph(current));
+                current = this.#startParagraph(linePart, line);
+                continue;
+            }
+
+            this.#appendParagraphLine(current, linePart, line, join);
+        }
+        if (current) {
+            paragraphs.push(this.#finishParagraph(current));
+        }
+
+        paragraphs.forEach((paragraph, index) => {
+            paragraph.elements.forEach(el => el.setAttribute('data-parts', index));
+        });
+        this.textParts = paragraphs;
+    }
+
+    #startParagraph(linePart, line) {
+        const elements = this.#getConnectedElements(linePart);
+        const elementSet = new Set(elements);
+        const right = line.left + line.width;
+        const bottom = line.top + line.height;
+        return {
+            text: linePart.text,
+            elements,
+            elementSet,
+            width: line.width,
+            minLeft: line.left,
+            maxRight: right,
+            top: line.top,
+            bottom,
+            fontSize: line.fontSize,
+            fontName: line.fontName,
+            color: line.color,
+            alignLeft: line.left,
+            lastTop: line.top,
+            lineCount: 1,
+            gapTotal: 0,
+            gapCount: 0
+        };
+    }
+
+    #appendParagraphLine(current, linePart, line, join) {
+        current.text += '\n' + linePart.text;
+        const elements = this.#getConnectedElements(linePart);
+        elements.forEach(el => {
+            if (!current.elementSet.has(el)) {
+                current.elementSet.add(el);
+                current.elements.push(el);
+            }
+        });
+        current.width = Math.max(current.width, line.width);
+        current.minLeft = Math.min(current.minLeft, line.left);
+        current.maxRight = Math.max(current.maxRight, line.left + line.width);
+        current.top = Math.min(current.top, line.top);
+        current.bottom = Math.max(current.bottom, line.top + line.height);
+        current.gapTotal += join.gap;
+        current.gapCount += 1;
+        current.lastTop = line.top;
+        current.lineCount += 1;
+        if (typeof join.alignLeft === 'number') {
+            current.alignLeft = join.alignLeft;
+        }
+    }
+
+    #finishParagraph(current) {
+        const lineHeight = current.gapCount > 0 ? current.gapTotal / current.gapCount : null;
+        return {
+            text: current.text,
+            elements: current.elements,
+            width: current.width,
+            lineHeight,
+            bounds: {
+                left: current.minLeft,
+                top: current.top,
+                right: current.maxRight,
+                bottom: current.bottom,
+                width: current.maxRight - current.minLeft,
+                height: current.bottom - current.top
+            }
+        };
+    }
+
+    #canJoinParagraph(current, line) {
+        const gap = line.top - current.lastTop;
+        if (!Number.isFinite(gap) || gap <= 0) {
+            return null;
+        }
+
+        const fontSize = current.fontSize || line.fontSize;
+        if (!fontSize) {
+            return null;
+        }
+
+        const sameFont = current.fontName === line.fontName && Math.abs(current.fontSize - line.fontSize) <= 0.5;
+        const sameColor = !current.color || !line.color || current.color === line.color;
+        if (!sameFont || !sameColor) {
+            return null;
+        }
+
+        const avgGap = current.gapCount ? current.gapTotal / current.gapCount : 0;
+        const maxGap = Math.max(fontSize * 1.9, avgGap ? avgGap * 1.4 : 0);
+        if (gap > maxGap) {
+            return null;
+        }
+
+        const alignThreshold = fontSize * 0.6;
+        const indentThreshold = fontSize * 2.2;
+        if (current.lineCount === 1) {
+            const leftDiff = Math.abs(line.left - current.alignLeft);
+            if (leftDiff <= alignThreshold) {
+                return { gap };
+            }
+            if (leftDiff <= indentThreshold) {
+                return { gap, alignLeft: line.left };
+            }
+            return null;
+        }
+
+        const leftDiff = Math.abs(line.left - current.alignLeft);
+        if (leftDiff <= alignThreshold) {
+            return { gap };
+        }
+        return null;
+    }
+
+    #getLineInfo(textPart) {
+        const elements = this.#getConnectedElements(textPart);
+        const element = elements[0];
+        if (!element) return null;
+
+        const left = this.#parsePx(element.style.left);
+        const top = this.#parsePx(element.style.top);
+        const rect = element.getBoundingClientRect();
+        const width = this.#parsePx(element.style.width) || rect.width;
+        const height = this.#parsePx(element.style.height) || rect.height;
+        const fontSize = this.#parsePx(element.getAttribute('data-fontsize')) || this.#parsePx(element.style.fontSize);
+        return {
+            left,
+            top,
+            width,
+            height,
+            fontSize,
+            fontName: element.getAttribute('data-loadedname') || '',
+            color: element.getAttribute('data-fontcolor') || ''
+        };
+    }
+
+    #getTextPartBounds(textPart, baseElement, forceRefresh = false) {
+        if (!textPart) return null;
+        if (textPart.bounds && !forceRefresh) return textPart.bounds;
+        const elements = this.#getConnectedElements(textPart);
+        if (!elements.length && baseElement) {
+            elements.push(baseElement);
+        }
+        if (!elements.length) return null;
+
+        let left = Infinity;
+        let top = Infinity;
+        let right = -Infinity;
+        let bottom = -Infinity;
+        elements.forEach(el => {
+            const box = this.#getElementBox(el);
+            if (!box) return;
+            left = Math.min(left, box.left);
+            top = Math.min(top, box.top);
+            right = Math.max(right, box.right);
+            bottom = Math.max(bottom, box.bottom);
+        });
+        if (!Number.isFinite(left) || !Number.isFinite(top) || !Number.isFinite(right) || !Number.isFinite(bottom)) {
+            return null;
+        }
+        const bounds = {
+            left,
+            top,
+            right,
+            bottom,
+            width: right - left,
+            height: bottom - top
+        };
+        if (textPart) {
+            textPart.bounds = bounds;
+        }
+        return bounds;
+    }
+
+    #getElementBox(element) {
+        if (!element) return null;
+        const left = this.#parsePx(element.style.left);
+        const top = this.#parsePx(element.style.top);
+        const rect = element.getBoundingClientRect();
+        const width = this.#parsePx(element.style.width) || rect.width;
+        const height = this.#parsePx(element.style.height) || rect.height;
+        return {
+            left,
+            top,
+            right: left + width,
+            bottom: top + height
+        };
+    }
+
+    #getTextPartElement(textPart, fallback) {
+        const elements = this.#getConnectedElements(textPart);
+        return elements[0] || fallback;
+    }
+
+    #getConnectedElements(textPart) {
+        if (!textPart || !Array.isArray(textPart.elements)) return [];
+        const elements = [];
+        const seen = new Set();
+        textPart.elements.forEach(el => {
+            if (!el || !el.isConnected || seen.has(el)) return;
+            seen.add(el);
+            elements.push(el);
+        });
+        return elements;
+    }
+
+    #applyItalicWidthPadding(textPart) {
+        const elements = this.#getConnectedElements(textPart);
+        elements.forEach(el => {
+            if (el.getAttribute('data-italic-pad')) return;
+            const width = this.#parsePx(el.style.width);
+            const rectWidth = el.getBoundingClientRect().width;
+            const baseWidth = width || rectWidth;
+            if (baseWidth > 0) {
+                el.style.width = (baseWidth + 3) + 'px';
+                el.setAttribute('data-italic-pad', '1');
+            }
+        });
+    }
+
+    #parsePx(value) {
+        const num = parseFloat(value);
+        return Number.isFinite(num) ? num : 0;
     }
 };

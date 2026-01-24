@@ -11,7 +11,8 @@ const TEXT_LAYER_CLASS = 'textLayer';
 const ANNOTATION_LAYER_CLASS= 'annotationLayer';
 
 const textContentOptions = {
-    disableCombineTextItems: false,
+    // Keep items separate so text highlights don't span large whitespace gaps.
+    disableCombineTextItems: true,
     includeMarkedContent: false
 };
 
