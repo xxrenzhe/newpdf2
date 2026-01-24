@@ -1,71 +1,62 @@
 "use client";
 
 import { useState } from "react";
+import { FilePenLine, FileUp, Monitor, ShieldCheck } from "lucide-react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const advantages = [
   {
     id: 0,
+    titleKey: "pdfEditingMadeEasy",
     title: "PDF editing made easy",
+    descriptionKey: "pdfEditingMadeEasyDesc",
     description: "Edit your PDFs effortlessly with our intuitive tools. Add text, images, annotations, or even e-signatures, all in just a few clicks.",
-    icon: (
-      <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-      </svg>
-    ),
+    icon: <FilePenLine className="w-7 h-7 text-primary" />,
     gradient: "from-[color:var(--brand-peach)] via-[color:var(--brand-lilac)] to-white",
+    badgeKey: "editingComplete",
     badge: "Editing complete",
     badgeColor: "bg-secondary",
   },
   {
     id: 1,
+    titleKey: "safeAndSecure",
     title: "100% safe and secure",
+    descriptionKey: "safeAndSecureDesc",
     description: "Your documents and privacy are always safe. We use encryption for file transfers and automatic deletion after processing.",
-    icon: (
-      <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        <path d="M9 12l2 2 4-4" />
-      </svg>
-    ),
+    icon: <ShieldCheck className="w-7 h-7 text-primary" />,
     gradient: "from-[color:var(--brand-lilac)] via-white to-[color:var(--brand-cream)]",
+    badgeKey: "encrypted256Bit",
     badge: "256-bit encrypted",
     badgeColor: "bg-primary",
   },
   {
     id: 2,
+    titleKey: "fastAndEasy",
     title: "Fast & easy online conversion",
+    descriptionKey: "fastAndEasyDesc",
     description: "Quickly convert your files to formats like Word, PDF, Excel, PNG, JPG, and more. It's quick, easy, and only takes a few seconds.",
-    icon: (
-      <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <path d="M12 18v-6" />
-        <path d="M9 15l3 3 3-3" />
-      </svg>
-    ),
+    icon: <FileUp className="w-7 h-7 text-primary" />,
     gradient: "from-[color:var(--brand-peach)] via-white to-[color:var(--brand-lilac)]",
+    badgeKey: "convertedInSeconds",
     badge: "Converted in 2s",
     badgeColor: "bg-secondary",
   },
   {
     id: 3,
+    titleKey: "noSoftware",
     title: "No software installation",
+    descriptionKey: "noSoftwareDesc",
     description: "No need for downloads or browser extensions. Our PDF editor and converter are fully web-based, requiring only an internet connection.",
-    icon: (
-      <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-        <line x1="8" y1="21" x2="16" y2="21" />
-        <line x1="12" y1="17" x2="12" y2="21" />
-      </svg>
-    ),
+    icon: <Monitor className="w-7 h-7 text-primary" />,
     gradient: "from-[color:var(--brand-lilac)] via-[color:var(--brand-peach)] to-white",
+    badgeKey: "worksEverywhere",
     badge: "Works everywhere",
     badgeColor: "bg-primary",
   },
 ];
 
 // Preview card content for each advantage
-const PreviewCards = {
+const buildPreviewCards = (t: (key: string, fallback?: string) => string) => ({
   // Edit PDF preview
   0: (
     <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative z-10">
@@ -74,8 +65,12 @@ const PreviewCards = {
           <span className="text-white text-sm font-bold">PDF</span>
         </div>
         <div>
-          <p className="font-bold text-[color:var(--brand-ink)] text-lg">Document.pdf</p>
-          <p className="text-sm text-[color:var(--brand-muted)]">2.4 MB</p>
+          <p className="font-bold text-[color:var(--brand-ink)] text-lg">
+            {t("sampleDocumentName", "Document.pdf")}
+          </p>
+          <p className="text-sm text-[color:var(--brand-muted)]">
+            {t("sampleDocumentSize", "2.4 MB")}
+          </p>
         </div>
         <div className="ml-auto">
           <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -136,27 +131,37 @@ const PreviewCards = {
         </div>
       </div>
       <div className="text-center mb-6">
-        <h4 className="text-xl font-bold text-[color:var(--brand-ink)] mb-2">Your files are protected</h4>
-        <p className="text-[color:var(--brand-muted)] text-sm">End-to-end encryption enabled</p>
+        <h4 className="text-xl font-bold text-[color:var(--brand-ink)] mb-2">
+          {t("filesProtectedTitle", "Your files are protected")}
+        </h4>
+        <p className="text-[color:var(--brand-muted)] text-sm">
+          {t("filesProtectedSubtitle", "End-to-end encryption enabled")}
+        </p>
       </div>
       <div className="space-y-4">
         <div className="flex items-center gap-3 p-3 bg-[color:var(--brand-lilac)] rounded-xl">
           <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 6L9 17l-5-5" />
           </svg>
-          <span className="text-[color:var(--brand-ink)] font-medium">SSL/TLS encryption</span>
+          <span className="text-[color:var(--brand-ink)] font-medium">
+            {t("sslEncryption", "SSL/TLS encryption")}
+          </span>
         </div>
         <div className="flex items-center gap-3 p-3 bg-[color:var(--brand-lilac)] rounded-xl">
           <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 6L9 17l-5-5" />
           </svg>
-          <span className="text-[color:var(--brand-ink)] font-medium">Auto-delete after 1 hour</span>
+          <span className="text-[color:var(--brand-ink)] font-medium">
+            {t("autoDeleteAfterHour", "Auto-delete after 1 hour")}
+          </span>
         </div>
         <div className="flex items-center gap-3 p-3 bg-[color:var(--brand-lilac)] rounded-xl">
           <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20 6L9 17l-5-5" />
           </svg>
-          <span className="text-[color:var(--brand-ink)] font-medium">No data stored on servers</span>
+          <span className="text-[color:var(--brand-ink)] font-medium">
+            {t("noDataStored", "No data stored on servers")}
+          </span>
         </div>
       </div>
     </div>
@@ -181,7 +186,9 @@ const PreviewCards = {
       </div>
       <div className="mb-6">
         <div className="flex justify-between text-sm mb-2">
-          <span className="text-[color:var(--brand-muted)] font-medium">Converting...</span>
+          <span className="text-[color:var(--brand-muted)] font-medium">
+            {t("converting", "Converting...")}
+          </span>
           <span className="text-secondary font-bold">100%</span>
         </div>
         <div className="h-3 bg-[color:var(--brand-cream)] rounded-full overflow-hidden">
@@ -204,7 +211,7 @@ const PreviewCards = {
         <div className="relative">
           <div className="w-48 h-32 bg-[color:var(--brand-ink)] rounded-lg flex items-center justify-center">
             <div className="w-44 h-28 bg-gradient-to-br from-[color:var(--brand-peach)] to-[color:var(--brand-lilac)] rounded flex items-center justify-center">
-              <svg className="w-12 h-12 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg className="w-12 h-12 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="2" y1="12" x2="22" y2="12" />
                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -216,8 +223,12 @@ const PreviewCards = {
         </div>
       </div>
       <div className="text-center mb-4">
-        <h4 className="text-xl font-bold text-[color:var(--brand-ink)] mb-2">Works on any device</h4>
-        <p className="text-[color:var(--brand-muted)] text-sm">No downloads required</p>
+        <h4 className="text-xl font-bold text-[color:var(--brand-ink)] mb-2">
+          {t("worksOnAnyDevice", "Works on any device")}
+        </h4>
+        <p className="text-[color:var(--brand-muted)] text-sm">
+          {t("noDownloadsRequired", "No downloads required")}
+        </p>
       </div>
       <div className="flex justify-center gap-6">
         <div className="flex flex-col items-center">
@@ -228,7 +239,9 @@ const PreviewCards = {
               <line x1="12" y1="17" x2="12" y2="21" />
             </svg>
           </div>
-          <span className="text-xs text-[color:var(--brand-muted)]">Desktop</span>
+          <span className="text-xs text-[color:var(--brand-muted)]">
+            {t("desktop", "Desktop")}
+          </span>
         </div>
         <div className="flex flex-col items-center">
           <div className="w-12 h-12 bg-[color:var(--brand-lilac)] rounded-xl flex items-center justify-center mb-2">
@@ -237,7 +250,9 @@ const PreviewCards = {
               <line x1="12" y1="18" x2="12.01" y2="18" />
             </svg>
           </div>
-          <span className="text-xs text-[color:var(--brand-muted)]">Mobile</span>
+          <span className="text-xs text-[color:var(--brand-muted)]">
+            {t("mobile", "Mobile")}
+          </span>
         </div>
         <div className="flex flex-col items-center">
           <div className="w-12 h-12 bg-[color:var(--brand-lilac)] rounded-xl flex items-center justify-center mb-2">
@@ -246,15 +261,19 @@ const PreviewCards = {
               <circle cx="12" cy="18" r="1" />
             </svg>
           </div>
-          <span className="text-xs text-[color:var(--brand-muted)]">Tablet</span>
+          <span className="text-xs text-[color:var(--brand-muted)]">
+            {t("tablet", "Tablet")}
+          </span>
         </div>
       </div>
     </div>
   ),
-};
+});
 
 export default function AdvantagesSection() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const { t } = useLanguage();
+  const previewCards = buildPreviewCards(t);
 
   return (
     <section className="py-20 md:py-28 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">
@@ -262,10 +281,10 @@ export default function AdvantagesSection() {
         {/* Section header */}
         <div className="text-center max-w-4xl mx-auto mb-16 md:mb-20">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[color:var(--brand-ink)] mb-6 leading-tight">
-            The ultimate solution to edit and manage PDF documents
+            {t("advantagesTitle", "The ultimate solution to edit and manage PDF documents")}
           </h2>
           <p className="text-xl text-[color:var(--brand-muted)]">
-            Everything you need to work with PDFs, all in one place
+            {t("advantagesSubtitleAlt", "Everything you need to work with PDFs, all in one place")}
           </p>
         </div>
 
@@ -273,20 +292,26 @@ export default function AdvantagesSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-7xl mx-auto">
           {/* Left side - Preview Image */}
           <div className="order-2 lg:order-1">
-            <div className={`relative bg-gradient-to-br ${advantages[activeIndex].gradient} rounded-3xl p-10 flex items-center justify-center min-h-[450px] overflow-hidden shadow-xl transition-all duration-500`}>
+            <div className={`relative bg-gradient-to-br ${advantages[activeIndex].gradient} rounded-3xl p-10 flex flex-col min-h-[450px] overflow-hidden shadow-xl transition-all duration-500`}>
               {/* Decorative elements */}
               <div className="absolute top-6 left-6 w-24 h-24 bg-white/40 rounded-full blur-2xl" />
               <div className="absolute bottom-6 right-6 w-36 h-36 bg-white/40 rounded-full blur-2xl" />
 
               {/* Dynamic preview card based on active index */}
-              <div className="transition-all duration-300">
-                {PreviewCards[activeIndex as keyof typeof PreviewCards]}
+              <div className="relative z-10 flex-1 flex items-center justify-center">
+                <div className="transition-all duration-300">
+                  {previewCards[activeIndex as keyof typeof previewCards]}
+                </div>
               </div>
 
               {/* Floating badge */}
-              <div className="absolute bottom-8 right-8 bg-white rounded-xl shadow-lg px-5 py-3 flex items-center gap-3">
-                <div className={`w-3 h-3 ${advantages[activeIndex].badgeColor} rounded-full animate-pulse`} />
-                <span className="text-base font-semibold text-[color:var(--brand-ink)]">{advantages[activeIndex].badge}</span>
+              <div className="relative z-10 mt-6 flex justify-end">
+                <div className="bg-white rounded-xl shadow-lg px-5 py-3 flex items-center gap-3">
+                  <div className={`w-3 h-3 ${advantages[activeIndex].badgeColor} rounded-full animate-pulse`} />
+                  <span className="text-base font-semibold text-[color:var(--brand-ink)]">
+                    {t(advantages[activeIndex].badgeKey, advantages[activeIndex].badge)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -304,22 +329,24 @@ export default function AdvantagesSection() {
                 }`}
               >
                 <div className="flex items-start gap-5">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                    activeIndex === index ? "bg-[color:var(--brand-lilac)] scale-110" : "bg-[color:var(--brand-cream)]"
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
+                    activeIndex === index ? "bg-[color:var(--brand-lilac)] shadow-md" : "bg-[color:var(--brand-cream)]"
                   }`}>
-                    {advantage.icon}
+                    <div className={`transition-transform duration-300 ${activeIndex === index ? "scale-110" : "scale-100"}`}>
+                      {advantage.icon}
+                    </div>
                   </div>
                   <div className="flex-1">
                     <h3 className={`font-bold text-xl mb-2 transition-colors ${
                       activeIndex === index ? "text-[color:var(--brand-ink)]" : "text-[color:var(--brand-muted)]"
                     }`}>
-                      {advantage.title}
+                      {t(advantage.titleKey, advantage.title)}
                     </h3>
                     <div className={`overflow-hidden transition-all duration-300 ${
                       activeIndex === index ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
                     }`}>
                       <p className="text-[color:var(--brand-muted)] text-base leading-relaxed">
-                        {advantage.description}
+                        {t(advantage.descriptionKey, advantage.description)}
                       </p>
                     </div>
                   </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 const brands = [
   "/assets/same-assets/3959512356.png",
   "/assets/same-assets/2364094864.png",
@@ -12,11 +14,13 @@ const brands = [
 ];
 
 export default function BrandsMarquee() {
+  const { t } = useLanguage();
+
   return (
     <section className="py-8 md:py-12 bg-white overflow-hidden">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 mb-6">
         <p className="text-center text-sm text-[color:var(--brand-muted)]">
-          Trusted by professionals from leading companies worldwide
+          {t("trustedBy", "Trusted by professionals from leading companies worldwide")}
         </p>
       </div>
       <div className="marquee-container relative">

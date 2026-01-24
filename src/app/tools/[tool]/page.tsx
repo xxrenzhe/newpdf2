@@ -8,6 +8,7 @@ import FileDropzone from "@/components/tools/FileDropzone";
 import { deleteUpload, loadUpload } from "@/lib/uploadStore";
 import { toolByKey, TOOLS } from "@/lib/tools";
 import { clearPdfEditorCache, loadPdfEditorInput, loadPdfEditorOutput } from "@/lib/pdfEditorCache";
+import { useLanguage } from "@/components/LanguageProvider";
 import { isIndexedDbWritable } from "@/lib/indexedDbSupport";
 import { ToolIcon } from "@/lib/toolIcons";
 
@@ -80,6 +81,7 @@ function ToolContent() {
   const [resumeInput, setResumeInput] = useState<File | null>(null);
   const [resumeOutput, setResumeOutput] = useState<File | null>(null);
   const [resumeBusy, setResumeBusy] = useState(false);
+  const { t } = useLanguage();
   const uploadId = searchParams.get("uploadId");
 
   useEffect(() => {
@@ -202,14 +204,14 @@ function ToolContent() {
               <ToolIcon name={tool.iconName} className="w-8 h-8 stroke-[2px]" />
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-4">
-              {tool.name}
+              {t(tool.nameKey, tool.name)}
             </h1>
             <p className="text-[color:var(--brand-muted)] text-lg">
-              {tool.description}
+              {t(tool.descriptionKey, tool.description)}
             </p>
             {tool.status === "comingSoon" && (
               <div className="mt-4 inline-flex text-xs px-3 py-1 rounded-full bg-[color:var(--brand-cream)] text-[color:var(--brand-ink)]">
-                Coming soon
+                {t("comingSoon", "Coming soon")}
               </div>
             )}
             <div className="mt-6">
@@ -220,7 +222,7 @@ function ToolContent() {
                   <rect x="14" y="14" width="7" height="7" />
                   <rect x="3" y="14" width="7" height="7" />
                 </svg>
-                All Tools
+                {t("allTools", "All Tools")}
               </Link>
             </div>
           </div>
@@ -228,10 +230,12 @@ function ToolContent() {
 
           {storageWritable === false && (
             <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="font-medium">Limited browser storage</p>
+              <p className="font-medium">{t("limitedBrowserStorage", "Limited browser storage")}</p>
               <p className="mt-1">
-                Your file will still open and process normally in this tab, but we can’t save it for later. This often
-                happens in Private Browsing. If you refresh or close this page, you may need to upload the file again.
+                {t(
+                  "limitedBrowserStorageDesc",
+                  "Your file will still open and process normally in this tab, but we can’t save it for later. This often happens in Private Browsing. If you refresh or close this page, you may need to upload the file again."
+                )}
               </p>
             </div>
           )}
@@ -242,11 +246,16 @@ function ToolContent() {
                 <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6 mb-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Continue where you left off</h3>
+                      <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+                        {t("continueWhereLeftOff", "Continue where you left off")}
+                      </h3>
                       <p className="text-sm text-[color:var(--brand-muted)] mt-1">
                         {resumeBusy
-                          ? "Checking your browser cache..."
-                          : "Your PDF stays on your device. You can resume from the last file you opened or saved."}
+                          ? t("checkingBrowserCache", "Checking your browser cache...")
+                          : t(
+                            "resumeFromCache",
+                            "Your PDF stays on your device. You can resume from the last file you opened or saved."
+                          )}
                       </p>
                     </div>
                     {(resumeInput || resumeOutput) && (
@@ -255,7 +264,7 @@ function ToolContent() {
                         className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
                         onClick={() => void clearResume()}
                       >
-                        Clear cache
+                        {t("clearCache", "Clear cache")}
                       </button>
                     )}
                   </div>
@@ -268,7 +277,7 @@ function ToolContent() {
                           className="h-11 px-4 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium"
                           onClick={() => setFiles([resumeOutput])}
                         >
-                          Resume last saved PDF
+                          {t("resumeLastSaved", "Resume last saved PDF")}
                         </button>
                       )}
                       {resumeInput && (
@@ -277,7 +286,7 @@ function ToolContent() {
                           className="h-11 px-4 rounded-xl border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] font-medium"
                           onClick={() => setFiles([resumeInput])}
                         >
-                          Resume last opened PDF
+                          {t("resumeLastOpened", "Resume last opened PDF")}
                         </button>
                       )}
                     </div>
@@ -289,8 +298,10 @@ function ToolContent() {
                 accept={accept}
                 multiple={isMulti}
                 onFiles={setFiles}
-                title={isMulti ? "Drop files here" : "Drop your file here"}
-                subtitle={toolKey === "merge" ? "Select 2 or more PDFs" : "Supported: PDF and common formats"}
+                title={isMulti ? t("dropFilesHere", "Drop files here") : t("dropFileHere", "Drop your file here")}
+                subtitle={toolKey === "merge"
+                  ? t("mergeSelectMultiple", "Select 2 or more PDFs")
+                  : t("dropzoneSupportedFormats", "Supported: PDF and common formats")}
               />
             </>
           ) : (
@@ -325,9 +336,14 @@ function ToolContent() {
                 <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Coming soon</h3>
+                      <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+                        {t("comingSoon", "Coming soon")}
+                      </h3>
                       <p className="text-sm text-[color:var(--brand-muted)] mt-1">
-                        This tool is not implemented yet. Try Annotate, Sign, Convert, Merge, or Compress.
+                        {t(
+                          "toolNotImplemented",
+                          "This tool is not implemented yet. Try Annotate, Sign, Convert, Merge, or Compress."
+                        )}
                       </p>
                     </div>
                     <button
@@ -335,7 +351,7 @@ function ToolContent() {
                       onClick={reset}
                       className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
                     >
-                      Choose another file
+                      {t("chooseAnotherFile", "Choose another file")}
                     </button>
                   </div>
                 </div>
@@ -347,7 +363,7 @@ function ToolContent() {
           {files.length === 0 && (
             <div className="mt-20 max-w-5xl mx-auto">
               <h2 className="text-xl font-semibold text-[color:var(--brand-ink)] mb-6 text-center">
-                Other PDF Tools
+                {t("otherPdfTools", "Other PDF Tools")}
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {relatedTools.map((relatedTool) => (
@@ -360,7 +376,7 @@ function ToolContent() {
                       <ToolIcon name={relatedTool.iconName} className="w-5 h-5 stroke-[2px]" />
                     </div>
                     <span className="text-xs font-medium text-[color:var(--brand-ink)] text-center group-hover:text-primary transition-colors">
-                      {relatedTool.name}
+                      {t(relatedTool.nameKey, relatedTool.name)}
                     </span>
                   </Link>
                 ))}

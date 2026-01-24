@@ -7,6 +7,7 @@ import FileDropzone from "./FileDropzone";
 import type { PdfRasterPreset } from "@/lib/pdf/client";
 import { downloadBlob, redactPdfRasterize } from "@/lib/pdf/client";
 import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type Mode = "select" | "redact";
 
@@ -185,6 +186,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
   const [overlays, setOverlays] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useLanguage();
 
   const isPdf = useMemo(
     () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
@@ -222,18 +224,24 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
       const outName = file.name.replace(/\.[^.]+$/, "") + "-redacted.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Redaction failed");
+      setError(e instanceof Error ? e.message : t("redactionFailed", "Redaction failed"));
     } finally {
       setBusy(false);
     }
-  }, [file, isPdf, overlays, preset]);
+  }, [file, isPdf, overlays, preset, t]);
 
   useEffect(() => {
     configurePdfJsWorker();
   }, []);
 
   if (!file) {
-    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to redact" />;
+    return (
+      <FileDropzone
+        accept=".pdf,application/pdf"
+        onFiles={(files) => setFile(files[0] ?? null)}
+        title={t("dropPdfToRedact", "Drop a PDF here to redact")}
+      />
+    );
   }
 
   const viewWidth = pageDimensions.width * scale;
@@ -247,7 +255,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             type="button"
             onClick={() => setFile(null)}
             className="p-2 hover:bg-[color:var(--brand-cream)] rounded-lg transition-colors"
-            title="Back"
+            title={t("back", "Back")}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -262,31 +270,31 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             onClick={() => setMode("redact")}
             className={`px-3 py-2 rounded-lg border ${mode === "redact" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-sm`}
           >
-            Redact
+            {t("redactMode", "Redact")}
           </button>
           <button
             type="button"
             onClick={() => setMode("select")}
             className={`px-3 py-2 rounded-lg border ${mode === "select" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-sm`}
           >
-            Select
+            {t("selectMode", "Select")}
           </button>
           <button
             type="button"
             onClick={clearPage}
             className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm hover:bg-[color:var(--brand-cream)]"
           >
-            Clear page
+            {t("clearPage", "Clear page")}
           </button>
           <select
             className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
             value={preset}
             onChange={(e) => setPreset(e.target.value as PdfRasterPreset)}
-            title="Output quality"
+            title={t("outputQuality", "Output quality")}
           >
-            <option value="balanced">Balanced</option>
-            <option value="small">Smaller</option>
-            <option value="smallest">Smallest</option>
+            <option value="balanced">{t("presetBalanced", "Balanced")}</option>
+            <option value="small">{t("presetSmaller", "Smaller")}</option>
+            <option value="smallest">{t("presetSmallest", "Smallest")}</option>
           </select>
           <button
             type="button"
@@ -294,7 +302,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             onClick={exportRedacted}
             className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
           >
-            {busy ? "Exporting..." : "Export redacted PDF"}
+            {busy ? t("exporting", "Exporting...") : t("exportRedacted", "Export redacted PDF")}
           </button>
         </div>
       </div>
@@ -309,10 +317,12 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             disabled={pageNumber <= 1}
             className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white disabled:opacity-50"
           >
-            Prev
+            {t("prev", "Prev")}
           </button>
           <span>
-            Page {pageNumber} / {numPages || "…"}
+            {t("pageOfShort", "Page {current} / {total}")
+              .replace("{current}", `${pageNumber}`)
+              .replace("{total}", numPages ? `${numPages}` : "...")}
           </span>
           <button
             type="button"
@@ -320,7 +330,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             disabled={pageNumber >= numPages}
             className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white disabled:opacity-50"
           >
-            Next
+            {t("next", "Next")}
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -373,9 +383,11 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
       </div>
 
       <div className="px-4 py-3 text-xs text-[color:var(--brand-muted)] bg-[color:var(--brand-cream)] border-t border-[color:var(--brand-line)]">
-        Redaction export rasterizes pages to permanently remove underlying text/vectors.
+        {t(
+          "redactionRasterNote",
+          "Redaction export rasterizes pages to permanently remove underlying text/vectors."
+        )}
       </div>
     </div>
   );
 }
-

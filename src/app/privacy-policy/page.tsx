@@ -2,8 +2,11 @@
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function PrivacyPolicyPage() {
+  const { t } = useLanguage();
+
   return (
     <main className="min-h-screen bg-white">
       <Header />
@@ -11,7 +14,9 @@ export default function PrivacyPolicyPage() {
       <section className="py-12 md:py-16">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto prose prose-gray">
-            <h1 className="text-4xl font-bold text-[color:var(--brand-ink)] mb-8">Privacy Policy</h1>
+            <h1 className="text-4xl font-bold text-[color:var(--brand-ink)] mb-8">
+              {t("privacyPolicy", "Privacy Policy")}
+            </h1>
 
             <p className="text-[color:var(--brand-muted)] mb-6">
               This privacy notice for QwerPDF ("Company", "Site", "Website", "Application", "we", "us", or "our"), describes how and why we might collect, store, use, and/or share ("process") your information when you use our services ("Services"), such as when you:

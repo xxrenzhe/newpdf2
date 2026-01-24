@@ -18,6 +18,7 @@ import {
   Trash2,
   ChevronDown
 } from "lucide-react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface AnnotationToolbarProps {
   activeTool: AnnotationTool;
@@ -30,54 +31,6 @@ interface AnnotationToolbarProps {
   onRedo?: () => void;
   onClear?: () => void;
 }
-
-const tools: { id: AnnotationTool; label: string; icon: React.ReactNode }[] = [
-  {
-    id: "select",
-    label: "Select",
-    icon: <MousePointer2 className="w-5 h-5" />,
-  },
-  {
-    id: "text",
-    label: "Text",
-    icon: <Type className="w-5 h-5" />,
-  },
-  {
-    id: "highlight",
-    label: "Highlight",
-    icon: <Highlighter className="w-5 h-5" />,
-  },
-  {
-    id: "freehand",
-    label: "Draw",
-    icon: <PenTool className="w-5 h-5" />,
-  },
-  {
-    id: "rectangle",
-    label: "Rectangle",
-    icon: <Square className="w-5 h-5" />,
-  },
-  {
-    id: "circle",
-    label: "Circle",
-    icon: <Circle className="w-5 h-5" />,
-  },
-  {
-    id: "arrow",
-    label: "Arrow",
-    icon: <MoveRight className="w-5 h-5" />,
-  },
-  {
-    id: "line",
-    label: "Line",
-    icon: <Minus className="w-5 h-5" />,
-  },
-  {
-    id: "eraser",
-    label: "Eraser",
-    icon: <Eraser className="w-5 h-5" />,
-  },
-];
 
 const colors = [
   "#1f1a2b",
@@ -105,6 +58,54 @@ export default function AnnotationToolbar({
 }: AnnotationToolbarProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showStrokeWidth, setShowStrokeWidth] = useState(false);
+  const { t } = useLanguage();
+  const tools: { id: AnnotationTool; label: string; icon: React.ReactNode }[] = [
+    {
+      id: "select",
+      label: t("toolSelect", "Select"),
+      icon: <MousePointer2 className="w-5 h-5" />,
+    },
+    {
+      id: "text",
+      label: t("toolText", "Text"),
+      icon: <Type className="w-5 h-5" />,
+    },
+    {
+      id: "highlight",
+      label: t("toolHighlight", "Highlight"),
+      icon: <Highlighter className="w-5 h-5" />,
+    },
+    {
+      id: "freehand",
+      label: t("toolDraw", "Draw"),
+      icon: <PenTool className="w-5 h-5" />,
+    },
+    {
+      id: "rectangle",
+      label: t("toolRectangle", "Rectangle"),
+      icon: <Square className="w-5 h-5" />,
+    },
+    {
+      id: "circle",
+      label: t("toolCircle", "Circle"),
+      icon: <Circle className="w-5 h-5" />,
+    },
+    {
+      id: "arrow",
+      label: t("toolArrow", "Arrow"),
+      icon: <MoveRight className="w-5 h-5" />,
+    },
+    {
+      id: "line",
+      label: t("toolLine", "Line"),
+      icon: <Minus className="w-5 h-5" />,
+    },
+    {
+      id: "eraser",
+      label: t("toolEraser", "Eraser"),
+      icon: <Eraser className="w-5 h-5" />,
+    },
+  ];
 
   return (
     <div className="flex flex-col bg-white border-r border-[color:var(--brand-line)] py-3 w-[72px] items-center h-full shadow-sm">
@@ -132,7 +133,7 @@ export default function AnnotationToolbar({
         <button
           onClick={() => setShowColorPicker(!showColorPicker)}
           className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] transition-colors border border-transparent hover:border-[color:var(--brand-line)]"
-          title="Color"
+          title={t("colorLabel", "Color")}
         >
           <div
             className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-[color:var(--brand-line)] shadow-sm"
@@ -141,7 +142,9 @@ export default function AnnotationToolbar({
         </button>
         {showColorPicker && (
           <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-[color:var(--brand-line)] p-3 z-50 w-48 animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-xs font-semibold text-[color:var(--brand-muted)] mb-2 uppercase tracking-wider">Stroke Color</div>
+            <div className="text-xs font-semibold text-[color:var(--brand-muted)] mb-2 uppercase tracking-wider">
+              {t("strokeColorLabel", "Stroke Color")}
+            </div>
             <div className="grid grid-cols-4 gap-2">
               {colors.map((color) => (
                 <button
@@ -165,7 +168,7 @@ export default function AnnotationToolbar({
         <button
           onClick={() => setShowStrokeWidth(!showStrokeWidth)}
           className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] transition-colors"
-          title="Stroke Width"
+          title={t("strokeWidthLabel", "Stroke Width")}
         >
           <div className="flex items-center justify-center">
             <div
@@ -179,7 +182,9 @@ export default function AnnotationToolbar({
         </button>
         {showStrokeWidth && (
           <div className="absolute left-14 top-0 bg-white rounded-xl shadow-xl border border-[color:var(--brand-line)] p-3 z-50 min-w-[120px] animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-xs font-semibold text-[color:var(--brand-muted)] mb-2 uppercase tracking-wider">Stroke Width</div>
+            <div className="text-xs font-semibold text-[color:var(--brand-muted)] mb-2 uppercase tracking-wider">
+              {t("strokeWidthLabel", "Stroke Width")}
+            </div>
             <div className="flex flex-col gap-1">
               {strokeWidths.map((width) => (
                 <button
@@ -211,7 +216,7 @@ export default function AnnotationToolbar({
           <button
             onClick={onUndo}
             className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
-            title="Undo"
+            title={t("undo", "Undo")}
           >
             <RotateCcw className="w-5 h-5" />
           </button>
@@ -220,7 +225,7 @@ export default function AnnotationToolbar({
           <button
             onClick={onRedo}
             className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
-            title="Redo"
+            title={t("redo", "Redo")}
           >
             <RotateCw className="w-5 h-5" />
           </button>
@@ -229,7 +234,7 @@ export default function AnnotationToolbar({
           <button
             onClick={onClear}
             className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors mt-2"
-            title="Clear All"
+            title={t("clearAll", "Clear All")}
           >
             <Trash2 className="w-5 h-5" />
           </button>

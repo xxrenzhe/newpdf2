@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as fabric from "fabric";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export type AnnotationTool =
   | "select"
@@ -41,6 +42,7 @@ export default function PDFAnnotationCanvas({
   const [isDrawing, setIsDrawing] = useState(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const currentShapeRef = useRef<fabric.Object | null>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     onAnnotationsChangeRef.current = onAnnotationsChange;
@@ -162,7 +164,7 @@ export default function PDFAnnotationCanvas({
 
       if (activeTool === "text") {
         // Add text at click position
-        const text = new fabric.IText("Click to edit", {
+        const text = new fabric.IText(t("annotationClickToEdit", "Click to edit"), {
           left: pointer.x,
           top: pointer.y,
           fontSize: 16,
@@ -334,7 +336,7 @@ export default function PDFAnnotationCanvas({
       canvas.off("mouse:move", handleMouseMove);
       canvas.off("mouse:up", handleMouseUp);
     };
-  }, [activeTool, activeColor, strokeWidth, isDrawing, saveAnnotations]);
+  }, [activeTool, activeColor, strokeWidth, isDrawing, saveAnnotations, t]);
 
   return (
     <canvas

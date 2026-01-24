@@ -6,6 +6,7 @@ import Link from "@/components/AppLink";
 import { downloadBlob } from "@/lib/pdf/client";
 import { savePdfEditorInput, savePdfEditorOutput } from "@/lib/pdfEditorCache";
 import { saveUpload } from "@/lib/uploadStore";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
 type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number; loadToken?: number };
@@ -15,12 +16,6 @@ type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number
 type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
 
 const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
-
-const UPLOAD_TIPS = [
-  "Uploading and preparing your document. Optimizing for editing...",
-  "Preparing the editor. This usually takes only a moment.",
-  "Tip: Larger PDFs may take a bit longer to load—thanks for your patience.",
-];
 
 function UploadProgressOverlay({
   open,
@@ -33,6 +28,7 @@ function UploadProgressOverlay({
   tip: string;
   onCancel?: () => void;
 }) {
+  const { t } = useLanguage();
   if (!open) return null;
   const clamped = Math.max(0, Math.min(100, progress));
 
@@ -41,10 +37,12 @@ function UploadProgressOverlay({
       className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/20 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label="Upload progress"
+      aria-label={t("uploadProgressLabel", "Upload progress")}
     >
       <div className="w-[min(840px,calc(100vw-2rem))] rounded-2xl bg-white shadow-2xl border border-[color:var(--brand-line)] p-8">
-        <h2 className="text-3xl font-semibold text-[color:var(--brand-ink)]">Loading, please wait...</h2>
+        <h2 className="text-3xl font-semibold text-[color:var(--brand-ink)]">
+          {t("loadingPleaseWait", "Loading, please wait...")}
+        </h2>
         <div className="mt-5 h-2 w-full rounded-full bg-[color:var(--brand-lilac)] overflow-hidden" role="progressbar" aria-valuenow={clamped}>
           <div
             className="h-full bg-primary transition-[width] duration-200"
@@ -84,7 +82,7 @@ function UploadProgressOverlay({
                   />
                 </svg>
               </span>
-              Productivity tip
+              {t("productivityTip", "Productivity tip")}
             </div>
             <p className="mt-4 text-[color:var(--brand-muted)] text-base leading-relaxed">{tip}</p>
           </div>
@@ -97,7 +95,7 @@ function UploadProgressOverlay({
               className="px-4 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
               onClick={onCancel}
             >
-              Cancel
+              {t("cancel", "Cancel")}
             </button>
           </div>
         ) : null}
@@ -155,6 +153,15 @@ export default function PdfEditorTool({
   const activeLoadTokenRef = useRef(0);
   const fileInputId = useId();
   const router = useRouter();
+  const { t } = useLanguage();
+  const uploadTips = useMemo(
+    () => [
+      t("uploadTipPreparing", "Uploading and preparing your document. Optimizing for editing..."),
+      t("uploadTipEditor", "Preparing the editor. This usually takes only a moment."),
+      t("uploadTipLarge", "Tip: Larger PDFs may take a bit longer to load - thanks for your patience."),
+    ],
+    [t]
+  );
   const [iframeReady, setIframeReady] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -162,12 +169,16 @@ export default function PdfEditorTool({
   const [loadCancelled, setLoadCancelled] = useState(false);
   const appliedToolRef = useRef<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadTip, setUploadTip] = useState(UPLOAD_TIPS[0]!);
+  const [uploadTip, setUploadTip] = useState(uploadTips[0] ?? "");
   const uploadProgressTimerRef = useRef<number | null>(null);
   const uploadProgressStartTimeoutRef = useRef<number | null>(null);
   const hasRealProgressRef = useRef(false);
 
   const outName = useMemo(() => file.name.replace(/\.[^.]+$/, "") + "-edited.pdf", [file.name]);
+
+  useEffect(() => {
+    setUploadTip(uploadTips[0] ?? "");
+  }, [uploadTips]);
 
   const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
     const win = iframeRef.current?.contentWindow;
@@ -320,7 +331,9 @@ export default function PdfEditorTool({
       return;
     }
 
-    setUploadTip(UPLOAD_TIPS[Math.floor(Math.random() * UPLOAD_TIPS.length)] ?? UPLOAD_TIPS[0]!);
+    if (uploadTips.length > 0) {
+      setUploadTip(uploadTips[Math.floor(Math.random() * uploadTips.length)] ?? uploadTips[0] ?? "");
+    }
     setUploadProgress(0);
 
     if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
@@ -347,7 +360,7 @@ export default function PdfEditorTool({
       if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
       uploadProgressTimerRef.current = null;
     };
-  }, [uploadOverlayOpen]);
+  }, [uploadOverlayOpen, uploadTips]);
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
@@ -391,7 +404,12 @@ export default function PdfEditorTool({
         hasRealProgressRef.current = false;
         setBusy(false);
         setLoadCancelled(false);
-        setError("This PDF is password protected. Please unlock it first, then re-open in the editor.");
+        setError(
+          t(
+            "pdfPasswordProtected",
+            "This PDF is password protected. Please unlock it first, then re-open in the editor."
+          )
+        );
       }
       if (hasMessageType<PdfErrorMessage["type"]>(evt.data, "pdf-error")) {
         if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
@@ -400,7 +418,7 @@ export default function PdfEditorTool({
         const message =
           typeof rawMessage === "string" && rawMessage.trim().length > 0
             ? rawMessage.trim()
-          : "Something went wrong while exporting your PDF. Please try again.";
+          : t("pdfExportFailed", "Something went wrong while exporting your PDF. Please try again.");
         setBusy(false);
         setLoadCancelled(false);
         setError(message);
@@ -415,7 +433,7 @@ export default function PdfEditorTool({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!pdfLoaded) return;
@@ -444,9 +462,9 @@ export default function PdfEditorTool({
       router.push(`/tools/convert?uploadId=${encodeURIComponent(uploadId)}`);
     } catch {
       setBusy(false);
-      setError("Could not open the Convert tool. Please try again.");
+      setError(t("convertOpenFailed", "Could not open the Convert tool. Please try again."));
     }
-  }, [file, onConvert, router]);
+  }, [file, onConvert, router, t]);
 
   const onFileChange = useCallback(
     (evt: React.ChangeEvent<HTMLInputElement>) => {
@@ -482,14 +500,14 @@ export default function PdfEditorTool({
       : "flex items-center gap-2";
 
   const statusText = busy
-    ? "Working…"
+    ? t("statusWorking", "Working...")
     : pdfLoaded
-      ? "Ready"
+      ? t("statusReady", "Ready")
       : loadCancelled
-        ? "Canceled"
+        ? t("statusCanceled", "Canceled")
         : iframeReady
-          ? "Waiting…"
-          : "Loading…";
+          ? t("statusWaiting", "Waiting...")
+          : t("statusLoading", "Loading...");
 
   return (
     <div className={shellClassName}>
@@ -502,7 +520,7 @@ export default function PdfEditorTool({
       <div className={headerClassName}>
         <div className={titleClassName}>
           {showBrand ? (
-            <Link href="/en" className="flex items-center">
+            <Link href="/" className="flex items-center">
               <img src="/logo.png" alt="QwerPDF" className="h-20 md:h-24 w-auto" />
             </Link>
           ) : (
@@ -543,7 +561,7 @@ export default function PdfEditorTool({
               busy ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
             }`}
           >
-            Upload New
+            {t("uploadNew", "Upload New")}
           </label>
           <button
             type="button"
@@ -551,7 +569,7 @@ export default function PdfEditorTool({
             onClick={() => void goToConvert()}
             disabled={busy}
           >
-            Convert
+            {t("convert", "Convert")}
           </button>
           <button
             type="button"
@@ -559,7 +577,7 @@ export default function PdfEditorTool({
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
           >
-            {busy ? "Working..." : "Save & Download"}
+            {busy ? t("working", "Working...") : t("saveDownload", "Save & Download")}
           </button>
           {showChangeFile && (
             <button
@@ -568,7 +586,7 @@ export default function PdfEditorTool({
               onClick={onBack}
               disabled={busy}
             >
-              Change file
+              {t("changeFile", "Change file")}
             </button>
           )}
         </div>
@@ -589,7 +607,7 @@ export default function PdfEditorTool({
       <div className={variant === "shell" ? "flex-1 min-h-0 bg-white" : "h-[75vh] min-h-[560px] bg-white"}>
         <iframe
           ref={iframeRef}
-          title="PDF Editor"
+          title={t("pdfEditorTitle", "PDF Editor")}
           className="w-full h-full"
           src="/pdfeditor/index.html"
           onLoad={() => setIframeReady(true)}

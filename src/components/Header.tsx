@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/sheet";
 import { TOOLS } from "@/lib/tools";
 import { ToolIcon } from "@/lib/toolIcons";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function Header() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const { data: session, status } = useSession();
+  const { t } = useLanguage();
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
@@ -55,14 +57,14 @@ export default function Header() {
                   onClick={handleSignOut}
                   className="border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-lilac)] font-medium px-4 py-2 h-10 rounded-lg"
                 >
-                  Sign out
+                  {t("signOut", "Sign out")}
                 </Button>
               </>
             ) : (
               <>
                 <Link href="/app/sign-in">
                   <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-4 py-2 h-10 rounded-lg">
-                    Continue with Google
+                    {t("continueWithGoogle", "Continue with Google")}
                   </Button>
                 </Link>
               </>
@@ -88,12 +90,12 @@ export default function Header() {
                     <rect x="1" y="10" width="5" height="5" rx="1" fill="currentColor" />
                     <rect x="10" y="10" width="5" height="5" rx="1" fill="currentColor" />
                   </svg>
-                  <span className="hidden md:inline">Tools</span>
+                  <span className="hidden md:inline">{t("tools", "Tools")}</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-full sm:w-[400px] md:w-[500px] p-0 overflow-y-auto">
                 <SheetHeader className="px-6 py-4 border-b border-[color:var(--brand-line)]">
-                  <SheetTitle className="text-left text-xl font-semibold">All Tools</SheetTitle>
+                  <SheetTitle className="text-left text-xl font-semibold">{t("allTools", "All Tools")}</SheetTitle>
                 </SheetHeader>
                 <div className="px-4 py-4">
                   <div className="grid grid-cols-1 gap-2">
@@ -108,10 +110,12 @@ export default function Header() {
                           <ToolIcon name={tool.iconName} className="w-6 h-6 stroke-[2px]" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-[color:var(--brand-ink)]">{tool.name}</h3>
+                          <h3 className="font-medium text-[color:var(--brand-ink)]">
+                            {t(tool.nameKey, tool.name)}
+                          </h3>
                           <p className="text-sm text-[color:var(--brand-muted)]">
-                            {tool.description}
-                            {tool.status === "comingSoon" ? " · Coming soon" : ""}
+                            {t(tool.descriptionKey, tool.description)}
+                            {tool.status === "comingSoon" ? ` · ${t("comingSoon", "Coming soon")}` : ""}
                           </p>
                         </div>
                       </Link>

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "@/components/AppLink";
-import { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -9,29 +8,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Español' },
-  { code: 'fr', name: 'Français' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'pt', name: 'Português' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'zh', name: '中文' },
-  { code: 'ja', name: '日本語' },
-  { code: 'ko', name: '한국어' },
-];
+import { useLanguage } from "@/components/LanguageProvider";
 
 const complianceBadges = [
-  { label: "GDPR", color: "bg-primary" },
-  { label: "SOC 2", color: "bg-[color:var(--brand-purple-dark)]" },
-  { label: "PCI", color: "bg-secondary" },
-  { label: "ISO", color: "bg-[color:var(--brand-orange-dark)]" },
-  { label: "CCPA", color: "bg-[color:var(--brand-purple)]" },
+  { label: "GDPR", color: "var(--brand-purple)" },
+  { label: "SOC 2", color: "var(--brand-purple-dark)" },
+  { label: "PCI", color: "var(--brand-orange)" },
+  { label: "ISO", color: "var(--brand-orange-dark)" },
+  { label: "CCPA", color: "var(--brand-purple)" },
 ];
 
 export default function Footer() {
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const { lang, setLang, languages, t } = useLanguage();
 
   return (
     <footer className="bg-gradient-to-b from-[color:var(--brand-cream)] to-white pt-20 pb-10">
@@ -39,33 +27,39 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-14 pb-10 border-b border-[color:var(--brand-line)]">
           {/* Logo and tagline */}
           <div className="lg:col-span-2">
-            <Link href="/" className="inline-flex items-center gap-2 mb-5">
-              <img
-                src="/logo.png"
-                alt="QwerPDF"
-                className="h-28 w-auto"
-              />
-            </Link>
-            <p className="text-[color:var(--brand-muted)] font-medium text-base">All-in-one PDF solutions</p>
+            <div className="flex flex-col items-start gap-0">
+              <Link href="/" className="inline-flex items-center gap-2">
+                <img
+                  src="/logo.png"
+                  alt="QwerPDF"
+                  className="h-28 w-auto block -mb-2"
+                />
+              </Link>
+              <p className="-mt-1 text-[color:var(--brand-muted)] font-medium text-base">
+                {t("footerTagline", "All-in-one PDF solutions")}
+              </p>
+            </div>
           </div>
 
           {/* Help Links */}
           <div>
-            <h3 className="font-bold text-[color:var(--brand-ink)] mb-5 text-base">Help</h3>
+            <h3 className="font-bold text-[color:var(--brand-ink)] mb-5 text-base">
+              {t("help", "Help")}
+            </h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/en/contact-us" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  Contact us
+                <Link href="/contact-us" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
+                  {t("contactUs", "Contact us")}
                 </Link>
               </li>
               <li>
-                <Link href="/en/faq" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  FAQ
+                <Link href="/faq" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
+                  {t("faq", "FAQ")}
                 </Link>
               </li>
               <li>
-                <Link href="/en/plan" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  Pricing
+                <Link href="/plan" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
+                  {t("pricing", "Pricing")}
                 </Link>
               </li>
             </ul>
@@ -73,21 +67,23 @@ export default function Footer() {
 
           {/* Account Links */}
           <div>
-            <h3 className="font-bold text-[color:var(--brand-ink)] mb-5 text-base">Account</h3>
+            <h3 className="font-bold text-[color:var(--brand-ink)] mb-5 text-base">
+              {t("account", "Account")}
+            </h3>
             <ul className="space-y-3">
               <li>
                 <Link href="/app/sign-in" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  Sign in
+                  {t("signIn", "Sign in")}
                 </Link>
               </li>
               <li>
                 <Link href="/app/sign-in" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  Continue with Google
+                  {t("continueWithGoogle", "Continue with Google")}
                 </Link>
               </li>
               <li>
-                <Link href="/en/unsubscribe" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  Unsubscribe
+                <Link href="/unsubscribe" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
+                  {t("unsubscribe", "Unsubscribe")}
                 </Link>
               </li>
             </ul>
@@ -95,16 +91,18 @@ export default function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h3 className="font-bold text-[color:var(--brand-ink)] mb-5 text-base">Legal</h3>
+            <h3 className="font-bold text-[color:var(--brand-ink)] mb-5 text-base">
+              {t("legal", "Legal")}
+            </h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/en/terms-and-conditions" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  Terms & Conditions
+                <Link href="/terms-and-conditions" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
+                  {t("termsAndConditions", "Terms & Conditions")}
                 </Link>
               </li>
               <li>
-                <Link href="/en/privacy-policy" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  Privacy Policy
+                <Link href="/privacy-policy" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
+                  {t("privacyPolicy", "Privacy Policy")}
                 </Link>
               </li>
             </ul>
@@ -114,19 +112,24 @@ export default function Footer() {
         {/* Bottom section */}
         <div className="pt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div>
-            <p className="text-[color:var(--brand-ink)] text-base mb-1">© QwerPDF | All rights reserved</p>
+            <p className="text-[color:var(--brand-ink)] text-base mb-1">
+              © {t("allRightsReserved", "QwerPDF | All rights reserved")}
+            </p>
             <p className="text-[color:var(--brand-muted)] text-sm">Apollo Technology LLC - Fargo, ND, USA</p>
           </div>
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
             {/* Security & Compliance */}
             <div>
-              <p className="text-base text-[color:var(--brand-muted)] mb-3 font-medium">Security & Compliance</p>
+              <p className="text-base text-[color:var(--brand-muted)] mb-3 font-medium">
+                {t("securityCompliance", "Security & Compliance")}
+              </p>
               <div className="flex items-center gap-2">
                 {complianceBadges.map((badge, index) => (
                   <div
                     key={index}
-                    className={`w-10 h-10 ${badge.color} rounded-full flex items-center justify-center`}
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: badge.color }}
                   >
                     <span className="text-white text-[9px] font-bold">{badge.label}</span>
                   </div>
@@ -135,7 +138,7 @@ export default function Footer() {
             </div>
 
             {/* Language Selector */}
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <Select value={lang} onValueChange={(value) => setLang(value as typeof lang)}>
               <SelectTrigger className="w-[180px] bg-white border-[color:var(--brand-line)] h-11">
                 <div className="flex items-center gap-2">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[color:var(--brand-muted)]">
@@ -147,9 +150,9 @@ export default function Footer() {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                {languages.map((lang) => (
-                  <SelectItem key={lang.code} value={lang.code}>
-                    {lang.name}
+                {languages.map((option) => (
+                  <SelectItem key={option.code} value={option.code}>
+                    {option.name}
                   </SelectItem>
                 ))}
               </SelectContent>

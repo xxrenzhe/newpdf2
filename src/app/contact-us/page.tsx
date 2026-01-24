@@ -18,30 +18,66 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const subjects = [
-  "General Inquiry",
-  "Technical Support",
-  "Billing Question",
-  "Feature Request",
-  "Bug Report",
-  "Partnership",
-  "Other",
+  { key: "subjectGeneral", label: "General Inquiry" },
+  { key: "subjectSupport", label: "Technical Support" },
+  { key: "subjectBilling", label: "Billing Question" },
+  { key: "subjectFeature", label: "Feature Request" },
+  { key: "subjectBug", label: "Bug Report" },
+  { key: "subjectPartnership", label: "Partnership" },
+  { key: "subjectOther", label: "Other" },
 ];
 
 const faqByTab = {
   general: [
-    { question: "What is QwerPDF?", answer: "QwerPDF is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely." },
-    { question: "Do I need to download or install anything to use QwerPDF?", answer: "No, QwerPDF is completely web-based." },
-    { question: "Can I merge PDF files with QwerPDF?", answer: "Yes, you can easily merge multiple PDF files into one document." },
-    { question: "Can I convert a Word document into a PDF?", answer: "Yes. Our Convert tool currently supports PDF ↔ images/text and images → PDF. Office-to-PDF can be added via a backend conversion service." },
+    {
+      questionKey: "contactFaqGeneral1Q",
+      question: "What is QwerPDF?",
+      answerKey: "contactFaqGeneral1A",
+      answer: "QwerPDF is an all-in-one online PDF editor that allows you to edit, convert, sign, and manage your PDF documents easily and securely.",
+    },
+    {
+      questionKey: "contactFaqGeneral2Q",
+      question: "Do I need to download or install anything to use QwerPDF?",
+      answerKey: "contactFaqGeneral2A",
+      answer: "No, QwerPDF is completely web-based.",
+    },
+    {
+      questionKey: "contactFaqGeneral3Q",
+      question: "Can I merge PDF files with QwerPDF?",
+      answerKey: "contactFaqGeneral3A",
+      answer: "Yes, you can easily merge multiple PDF files into one document.",
+    },
+    {
+      questionKey: "contactFaqGeneral4Q",
+      question: "Can I convert a Word document into a PDF?",
+      answerKey: "contactFaqGeneral4A",
+      answer: "Yes. Our Convert tool currently supports PDF ↔ images/text and images → PDF. Office-to-PDF can be added via a backend conversion service.",
+    },
   ],
   security: [
-    { question: "Is QwerPDF safe to use?", answer: "QwerPDF runs core PDF operations locally in your browser for many tools, so your files don't need to leave your device for basic edits, conversion, and compression." },
-    { question: "Do you store my documents?", answer: "This demo app does not store your documents server-side unless you explicitly upload them to an external service." },
+    {
+      questionKey: "contactFaqSecurity1Q",
+      question: "Is QwerPDF safe to use?",
+      answerKey: "contactFaqSecurity1A",
+      answer: "QwerPDF runs core PDF operations locally in your browser for many tools, so your files don't need to leave your device for basic edits, conversion, and compression.",
+    },
+    {
+      questionKey: "contactFaqSecurity2Q",
+      question: "Do you store my documents?",
+      answerKey: "contactFaqSecurity2A",
+      answer: "This demo app does not store your documents server-side unless you explicitly upload them to an external service.",
+    },
   ],
   billing: [
-    { question: "How can I cancel my subscription?", answer: "You can cancel your subscription from your account settings." },
+    {
+      questionKey: "contactFaqBilling1Q",
+      question: "How can I cancel my subscription?",
+      answerKey: "contactFaqBilling1A",
+      answer: "You can cancel your subscription from your account settings.",
+    },
   ],
 } as const;
 
@@ -57,6 +93,7 @@ export default function ContactUsPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState<FaqTab>("general");
+  const { t } = useLanguage();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,12 +108,12 @@ export default function ContactUsPage() {
         });
         if (!res.ok) {
           const data = await res.json().catch(() => null);
-          throw new Error(data?.error || "Failed to send");
+          throw new Error(data?.error || t("contactSendFailed", "Failed to send"));
         }
         setStatus("sent");
       } catch (err) {
         setStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : "Failed to send");
+        setErrorMessage(err instanceof Error ? err.message : t("contactSendFailed", "Failed to send"));
       }
     })();
   };
@@ -89,34 +126,40 @@ export default function ContactUsPage() {
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-bold text-center mb-10">
-            Contact Us
+            {t("contactUsTitle", "Contact Us")}
           </h1>
 
           {/* Contact Form */}
           <div className="max-w-2xl mx-auto mb-16">
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <p className="text-[color:var(--brand-muted)] mb-6">
-                Need assistance? Fill out the form below, and our team will get back to you as soon as we can.
+                {t(
+                  "contactUsDesc",
+                  "Need assistance? Fill out the form below, and our team will get back to you as soon as we can."
+                )}
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {status === "sent" && (
                   <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
-                    Thanks! We received your message and will get back to you soon.
+                    {t(
+                      "contactSendSuccess",
+                      "Thanks! We received your message and will get back to you soon."
+                    )}
                   </div>
                 )}
                 {status === "error" && (
                   <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                    {errorMessage || "Something went wrong. Please try again."}
+                    {errorMessage || t("contactSendError", "Something went wrong. Please try again.")}
                   </div>
                 )}
                 <div>
                   <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
-                    Full Name <span className="text-red-500">*</span>
+                    {t("fullName", "Full Name")} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="text"
-                    placeholder="John Newman"
+                    placeholder={t("fullNamePlaceholder", "John Newman")}
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                     className="h-12 rounded-lg border-[color:var(--brand-line)]"
@@ -126,11 +169,11 @@ export default function ContactUsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
-                    Your email address <span className="text-red-500">*</span>
+                    {t("yourEmailAddress", "Your email address")} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="email"
-                    placeholder="example@mail.com"
+                    placeholder={t("emailPlaceholder", "example@mail.com")}
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="h-12 rounded-lg border-[color:var(--brand-line)]"
@@ -140,19 +183,19 @@ export default function ContactUsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
-                    Subject <span className="text-red-500">*</span>
+                    {t("subject", "Subject")} <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.subject}
                     onValueChange={(value) => setFormData({ ...formData, subject: value })}
                   >
                     <SelectTrigger className="h-12 rounded-lg border-[color:var(--brand-line)]">
-                      <SelectValue placeholder="Choose subject" />
+                      <SelectValue placeholder={t("chooseSubject", "Choose subject")} />
                     </SelectTrigger>
                     <SelectContent>
                       {subjects.map((subject) => (
-                        <SelectItem key={subject} value={subject}>
-                          {subject}
+                        <SelectItem key={subject.key} value={subject.label}>
+                          {t(subject.key, subject.label)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -161,11 +204,14 @@ export default function ContactUsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
-                    Description <span className="text-red-500">*</span>
+                    {t("description", "Description")} <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <textarea
-                      placeholder="Please enter the details of your request. A member of our support staff will respond as soon as possible."
+                      placeholder={t(
+                        "descriptionPlaceholder",
+                        "Please enter the details of your request. A member of our support staff will respond as soon as possible."
+                      )}
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full h-32 p-4 rounded-lg border border-[color:var(--brand-line)] resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -183,7 +229,7 @@ export default function ContactUsPage() {
                   disabled={status === "sending"}
                   className="w-full bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium h-12 rounded-lg"
                 >
-                  {status === "sending" ? "Sending..." : "Send"}
+                  {status === "sending" ? t("sending", "Sending...") : t("send", "Send")}
                 </Button>
               </form>
             </div>
@@ -192,15 +238,15 @@ export default function ContactUsPage() {
           {/* FAQ Section */}
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] text-center mb-8">
-              Frequently Asked Questions
+              {t("faqTitle", "Frequently Asked Questions")}
             </h2>
 
             <div className="flex justify-center gap-4 md:gap-8 mb-8 border-b border-[color:var(--brand-line)]">
               {(
                 [
-                  { key: "general", label: "General" },
-                  { key: "security", label: "Security" },
-                  { key: "billing", label: "Account & Billing" },
+                  { key: "general", labelKey: "general", label: "General" },
+                  { key: "security", labelKey: "security", label: "Security" },
+                  { key: "billing", labelKey: "accountBilling", label: "Account & Billing" },
                 ] as const
               ).map((tab) => (
                 <button
@@ -213,7 +259,7 @@ export default function ContactUsPage() {
                       : "text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
                   }`}
                 >
-                  {tab.label}
+                  {t(tab.labelKey, tab.label)}
                 </button>
               ))}
             </div>
@@ -226,10 +272,10 @@ export default function ContactUsPage() {
                   className="bg-white rounded-xl border-none px-6 shadow-sm"
                 >
                   <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
-                    {item.question}
+                    {t(item.questionKey, item.question)}
                   </AccordionTrigger>
                   <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
-                    {item.answer}
+                    {t(item.answerKey, item.answer)}
                   </AccordionContent>
                 </AccordionItem>
               ))}

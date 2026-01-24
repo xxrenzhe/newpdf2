@@ -12,17 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const languages = [
-  { code: "en", name: "English" },
-  { code: "es", name: "Español" },
-  { code: "fr", name: "Français" },
-  { code: "de", name: "Deutsch" },
-  { code: "pt", name: "Português" },
-];
+import { useLanguage } from "@/components/LanguageProvider";
 
 function SignInInner() {
-  const [language, setLanguage] = useState("en");
+  const { lang, setLang, languages, t } = useLanguage();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [availableProviders, setAvailableProviders] = useState<Awaited<ReturnType<typeof getProviders>>>(null);
@@ -63,7 +56,7 @@ function SignInInner() {
               className="h-24 md:h-28 w-auto"
             />
           </Link>
-          <Select value={language} onValueChange={setLanguage}>
+          <Select value={lang} onValueChange={(value) => setLang(value as typeof lang)}>
             <SelectTrigger className="w-[140px] bg-transparent border-none">
               <div className="flex items-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[color:var(--brand-muted)]">
@@ -75,9 +68,9 @@ function SignInInner() {
               </div>
             </SelectTrigger>
             <SelectContent>
-              {languages.map((lang) => (
-                <SelectItem key={lang.code} value={lang.code}>
-                  {lang.name}
+              {languages.map((option) => (
+                <SelectItem key={option.code} value={option.code}>
+                  {option.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -89,8 +82,12 @@ function SignInInner() {
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-8">
         <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-10 md:p-12">
           <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-[color:var(--brand-ink)] mb-3">Sign in</h1>
-            <p className="text-[color:var(--brand-muted)] text-lg">Continue with Google to unlock higher free usage.</p>
+            <h1 className="text-4xl font-bold text-[color:var(--brand-ink)] mb-3">
+              {t("signIn", "Sign in")}
+            </h1>
+            <p className="text-[color:var(--brand-muted)] text-lg">
+              {t("signInSubtitle", "Continue with Google to unlock higher free usage.")}
+            </p>
           </div>
 
           {error && (
@@ -112,19 +109,19 @@ function SignInInner() {
                   fill="#4285F4"
                 />
               </svg>
-              Continue with Google
+              {t("continueWithGoogle", "Continue with Google")}
             </Button>
 
             {!googleConfigured && (
               <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                Google sign-in is not configured on this environment.
+                {t("googleNotConfigured", "Google sign-in is not configured on this environment.")}
               </div>
             )}
 
             <div className="text-center text-sm text-[color:var(--brand-muted)]">
-              Prefer not to sign in?{" "}
+              {t("preferNotToSignIn", "Prefer not to sign in?")}{" "}
               <Link href="/tools/annotate" className="text-primary hover:underline font-medium">
-                Continue as guest
+                {t("continueAsGuest", "Continue as guest")}
               </Link>
             </div>
           </div>

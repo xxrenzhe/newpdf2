@@ -6,6 +6,7 @@ import type { PageOpItem } from "@/lib/pdf/client";
 import { downloadBlob, rebuildPdfWithOps } from "@/lib/pdf/client";
 import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
 import { safeRandomUUID } from "@/lib/safeRandomUUID";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type PageItem = {
   id: string;
@@ -28,6 +29,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
   const [items, setItems] = useState<PageItem[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [thumbs, setThumbs] = useState<ThumbState>({});
+  const { t } = useLanguage();
   const [numPages, setNumPages] = useState(0);
 
   const docRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
@@ -94,11 +96,11 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
       setSelected({});
     };
 
-    void run().catch((e) => setError(e instanceof Error ? e.message : "Failed to load PDF"));
+    void run().catch((e) => setError(e instanceof Error ? e.message : t("loadPdfFailed", "Failed to load PDF")));
     return () => {
       cancelled = true;
     };
-  }, [file, isPdf, resetFileState]);
+  }, [file, isPdf, resetFileState, t]);
 
   useEffect(() => {
     return () => {
@@ -210,7 +212,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
       setError("");
       try {
         const list = onlySelected ? items.filter((i) => selectedIds.has(i.id)) : items;
-        if (list.length === 0) throw new Error("No pages selected.");
+        if (list.length === 0) throw new Error(t("noPagesSelected", "No pages selected."));
         const ops: PageOpItem[] = list.map((i) => ({
           sourcePageIndex: i.sourcePageIndex,
           rotationDegrees: i.rotationDegrees,
@@ -220,16 +222,22 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
         const outName = file.name.replace(/\.[^.]+$/, "") + `${suffix}.pdf`;
         downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Export failed");
+        setError(e instanceof Error ? e.message : t("exportFailed", "Export failed"));
       } finally {
         setBusy(false);
       }
     },
-    [file, isPdf, items, selectedIds]
+    [file, isPdf, items, selectedIds, t]
   );
 
   if (!file) {
-    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to organize pages" />;
+    return (
+      <FileDropzone
+        accept=".pdf,application/pdf"
+        onFiles={(files) => setFile(files[0] ?? null)}
+        title={t("dropPdfToOrganize", "Drop a PDF here to organize pages")}
+      />
+    );
   }
 
   return (
@@ -237,10 +245,12 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
       <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6 mb-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Organize Pages</h3>
+            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+              {t("organizePagesTitle", "Organize Pages")}
+            </h3>
             <p className="text-sm text-[color:var(--brand-muted)] truncate">
               {file.name}
-              {numPages ? ` · ${numPages} pages` : ""}
+              {numPages ? ` | ${t("pageCount", "{count} pages").replace("{count}", `${numPages}`)}` : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -252,7 +262,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
                 setFile(null);
               }}
             >
-              Change file
+              {t("changeFile", "Change file")}
             </button>
             <button
               type="button"
@@ -260,14 +270,14 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
               className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
               onClick={() => void exportPdf(false)}
             >
-              {busy ? "Working..." : "Export PDF"}
+              {busy ? t("working", "Working...") : t("exportPdf", "Export PDF")}
             </button>
           </div>
         </div>
 
         {!isPdf && (
           <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-            Please upload a PDF file.
+            {t("uploadPdfOnly", "Please upload a PDF file.")}
           </div>
         )}
 
@@ -287,7 +297,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
               onClick={selectAll}
               disabled={items.length === 0}
             >
-              Select all
+              {t("selectAll", "Select all")}
             </button>
             <button
               type="button"
@@ -295,10 +305,12 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
               onClick={clearSelection}
               disabled={selectedCount === 0}
             >
-              Clear
+              {t("clear", "Clear")}
             </button>
             <span className="text-sm text-[color:var(--brand-muted)]">
-              {selectedCount > 0 ? `${selectedCount} selected` : `${items.length} pages`}
+              {selectedCount > 0
+                ? t("selectedCount", "{count} selected").replace("{count}", `${selectedCount}`)
+                : t("pageCount", "{count} pages").replace("{count}", `${items.length}`)}
             </span>
           </div>
 
@@ -308,27 +320,27 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
               className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
               onClick={() => rotateIds(selectedIds, -90)}
               disabled={selectedCount === 0}
-              title="Rotate left"
+              title={t("rotateLeft", "Rotate left")}
             >
-              Rotate ⟲
+              {t("rotateLeftLabel", "Rotate ⟲")}
             </button>
             <button
               type="button"
               className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
               onClick={() => rotateIds(selectedIds, 90)}
               disabled={selectedCount === 0}
-              title="Rotate right"
+              title={t("rotateRight", "Rotate right")}
             >
-              Rotate ⟳
+              {t("rotateRightLabel", "Rotate ⟳")}
             </button>
             <button
               type="button"
               className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
               onClick={() => deleteIds(selectedIds)}
               disabled={selectedCount === 0}
-              title="Delete selected pages"
+              title={t("deleteSelectedPages", "Delete selected pages")}
             >
-              Delete
+              {t("delete", "Delete")}
             </button>
             <button
               type="button"
@@ -336,7 +348,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
               onClick={() => void exportPdf(true)}
               disabled={selectedCount === 0 || busy}
             >
-              Export selected
+              {t("exportSelected", "Export selected")}
             </button>
           </div>
         </div>
@@ -353,6 +365,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
                 item={item}
                 thumbUrl={thumb}
                 selected={isSelected}
+                t={t}
                 onToggleSelect={() => toggleSelect(item.id)}
                 onMoveUp={() => move(item.id, -1)}
                 onMoveDown={() => move(item.id, 1)}
@@ -375,6 +388,7 @@ function OrganizePageCard({
   item,
   thumbUrl,
   selected,
+  t,
   onToggleSelect,
   onMoveUp,
   onMoveDown,
@@ -388,6 +402,7 @@ function OrganizePageCard({
   item: PageItem;
   thumbUrl?: string;
   selected: boolean;
+  t: (key: string, fallback?: string) => string;
   onToggleSelect: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -425,14 +440,14 @@ function OrganizePageCard({
         type="button"
         className="w-full text-left"
         onClick={onToggleSelect}
-        title="Select"
+        title={t("select", "Select")}
       >
         <div className="bg-[color:var(--brand-cream)] p-2 flex items-center justify-between">
           <span className="text-xs text-[color:var(--brand-muted)]">
             {idx + 1} / {total}
           </span>
           <span className="text-xs text-[color:var(--brand-muted)]">
-            p{item.sourcePageIndex + 1}
+            {t("pageShort", "p{count}").replace("{count}", `${item.sourcePageIndex + 1}`)}
             {item.rotationDegrees ? ` · ${item.rotationDegrees}°` : ""}
           </span>
         </div>
@@ -451,7 +466,7 @@ function OrganizePageCard({
           onClick={onMoveUp}
           disabled={disableMoveUp}
           className="flex-1 h-9 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
-          title="Move up"
+          title={t("moveUp", "Move up")}
         >
           ↑
         </button>
@@ -460,7 +475,7 @@ function OrganizePageCard({
           onClick={onMoveDown}
           disabled={disableMoveDown}
           className="flex-1 h-9 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
-          title="Move down"
+          title={t("moveDown", "Move down")}
         >
           ↓
         </button>
@@ -468,7 +483,7 @@ function OrganizePageCard({
           type="button"
           onClick={onRotate}
           className="flex-1 h-9 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
-          title="Rotate"
+          title={t("rotate", "Rotate")}
         >
           ⟳
         </button>

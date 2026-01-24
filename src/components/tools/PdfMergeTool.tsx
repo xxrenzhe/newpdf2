@@ -3,12 +3,14 @@
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { mergePdfs, downloadBlob } from "@/lib/pdf/client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }) {
   const [files, setFiles] = useState<File[]>(initialFiles ?? []);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
+  const { t } = useLanguage();
   const canMerge = files.length >= 2 && files.every((f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
 
   const totalSize = useMemo(() => files.reduce((acc, f) => acc + f.size, 0), [files]);
@@ -49,8 +51,8 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
         accept=".pdf,application/pdf"
         multiple
         onFiles={setFiles}
-        title="Drop PDFs here to merge"
-        subtitle="Select 2 or more PDF files"
+        title={t("dropPdfsToMerge", "Drop PDFs here to merge")}
+        subtitle={t("mergeSelectMultiple", "Select 2 or more PDF files")}
       />
     );
   }
@@ -59,9 +61,13 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
     <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
       <div className="flex items-center justify-between gap-3 mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Merge PDFs</h3>
+          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+            {t("mergeDocuments", "Merge Documents")}
+          </h3>
           <p className="text-sm text-[color:var(--brand-muted)]">
-            {files.length} file(s) - {(totalSize / 1024 / 1024).toFixed(2)} MB total
+            {t("mergeFileCountSize", "{count} file(s) - {size} MB total")
+              .replace("{count}", `${files.length}`)
+              .replace("{size}", (totalSize / 1024 / 1024).toFixed(2))}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -79,7 +85,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            Add more
+            {t("addMore", "Add more")}
           </label>
           <input
             ref={inputRef}
@@ -101,7 +107,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
             onClick={() => setFiles([])}
             className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm"
           >
-            Reset
+            {t("reset", "Reset")}
           </button>
         </div>
       </div>
@@ -111,7 +117,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
           <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          Please upload at least 2 PDF files.
+          {t("mergeMinFiles", "Please upload at least 2 PDF files.")}
         </div>
       )}
 
@@ -134,7 +140,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
                 onClick={() => moveFile(index, index - 1)}
                 disabled={index === 0}
                 className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Move up"
+                title={t("moveUp", "Move up")}
               >
                 <svg className="w-4 h-4 text-[color:var(--brand-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 15l-6-6-6 6" />
@@ -145,7 +151,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
                 onClick={() => moveFile(index, index + 1)}
                 disabled={index === files.length - 1}
                 className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Move down"
+                title={t("moveDown", "Move down")}
               >
                 <svg className="w-4 h-4 text-[color:var(--brand-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M6 9l6 6 6-6" />
@@ -155,7 +161,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
                 type="button"
                 onClick={() => removeFile(index)}
                 className="p-1.5 rounded-lg hover:bg-red-50"
-                title="Remove"
+                title={t("remove", "Remove")}
               >
                 <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 6L6 18M6 6l12 12" />
@@ -178,14 +184,14 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            Merging...
+            {t("merging", "Merging...")}
           </>
         ) : (
           <>
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
             </svg>
-            Merge & Download
+            {t("mergeDownload", "Merge & Download")}
           </>
         )}
       </button>

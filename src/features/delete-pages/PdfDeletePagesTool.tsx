@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import FileDropzone from "@/components/tools/FileDropzone";
 import { downloadBlob, extractPdfPages } from "@/lib/pdf/client";
 import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type ThumbState = Record<number, string>;
 
@@ -32,6 +33,7 @@ export default function PdfDeletePagesTool({
   const [thumbs, setThumbs] = useState<ThumbState>({});
   const [deleted, setDeleted] = useState<Record<number, boolean>>({});
   const [thumbPage, setThumbPage] = useState(1);
+  const { t } = useLanguage();
 
   const docRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
   const thumbsRef = useRef<ThumbState>({});
@@ -187,11 +189,11 @@ export default function PdfDeletePagesTool({
       setNumPages(doc.numPages);
     };
 
-    void run().catch((e) => setError(e instanceof Error ? e.message : "Failed to load PDF"));
+    void run().catch((e) => setError(e instanceof Error ? e.message : t("loadPdfFailed", "Failed to load PDF")));
     return () => {
       cancelled = true;
     };
-  }, [file, resetFileState]);
+  }, [file, resetFileState, t]);
 
   useEffect(() => {
     const inFlightThumbs = inFlightThumbsRef.current;
@@ -217,26 +219,26 @@ export default function PdfDeletePagesTool({
     setBusy(true);
     setError("");
     try {
-      if (numPages === 0) throw new Error("PDF not loaded.");
+      if (numPages === 0) throw new Error(t("pdfNotLoaded", "PDF not loaded."));
       const keepPages = Array.from({ length: numPages }, (_, i) => i + 1).filter((n) => !deleted[n - 1]);
-      if (keepPages.length === 0) throw new Error("You cannot delete all pages.");
+      if (keepPages.length === 0) throw new Error(t("deleteAllPagesError", "You cannot delete all pages."));
 
       const bytes = await extractPdfPages(file, keepPages);
       const outName = file.name.replace(/\.[^.]+$/, "") + "-deleted.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Export failed");
+      setError(e instanceof Error ? e.message : t("exportFailed", "Export failed"));
     } finally {
       setBusy(false);
     }
-  }, [deleted, file, numPages]);
+  }, [deleted, file, numPages, t]);
 
   if (!file) {
     return (
       <FileDropzone
         accept=".pdf,application/pdf"
         onFiles={(files) => setFile(files[0] ?? null)}
-        title="Drop a PDF here to delete pages"
+        title={t("dropPdfToDeletePages", "Drop a PDF here to delete pages")}
       />
     );
   }
@@ -248,11 +250,15 @@ export default function PdfDeletePagesTool({
       <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6 mb-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Delete Pages</h3>
+            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+              {t("deletePagesTitle", "Delete Pages")}
+            </h3>
             <p className="text-sm text-[color:var(--brand-muted)] truncate">
               {file.name}
-              {numPages ? ` · ${numPages} pages` : ""}
-              {deletedCount ? ` · ${deletedCount} marked for deletion` : ""}
+              {numPages ? ` | ${t("pageCount", "{count} pages").replace("{count}", `${numPages}`)}` : ""}
+              {deletedCount
+                ? ` | ${t("markedForDeletion", "{count} marked for deletion").replace("{count}", `${deletedCount}`)}`
+                : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -262,7 +268,7 @@ export default function PdfDeletePagesTool({
               onClick={exit}
               disabled={busy}
             >
-              Exit
+              {t("exit", "Exit")}
             </button>
             <button
               type="button"
@@ -270,7 +276,7 @@ export default function PdfDeletePagesTool({
               onClick={() => (onExit ? onExit() : setFile(null))}
               disabled={busy}
             >
-              Change file
+              {t("changeFile", "Change file")}
             </button>
             <button
               type="button"
@@ -278,14 +284,14 @@ export default function PdfDeletePagesTool({
               className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
               onClick={() => void exportPdf()}
             >
-              {busy ? "Working..." : "Export PDF"}
+              {busy ? t("working", "Working...") : t("exportPdf", "Export PDF")}
             </button>
           </div>
         </div>
 
         {!pdfOk && (
           <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-            Please upload a PDF file.
+            {t("uploadPdfOnly", "Please upload a PDF file.")}
           </div>
         )}
 
@@ -300,7 +306,10 @@ export default function PdfDeletePagesTool({
         <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-4">
           <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3">
             <p className="text-sm text-[color:var(--brand-muted)]">
-              Pages {visibleRange.start + 1}-{visibleRange.endExclusive} of {numPages}
+              {t("pagesRangeOfTotal", "Pages {start}-{end} of {total}")
+                .replace("{start}", `${visibleRange.start + 1}`)
+                .replace("{end}", `${visibleRange.endExclusive}`)
+                .replace("{total}", `${numPages}`)}
             </p>
             {totalThumbPages > 1 && (
               <div className="flex items-center gap-2">
@@ -310,7 +319,7 @@ export default function PdfDeletePagesTool({
                   onClick={() => setThumbPage((p) => Math.max(1, p - 1))}
                   disabled={thumbPageClamped <= 1}
                 >
-                  Prev
+                  {t("prev", "Prev")}
                 </button>
                 <span className="text-sm text-[color:var(--brand-muted)] tabular-nums">
                   {thumbPageClamped} / {totalThumbPages}
@@ -321,7 +330,7 @@ export default function PdfDeletePagesTool({
                   onClick={() => setThumbPage((p) => Math.min(totalThumbPages, p + 1))}
                   disabled={thumbPageClamped >= totalThumbPages}
                 >
-                  Next
+                  {t("next", "Next")}
                 </button>
               </div>
             )}
@@ -334,6 +343,7 @@ export default function PdfDeletePagesTool({
                 pageIndex={pageIndex}
                 thumbUrl={thumbs[pageIndex]}
                 marked={!!deleted[pageIndex]}
+                t={t}
                 onToggle={toggleDelete}
                 onNeedThumb={queueThumbRender}
               />
@@ -349,12 +359,14 @@ const DeletePageCard = memo(function DeletePageCard({
   pageIndex,
   thumbUrl,
   marked,
+  t,
   onToggle,
   onNeedThumb,
 }: {
   pageIndex: number;
   thumbUrl?: string;
   marked: boolean;
+  t: (key: string, fallback?: string) => string;
   onToggle: (pageIndex: number) => void;
   onNeedThumb: (pageIndex: number) => void;
 }) {
@@ -387,13 +399,19 @@ const DeletePageCard = memo(function DeletePageCard({
         marked ? "border-red-400 bg-red-50/30" : "border-[color:var(--brand-line)] bg-white hover:bg-[color:var(--brand-cream)]"
       }`}
       onClick={() => onToggle(pageIndex)}
-      title={marked ? "Click to keep this page" : "Click to delete this page"}
+      title={
+        marked
+          ? t("deletePageKeepHint", "Click to keep this page")
+          : t("deletePageRemoveHint", "Click to delete this page")
+      }
     >
       <div className="flex items-center justify-between px-2 py-1.5 bg-[color:var(--brand-cream)]">
-        <span className="text-xs text-[color:var(--brand-muted)]">Page {pageIndex + 1}</span>
+        <span className="text-xs text-[color:var(--brand-muted)]">
+          {t("pageLabel", "Page {count}").replace("{count}", `${pageIndex + 1}`)}
+        </span>
         {marked && (
           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-            Delete
+            {t("delete", "Delete")}
           </span>
         )}
       </div>

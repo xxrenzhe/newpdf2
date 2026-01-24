@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Document, Page } from "react-pdf";
 import dynamic from "next/dynamic";
 import AnnotationToolbar from "./AnnotationToolbar";
@@ -9,6 +9,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
 import { applyAnnotationOverlays, downloadBlob } from "@/lib/pdf/client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 // Dynamically import annotation canvas
 const PDFAnnotationCanvas = dynamic(() => import("./PDFAnnotationCanvas"), {
@@ -35,6 +36,22 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
   const [activeColor, setActiveColor] = useState("#5b4bb7");
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [annotations, setAnnotations] = useState<Record<number, string>>({});
+  const { t } = useLanguage();
+  const toolLabels = useMemo(
+    () => ({
+      select: t("toolSelect", "Select"),
+      text: t("toolText", "Text"),
+      highlight: t("toolHighlight", "Highlight"),
+      rectangle: t("toolRectangle", "Rectangle"),
+      circle: t("toolCircle", "Circle"),
+      arrow: t("toolArrow", "Arrow"),
+      line: t("toolLine", "Line"),
+      freehand: t("toolDraw", "Draw"),
+      eraser: t("toolEraser", "Eraser"),
+    }),
+    [t]
+  );
+  const activeToolLabel = toolLabels[activeTool] ?? activeTool;
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -142,7 +159,9 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
               </svg>
             </button>
             <span className="text-sm text-[color:var(--brand-muted)] min-w-[80px] text-center">
-              Page {pageNumber} of {numPages}
+              {t("pageOf", "Page {current} of {total}")
+                .replace("{current}", `${pageNumber}`)
+                .replace("{total}", `${numPages}`)}
             </span>
             <button
               onClick={goToNextPage}
@@ -161,7 +180,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
               onClick={zoomOut}
               disabled={scale <= 0.5}
               className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
-              title="Zoom Out"
+              title={t("zoomOut", "Zoom Out")}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" />
@@ -179,7 +198,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
               onClick={zoomIn}
               disabled={scale >= 3}
               className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
-              title="Zoom In"
+              title={t("zoomIn", "Zoom In")}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" />
@@ -201,7 +220,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download
+              {t("download", "Download")}
             </button>
             <button
               onClick={handleSave}
@@ -212,7 +231,7 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
                 <polyline points="17 21 17 13 7 13 7 21" />
                 <polyline points="7 3 7 8 15 8" />
               </svg>
-              Save
+              {t("saveChanges", "Save Changes")}
             </button>
           </div>
         </div>
@@ -267,16 +286,21 @@ export default function PDFEditor({ file, fileName, onSave, onClose }: PDFEditor
         <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--brand-cream)] border-t border-[color:var(--brand-line)] text-sm text-[color:var(--brand-muted)]">
           <div className="flex items-center gap-4">
             <span>
-              Tool: <span className="font-medium text-[color:var(--brand-ink)] capitalize">{activeTool}</span>
+              {t("toolLabel", "Tool")}:{" "}
+              <span className="font-medium text-[color:var(--brand-ink)]">{activeToolLabel}</span>
             </span>
             <span>
-              Color: <span className="inline-block w-3 h-3 rounded-full align-middle ml-1" style={{ backgroundColor: activeColor }} />
+              {t("colorLabel", "Color")}:
+              <span className="inline-block w-3 h-3 rounded-full align-middle ml-1" style={{ backgroundColor: activeColor }} />
             </span>
           </div>
           <div>
             {Object.keys(annotations).length > 0 && (
               <span className="text-green-600">
-                Annotations on {Object.keys(annotations).length} page(s)
+                {t("annotationsOnPages", "Annotations on {count} page(s)").replace(
+                  "{count}",
+                  `${Object.keys(annotations).length}`
+                )}
               </span>
             )}
           </div>

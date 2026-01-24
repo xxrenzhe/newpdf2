@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useId, useRef, useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 // 文件大小限制常量
 const MAX_PDF_SIZE = 100 * 1024 * 1024; // 100MB for PDF
@@ -12,14 +13,20 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function validateFileSize(file: File): { valid: boolean; error?: string } {
+function validateFileSize(file: File, t: (key: string, fallback?: string) => string): { valid: boolean; error?: string } {
   const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   const maxSize = isPdf ? MAX_PDF_SIZE : MAX_OTHER_SIZE;
 
   if (file.size > maxSize) {
     return {
       valid: false,
-      error: `File "${file.name}" (${formatFileSize(file.size)}) exceeds the ${isPdf ? "100MB" : "20MB"} limit.`,
+      error: t(
+        "fileTooLarge",
+        'File "{name}" ({size}) exceeds the {limit} limit.'
+      )
+        .replace("{name}", file.name)
+        .replace("{size}", formatFileSize(file.size))
+        .replace("{limit}", isPdf ? "100MB" : "20MB"),
     };
   }
   return { valid: true };
@@ -41,13 +48,16 @@ export default function FileDropzone({
   maxFiles,
   maxSize,
   onFiles,
-  title = "Drop your file here",
-  subtitle = "Or choose a file from your computer",
+  title,
+  subtitle,
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
+  const { t } = useLanguage();
+  const resolvedTitle = title ?? t("dropFileHere", "Drop your file here");
+  const resolvedSubtitle = subtitle ?? t("dropzoneSubtitle", "Or choose a file from your computer");
 
   const emitFiles = useCallback(
     (list: FileList | File[]) => {
@@ -62,12 +72,20 @@ export default function FileDropzone({
         // 如果提供了自定义 maxSize，使用它；否则使用默认验证
         if (maxSize) {
           if (file.size > maxSize) {
-            errors.push(`File "${file.name}" (${formatFileSize(file.size)}) exceeds the ${formatFileSize(maxSize)} limit.`);
+            errors.push(
+              t(
+                "fileTooLarge",
+                'File "{name}" ({size}) exceeds the {limit} limit.'
+              )
+                .replace("{name}", file.name)
+                .replace("{size}", formatFileSize(file.size))
+                .replace("{limit}", formatFileSize(maxSize))
+            );
           } else {
             validFiles.push(file);
           }
         } else {
-          const result = validateFileSize(file);
+          const result = validateFileSize(file, t);
           if (result.valid) {
             validFiles.push(file);
           } else if (result.error) {
@@ -86,7 +104,7 @@ export default function FileDropzone({
 
       if (validFiles.length > 0) onFiles(validFiles);
     },
-    [maxFiles, maxSize, onFiles]
+    [maxFiles, maxSize, onFiles, t]
   );
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -162,8 +180,8 @@ export default function FileDropzone({
             />
           </div>
 
-          <h3 className="text-xl md:text-2xl font-semibold text-[color:var(--brand-ink)] mb-2">{title}</h3>
-          <p className="text-sm text-[color:var(--brand-muted)] mb-6">{subtitle}</p>
+          <h3 className="text-xl md:text-2xl font-semibold text-[color:var(--brand-ink)] mb-2">{resolvedTitle}</h3>
+          <p className="text-sm text-[color:var(--brand-muted)] mb-6">{resolvedSubtitle}</p>
 
           <label
             htmlFor={inputId}
@@ -199,19 +217,19 @@ export default function FileDropzone({
 
       {/* Cloud upload options (disabled) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title="Coming soon">
+        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C6.477 2 1.545 6.932 1.545 13s4.932 11 11 11c6.076 0 10.545-4.268 10.545-10.545 0-.707-.082-1.391-.235-2.055l-10.31-.161z" fill="#4285F4"/>
           </svg>
           <span className="text-[color:var(--brand-muted)] font-medium text-sm">Google Drive</span>
         </button>
-        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title="Coming soon">
+        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#0061FF">
             <path d="M12 2L6 6.5l6 4.5 6-4.5L12 2zM6 11.5L0 16l6 4.5 6-4.5-6-4.5zm12 0l-6 4.5 6 4.5 6-4.5-6-4.5zM12 14l-6 4.5L12 23l6-4.5L12 14z"/>
           </svg>
           <span className="text-[color:var(--brand-muted)] font-medium text-sm">Dropbox</span>
         </button>
-        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title="Coming soon">
+        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#0078D4">
             <path d="M10.5 2.5H2.5v9h8v-9zm11 0h-8v9h8v-9zm-11 11h-8v9h8v-9zm11 0h-8v9h8v-9z"/>
           </svg>

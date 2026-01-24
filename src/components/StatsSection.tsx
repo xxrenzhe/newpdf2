@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const stats = [
   {
@@ -13,6 +14,7 @@ const stats = [
       </svg>
     ),
     value: "1.9M",
+    labelKey: "documentsEdited",
     label: "Documents edited",
     suffix: "+",
   },
@@ -26,6 +28,7 @@ const stats = [
       </svg>
     ),
     value: "15+",
+    labelKey: "powerfulTools",
     label: "Powerful Tools",
     suffix: "",
   },
@@ -36,6 +39,7 @@ const stats = [
       </svg>
     ),
     value: "232K",
+    labelKey: "documentsSigned",
     label: "Documents signed",
     suffix: "+",
   },
@@ -44,6 +48,7 @@ const stats = [
 export default function StatsSection() {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -86,7 +91,9 @@ export default function StatsSection() {
                     <span className="text-secondary text-2xl font-bold">{stat.suffix}</span>
                   )}
                 </div>
-                <div className="text-base text-[color:var(--brand-muted)] font-medium">{stat.label}</div>
+                <div className="text-base text-[color:var(--brand-muted)] font-medium">
+                  {t(stat.labelKey, stat.label)}
+                </div>
               </div>
             </div>
           ))}

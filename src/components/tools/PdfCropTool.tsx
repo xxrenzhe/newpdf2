@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { cropPdf, downloadBlob } from "@/lib/pdf/client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -12,6 +13,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
   const [marginRight, setMarginRight] = useState(24);
   const [marginTop, setMarginTop] = useState(24);
   const [marginBottom, setMarginBottom] = useState(24);
+  const { t } = useLanguage();
 
   const isPdf = useMemo(
     () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
@@ -27,21 +29,29 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
       const outName = file.name.replace(/\.[^.]+$/, "") + "-cropped.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Crop failed");
+      setError(e instanceof Error ? e.message : t("cropFailed", "Crop failed"));
     } finally {
       setBusy(false);
     }
-  }, [file, isPdf, marginBottom, marginLeft, marginRight, marginTop]);
+  }, [file, isPdf, marginBottom, marginLeft, marginRight, marginTop, t]);
 
   if (!file) {
-    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to crop" />;
+    return (
+      <FileDropzone
+        accept=".pdf,application/pdf"
+        onFiles={(files) => setFile(files[0] ?? null)}
+        title={t("dropPdfToCrop", "Drop a PDF here to crop")}
+      />
+    );
   }
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Crop Pages</h3>
+          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+            {t("cropPages", "Crop Pages")}
+          </h3>
           <p className="text-sm text-[color:var(--brand-muted)] truncate">{file.name}</p>
         </div>
         <button
@@ -49,19 +59,19 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
           onClick={() => setFile(null)}
         >
-          Change file
+          {t("changeFile", "Change file")}
         </button>
       </div>
 
       {!isPdf && (
         <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-          Please upload a PDF file.
+          {t("uploadPdfOnly", "Please upload a PDF file.")}
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <label className="text-sm text-[color:var(--brand-muted)]">
-          Left (pt)
+          {t("leftPt", "Left (pt)")}
           <input
             type="number"
             min={0}
@@ -71,7 +81,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           />
         </label>
         <label className="text-sm text-[color:var(--brand-muted)]">
-          Right (pt)
+          {t("rightPt", "Right (pt)")}
           <input
             type="number"
             min={0}
@@ -81,7 +91,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           />
         </label>
         <label className="text-sm text-[color:var(--brand-muted)]">
-          Top (pt)
+          {t("topPt", "Top (pt)")}
           <input
             type="number"
             min={0}
@@ -91,7 +101,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           />
         </label>
         <label className="text-sm text-[color:var(--brand-muted)]">
-          Bottom (pt)
+          {t("bottomPt", "Bottom (pt)")}
           <input
             type="number"
             min={0}
@@ -110,9 +120,8 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
         onClick={run}
         className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
       >
-        {busy ? "Working..." : "Crop & Download"}
+        {busy ? t("working", "Working...") : t("cropDownload", "Crop & Download")}
       </button>
     </div>
   );
 }
-

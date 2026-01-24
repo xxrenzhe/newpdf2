@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, unlockPdfWithPassword } from "@/lib/pdf/client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -10,6 +11,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useLanguage();
 
   const isPdf = useMemo(
     () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
@@ -25,14 +27,21 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
       const outName = file.name.replace(/\.[^.]+$/, "") + "-unlocked.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to unlock PDF");
+      setError(e instanceof Error ? e.message : t("unlockFailed", "Failed to unlock PDF"));
     } finally {
       setBusy(false);
     }
-  }, [file, isPdf, password]);
+  }, [file, isPdf, password, t]);
 
   if (!file) {
-    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to unlock" subtitle="Remove password protection from your PDF" />;
+    return (
+      <FileDropzone
+        accept=".pdf,application/pdf"
+        onFiles={(files) => setFile(files[0] ?? null)}
+        title={t("dropPdfToUnlock", "Drop a PDF here to unlock")}
+        subtitle={t("unlockSubtitle", "Remove password protection from your PDF")}
+      />
+    );
   }
 
   return (
@@ -46,7 +55,9 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
             </svg>
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Unlock PDF</h3>
+            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+              {t("unlockPdf", "Unlock PDF")}
+            </h3>
             <p className="text-sm text-[color:var(--brand-muted)] truncate">{file.name}</p>
           </div>
         </div>
@@ -58,7 +69,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
-          Change file
+          {t("changeFile", "Change file")}
         </button>
       </div>
 
@@ -68,20 +79,23 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
             <circle cx="12" cy="12" r="10" />
             <path d="M15 9l-6 6M9 9l6 6" />
           </svg>
-          Please upload a PDF file.
+          {t("uploadPdfOnly", "Please upload a PDF file.")}
         </div>
       )}
 
       <div className="mb-6">
         <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
-          Password <span className="text-[color:var(--brand-muted)] font-normal">(leave empty if not required)</span>
+          {t("passwordLabel", "Password")}{" "}
+          <span className="text-[color:var(--brand-muted)] font-normal">
+            {t("passwordOptionalHint", "(leave empty if not required)")}
+          </span>
         </label>
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter PDF password..."
+            placeholder={t("unlockPasswordPlaceholder", "Enter PDF password...")}
             className="w-full h-12 px-4 pr-12 rounded-xl border border-[color:var(--brand-line)] focus:border-primary focus:ring-2 focus:ring-[color:var(--brand-lilac)] transition-all"
           />
           <button
@@ -109,7 +123,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
             <circle cx="12" cy="12" r="10" />
             <path d="M12 16v-4M12 8h.01" />
           </svg>
-          Some PDFs have restrictions without requiring a password
+          {t("unlockRestrictionsHint", "Some PDFs have restrictions without requiring a password")}
         </p>
       </div>
 
@@ -134,7 +148,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            Unlocking...
+            {t("unlocking", "Unlocking...")}
           </>
         ) : (
           <>
@@ -142,7 +156,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 019.9-1" />
             </svg>
-            Unlock & Download
+            {t("unlockDownload", "Unlock & Download")}
           </>
         )}
       </button>
@@ -152,7 +166,10 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
           <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
-          Only use this tool to unlock PDFs you have permission to access. Processing happens locally in your browser.
+          {t(
+            "unlockLegalNotice",
+            "Only use this tool to unlock PDFs you have permission to access. Processing happens locally in your browser."
+          )}
         </p>
       </div>
     </div>

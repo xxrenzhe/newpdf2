@@ -3,11 +3,13 @@
 import { getGuestQuotaState, GUEST_QUOTA_UPDATED_EVENT } from "@/lib/guestQuota";
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function GuestQuotaBanner() {
   const { data: session, status } = useSession();
   const [quota, setQuota] = useState(() => getGuestQuotaState());
   const isGuest = useMemo(() => status !== "loading" && !session, [session, status]);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const update = () => setQuota(getGuestQuotaState());
@@ -34,10 +36,15 @@ export default function GuestQuotaBanner() {
     >
       <div className="min-w-0">
         <p className="font-medium">
-          Guest usage: {quota.remaining} / {quota.limit} downloads left today
+          {t("guestUsage", "Guest usage: {remaining} / {limit} downloads left today")
+            .replace("{remaining}", `${quota.remaining}`)
+            .replace("{limit}", `${quota.limit}`)}
         </p>
         <p className="mt-1 text-xs opacity-80">
-          PDF processing stays in your browser. Sign in with Google to unlock higher free usage.
+          {t(
+            "guestUsageHint",
+            "PDF processing stays in your browser. Sign in with Google to unlock higher free usage."
+          )}
         </p>
       </div>
       <button
@@ -45,7 +52,7 @@ export default function GuestQuotaBanner() {
         className="shrink-0 px-3 py-2 rounded-lg bg-primary text-white hover:bg-[color:var(--brand-purple-dark)]"
         onClick={() => void signIn("google", { callbackUrl: window.location.href })}
       >
-        Continue with Google
+        {t("continueWithGoogle", "Continue with Google")}
       </button>
     </div>
   );

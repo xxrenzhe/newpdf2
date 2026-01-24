@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, extractPdfText, imagesToPdf, pdfToImagesZip } from "@/lib/pdf/client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type Mode = "auto" | "pdf-to-images" | "pdf-to-text" | "images-to-pdf" | "file-to-pdf";
 
@@ -14,6 +15,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
   const [format, setFormat] = useState<"png" | "jpg">("png");
   const [dpi, setDpi] = useState(150);
   const [quality, setQuality] = useState(0.85);
+  const { t } = useLanguage();
 
   const inferred = useMemo<Mode>(() => {
     if (mode !== "auto") return mode;
@@ -32,14 +34,14 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
     setMessage("");
     try {
       if (inferred === "file-to-pdf") {
-        if (files.length !== 1) throw new Error("Please upload a single file for conversion.");
+        if (files.length !== 1) throw new Error(t("convertSingleFileError", "Please upload a single file for conversion."));
         const f = files[0]!;
         const form = new FormData();
         form.set("file", f, f.name);
         const res = await fetch("/api/convert/to-pdf", { method: "POST", body: form });
         if (!res.ok) {
           const data = await res.json().catch(() => null);
-          throw new Error(data?.error || "Self-hosted conversion service is not available");
+          throw new Error(data?.error || t("convertServiceUnavailable", "Self-hosted conversion service is not available"));
         }
         const blob = await res.blob();
         downloadBlob(blob, f.name.replace(/\.[^.]+$/, "") + ".pdf");
@@ -55,7 +57,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
       const pdfFile = files[0];
       if (!pdfFile) return;
       const isPdf = pdfFile.type === "application/pdf" || pdfFile.name.toLowerCase().endsWith(".pdf");
-      if (!isPdf) throw new Error("Please upload a PDF file.");
+      if (!isPdf) throw new Error(t("uploadPdfOnly", "Please upload a PDF file."));
 
       if (inferred === "pdf-to-text") {
         const text = await extractPdfText(pdfFile);
@@ -66,11 +68,11 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
       const zip = await pdfToImagesZip(pdfFile, { format, dpi, quality });
       downloadBlob(zip, pdfFile.name.replace(/\.[^.]+$/, "") + `-${dpi}dpi-images.zip`);
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Conversion failed");
+      setMessage(e instanceof Error ? e.message : t("convertFailed", "Conversion failed"));
     } finally {
       setBusy(false);
     }
-  }, [dpi, files, format, inferred, quality]);
+  }, [dpi, files, format, inferred, quality, t]);
 
   if (files.length === 0) {
     return (
@@ -78,8 +80,8 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
         accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
         multiple
         onFiles={setFiles}
-        title="Drop files here to convert"
-        subtitle="PDF → images/text, images → PDF, or Office → PDF (self-hosted)"
+        title={t("dropFilesToConvert", "Drop files here to convert")}
+        subtitle={t("convertSubtitle", "PDF → images/text, images → PDF, or Office → PDF (self-hosted)")}
       />
     );
   }
@@ -88,9 +90,11 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
     <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Convert</h3>
+          <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+            {t("convert", "Convert")}
+          </h3>
           <p className="text-sm text-[color:var(--brand-muted)] truncate">
-            {files.length} file(s): {files.map((f) => f.name).join(", ")}
+            {t("fileCount", "{count} file(s)").replace("{count}", `${files.length}`)}: {files.map((f) => f.name).join(", ")}
           </p>
         </div>
         <button
@@ -98,40 +102,40 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
           className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
           onClick={() => setFiles([])}
         >
-          Reset
+          {t("reset", "Reset")}
         </button>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <label className="text-sm text-[color:var(--brand-muted)]">Mode</label>
+        <label className="text-sm text-[color:var(--brand-muted)]">{t("modeLabel", "Mode")}</label>
         <select
           className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
           value={mode}
           onChange={(e) => setMode(e.target.value as Mode)}
         >
-          <option value="auto">Auto</option>
-          <option value="pdf-to-images">PDF → Images (.zip)</option>
-          <option value="pdf-to-text">PDF → Text (.txt)</option>
-          <option value="images-to-pdf">Images → PDF</option>
-          <option value="file-to-pdf">Office → PDF (self-hosted)</option>
+          <option value="auto">{t("convertModeAuto", "Auto")}</option>
+          <option value="pdf-to-images">{t("convertModePdfToImages", "PDF → Images (.zip)")}</option>
+          <option value="pdf-to-text">{t("convertModePdfToText", "PDF → Text (.txt)")}</option>
+          <option value="images-to-pdf">{t("convertModeImagesToPdf", "Images → PDF")}</option>
+          <option value="file-to-pdf">{t("convertModeFileToPdf", "Office → PDF (self-hosted)")}</option>
         </select>
       </div>
 
       {inferred === "pdf-to-images" && (
         <div className="grid grid-cols-3 gap-3 mb-4">
           <label className="text-sm text-[color:var(--brand-muted)]">
-            Format
+            {t("formatLabel", "Format")}
             <select
               className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
               value={format}
               onChange={(e) => setFormat(e.target.value as "png" | "jpg")}
             >
-              <option value="png">PNG</option>
-              <option value="jpg">JPG</option>
+              <option value="png">{t("formatPng", "PNG")}</option>
+              <option value="jpg">{t("formatJpg", "JPG")}</option>
             </select>
           </label>
           <label className="text-sm text-[color:var(--brand-muted)]">
-            DPI
+            {t("dpiLabel", "DPI")}
             <input
               type="number"
               min={72}
@@ -142,7 +146,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
             />
           </label>
           <label className="text-sm text-[color:var(--brand-muted)]">
-            Quality
+            {t("qualityLabel", "Quality")}
             <input
               type="number"
               min={0.1}
@@ -168,7 +172,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
         onClick={run}
         className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
       >
-        {busy ? "Working..." : "Convert & Download"}
+        {busy ? t("working", "Working...") : t("convertDownload", "Convert & Download")}
       </button>
     </div>
   );

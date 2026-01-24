@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, extractPdfPages, splitPdfToZip } from "@/lib/pdf/client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 function parsePageRanges(input: string, maxPages: number): number[] {
   const trimmed = input.trim();
@@ -28,30 +29,6 @@ function parsePageRanges(input: string, maxPages: number): number[] {
 
 type Mode = "extract" | "splitZip";
 
-const modeInfo: Record<Mode, { label: string; desc: string; icon: React.ReactNode }> = {
-  extract: {
-    label: "Extract to PDF",
-    desc: "Extract selected pages into one PDF",
-    icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <path d="M12 18v-6M9 15l3 3 3-3" />
-      </svg>
-    ),
-  },
-  splitZip: {
-    label: "Split to ZIP",
-    desc: "One PDF per page in ZIP file",
-    icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M21 8v13H3V8M1 3h22v5H1z" />
-        <path d="M10 12h4" />
-      </svg>
-    ),
-  },
-};
-
 export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [busy, setBusy] = useState(false);
@@ -59,6 +36,31 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
   const [mode, setMode] = useState<Mode>("extract");
   const [maxPages, setMaxPages] = useState<number>(0);
   const [range, setRange] = useState("1-1");
+  const { t } = useLanguage();
+
+  const modeInfo: Record<Mode, { label: string; desc: string; icon: React.ReactNode }> = {
+    extract: {
+      label: t("splitExtractLabel", "Extract to PDF"),
+      desc: t("splitExtractDesc", "Extract selected pages into one PDF"),
+      icon: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <path d="M12 18v-6M9 15l3 3 3-3" />
+        </svg>
+      ),
+    },
+    splitZip: {
+      label: t("splitZipLabel", "Split to ZIP"),
+      desc: t("splitZipDesc", "One PDF per page in ZIP file"),
+      icon: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 8v13H3V8M1 3h22v5H1z" />
+          <path d="M10 12h4" />
+        </svg>
+      ),
+    },
+  };
 
   const isPdf = useMemo(
     () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
@@ -92,7 +94,7 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
       const pages = parsePageRanges(range, maxPages || Number.MAX_SAFE_INTEGER);
 
       if (mode === "extract") {
-        if (pages.length === 0) throw new Error("Please enter pages to extract.");
+        if (pages.length === 0) throw new Error(t("splitPagesRequired", "Please enter pages to extract."));
         const bytes = await extractPdfPages(file, pages);
         const outName = file.name.replace(/\.[^.]+$/, "") + "-extracted.pdf";
         downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
@@ -103,14 +105,21 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
       const outName = file.name.replace(/\.[^.]+$/, "") + "-split.zip";
       downloadBlob(zip, outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Split failed");
+      setError(e instanceof Error ? e.message : t("splitFailed", "Split failed"));
     } finally {
       setBusy(false);
     }
-  }, [file, isPdf, maxPages, mode, range]);
+  }, [file, isPdf, maxPages, mode, range, t]);
 
   if (!file) {
-    return <FileDropzone accept=".pdf,application/pdf" onFiles={onFiles} title="Drop a PDF here to split/extract" subtitle="Split PDF into multiple files or extract specific pages" />;
+    return (
+      <FileDropzone
+        accept=".pdf,application/pdf"
+        onFiles={onFiles}
+        title={t("dropPdfToSplit", "Drop a PDF here to split/extract")}
+        subtitle={t("splitSubtitle", "Split PDF into multiple files or extract specific pages")}
+      />
+    );
   }
 
   return (
@@ -123,10 +132,16 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
             </svg>
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Split & Extract Pages</h3>
+            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
+              {t("splitExtractPages", "Split & Extract Pages")}
+            </h3>
             <p className="text-sm text-[color:var(--brand-muted)] truncate">
               {file.name}
-              {maxPages ? <span className="text-primary ml-2 font-medium">{maxPages} pages</span> : ""}
+              {maxPages ? (
+                <span className="text-primary ml-2 font-medium">
+                  {t("pageCount", "{count} pages").replace("{count}", `${maxPages}`)}
+                </span>
+              ) : ""}
             </p>
           </div>
         </div>
@@ -138,7 +153,7 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
-          Change file
+          {t("changeFile", "Change file")}
         </button>
       </div>
 
@@ -148,12 +163,14 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
             <circle cx="12" cy="12" r="10" />
             <path d="M15 9l-6 6M9 9l6 6" />
           </svg>
-          Please upload a PDF file.
+          {t("uploadPdfOnly", "Please upload a PDF file.")}
         </div>
       )}
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-3">Split Mode</label>
+        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-3">
+          {t("splitModeLabel", "Split Mode")}
+        </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {(Object.keys(modeInfo) as Mode[]).map((key) => {
             const info = modeInfo[key];
@@ -185,11 +202,13 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">Page Range</label>
+        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
+          {t("pageRangeLabel", "Page Range")}
+        </label>
         <input
           value={range}
           onChange={(e) => setRange(e.target.value)}
-          placeholder="e.g. 1-3, 5, 7"
+          placeholder={t("pageRangePlaceholder", "e.g. 1-3, 5, 7")}
           className="w-full h-12 px-4 rounded-xl border border-[color:var(--brand-line)] focus:border-primary focus:ring-2 focus:ring-[color:var(--brand-lilac)] transition-all text-lg"
         />
         <p className="text-xs text-[color:var(--brand-muted)] mt-2 flex items-center gap-1">
@@ -197,7 +216,10 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
             <circle cx="12" cy="12" r="10" />
             <path d="M12 16v-4M12 8h.01" />
           </svg>
-          Examples: 1-3, 1,3,5, 2-4,8 {maxPages > 0 && `· Total: ${maxPages} pages`}
+          {t("pageRangeExamples", "Examples: 1-3, 1,3,5, 2-4,8")}
+          {maxPages > 0
+            ? ` | ${t("pageRangeTotal", "Total: {count} pages").replace("{count}", `${maxPages}`)}`
+            : ""}
         </p>
       </div>
 
@@ -222,7 +244,7 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            Working...
+            {t("working", "Working...")}
           </>
         ) : (
           <>
@@ -233,7 +255,9 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
                 <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
               )}
             </svg>
-            {mode === "extract" ? "Extract & Download" : "Split & Download ZIP"}
+            {mode === "extract"
+              ? t("extractDownload", "Extract & Download")
+              : t("splitDownloadZip", "Split & Download ZIP")}
           </>
         )}
       </button>

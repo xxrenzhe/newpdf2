@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { createGuestDocument } from "@/lib/guestDocumentStore";
 import { toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
@@ -12,6 +13,7 @@ export default function HeroSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
   const router = useRouter();
+  const { t } = useLanguage();
 
   const openWithFiles = useCallback(async (files: FileList | File[]) => {
     setUploadError(null);
@@ -29,9 +31,14 @@ export default function HeroSection() {
       router.push(`/app/guest/document?chosenTool=${encodeURIComponent(chosenTool)}&documentId=${encodeURIComponent(documentId)}`);
     } catch (err) {
       console.error("Failed to create guest document", err);
-      setUploadError("Could not start the editor in this browser. Please try Chrome or disable Private Browsing.");
+      setUploadError(
+        t(
+          "uploadErrorFallback",
+          "Could not start the editor in this browser. Please try Chrome or disable Private Browsing."
+        )
+      );
     }
-  }, [router]);
+  }, [router, t]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -72,10 +79,10 @@ export default function HeroSection() {
         {/* Title */}
         <div className="text-center max-w-4xl mx-auto mb-12 md:mb-16">
           <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-[color:var(--brand-ink)] mb-6 leading-tight tracking-tight">
-            All-in-One Online PDF Editor
+            {t("heroTitle", "All-in-One Online PDF Editor")}
           </h1>
           <p className="text-xl md:text-2xl text-[color:var(--brand-muted)] max-w-2xl mx-auto leading-relaxed">
-            Easily edit, convert and sign PDFs. Fast, simple and secure.
+            {t("heroSubtitle", "Easily edit, convert and sign PDFs. Fast, simple and secure.")}
           </p>
         </div>
 
@@ -105,10 +112,10 @@ export default function HeroSection() {
 
               {/* Drop text */}
               <h3 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] mb-3">
-                Drop your file here
+                {t("dropFileHere", "Drop your file here")}
               </h3>
               <p className="text-lg text-[color:var(--brand-muted)] mb-8">
-                or click to browse from your computer
+                {t("browseFilesHint", "or click to browse from your computer")}
               </p>
 
               {/* Browse button */}
@@ -137,14 +144,17 @@ export default function HeroSection() {
                       fileInputRef.current?.click();
                     }}
                   >
-                    Browse files
+                    {t("browseFiles", "Browse files")}
                   </label>
                 </Button>
               </div>
 
               {/* File size info */}
               <p className="text-base text-[color:var(--brand-muted)] max-w-lg">
-                Up to <span className="font-semibold text-[color:var(--brand-ink)]">100 MB</span> for PDF and up to <span className="font-semibold text-[color:var(--brand-ink)]">20 MB</span> for DOC, DOCX, PPT, PPTX, XLS, XLSX, images, or TXT
+                {t(
+                  "uploadLimit",
+                  "Up to 100 MB for PDF and up to 20 MB for DOC, DOCX, PPT, PPTX, XLS, XLSX, BMP, JPG, JPEG, GIF, PNG, or TXT"
+                )}
               </p>
               {uploadError ? (
                 <p className="mt-4 text-sm text-red-600" role="alert">
@@ -156,23 +166,29 @@ export default function HeroSection() {
 
           {/* Cloud upload options */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title="Coming soon">
+            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
               <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C6.477 2 1.545 6.932 1.545 13s4.932 11 11 11c6.076 0 10.545-4.268 10.545-10.545 0-.707-.082-1.391-.235-2.055l-10.31-.161z" fill="#4285F4"/>
               </svg>
-              <span className="text-[color:var(--brand-muted)] font-medium">Google Drive</span>
+              <span className="text-[color:var(--brand-muted)] font-medium">
+                {t("uploadFromGoogleDrive", "Upload from Google Drive")}
+              </span>
             </button>
-            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title="Coming soon">
+            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#0061FF">
                 <path d="M12 2L6 6.5l6 4.5 6-4.5L12 2zM6 11.5L0 16l6 4.5 6-4.5-6-4.5zm12 0l-6 4.5 6 4.5 6-4.5-6-4.5zM12 14l-6 4.5L12 23l6-4.5L12 14z"/>
               </svg>
-              <span className="text-[color:var(--brand-muted)] font-medium">Dropbox</span>
+              <span className="text-[color:var(--brand-muted)] font-medium">
+                {t("uploadFromDropbox", "Upload from Dropbox")}
+              </span>
             </button>
-            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title="Coming soon">
+            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#0078D4">
                 <path d="M10.5 2.5H2.5v9h8v-9zm11 0h-8v9h8v-9zm-11 11h-8v9h8v-9zm11 0h-8v9h8v-9z"/>
               </svg>
-              <span className="text-[color:var(--brand-muted)] font-medium">OneDrive</span>
+              <span className="text-[color:var(--brand-muted)] font-medium">
+                {t("uploadFromOneDrive", "Upload from OneDrive")}
+              </span>
             </button>
           </div>
         </div>

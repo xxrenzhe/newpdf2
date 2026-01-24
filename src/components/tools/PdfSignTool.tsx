@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import SignaturePad, { type SignaturePadHandle } from "./SignaturePad";
 import { dataUrlToUint8Array, downloadBlob, signPdfWithPng } from "@/lib/pdf/client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -14,6 +15,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const padRef = useRef<SignaturePadHandle>(null);
+  const { t } = useLanguage();
 
   const isPdf = useMemo(() => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")), [file]);
 
@@ -22,7 +24,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
     setError("");
     const dataUrl = padRef.current?.toPngDataUrl() ?? "";
     if (!dataUrl || padRef.current?.isEmpty()) {
-      setError("Please draw a signature first.");
+      setError(t("signDrawFirst", "Please draw a signature first."));
       return;
     }
 
@@ -36,14 +38,21 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
       });
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), file.name.replace(/\.[^.]+$/, "") + "-signed.pdf");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Signing failed");
+      setError(e instanceof Error ? e.message : t("signFailed", "Signing failed"));
     } finally {
       setBusy(false);
     }
-  }, [file, isPdf, marginBottom, marginRight, page, width]);
+  }, [file, isPdf, marginBottom, marginRight, page, t, width]);
 
   if (!file) {
-    return <FileDropzone accept=".pdf,application/pdf" onFiles={(files) => setFile(files[0] ?? null)} title="Drop a PDF here to sign" subtitle="Add your signature to any PDF document" />;
+    return (
+      <FileDropzone
+        accept=".pdf,application/pdf"
+        onFiles={(files) => setFile(files[0] ?? null)}
+        title={t("dropPdfToSign", "Drop a PDF here to sign")}
+        subtitle={t("signSubtitle", "Add your signature to any PDF document")}
+      />
+    );
   }
 
   return (
@@ -56,7 +65,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
             </svg>
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">Sign PDF</h3>
+            <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">{t("signPdf", "Sign PDF")}</h3>
             <p className="text-sm text-[color:var(--brand-muted)] truncate">{file.name}</p>
           </div>
         </div>
@@ -68,7 +77,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
-          Change file
+          {t("changeFile", "Change file")}
         </button>
       </div>
 
@@ -78,13 +87,15 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
             <circle cx="12" cy="12" r="10" />
             <path d="M15 9l-6 6M9 9l6 6" />
           </svg>
-          Please upload a PDF file.
+          {t("uploadPdfOnly", "Please upload a PDF file.")}
         </div>
       )}
 
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-[color:var(--brand-ink)]">Draw your signature</p>
+          <p className="text-sm font-medium text-[color:var(--brand-ink)]">
+            {t("drawSignature", "Draw your signature")}
+          </p>
           <button
             type="button"
             className="text-sm text-primary hover:text-[color:var(--brand-purple-dark)] font-medium flex items-center gap-1 transition-colors"
@@ -93,7 +104,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
             </svg>
-            Clear
+            {t("clear", "Clear")}
           </button>
         </div>
         <div className="border-2 border-dashed border-[color:var(--brand-line)] rounded-xl overflow-hidden bg-[color:var(--brand-cream)]">
@@ -104,13 +115,13 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
             <circle cx="12" cy="12" r="10" />
             <path d="M12 16v-4M12 8h.01" />
           </svg>
-          Tip: use a mouse or touch to sign
+          {t("signatureTip", "Tip: use a mouse or touch to sign")}
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <label className="block">
-          <span className="text-sm text-[color:var(--brand-muted)] font-medium">Page</span>
+          <span className="text-sm text-[color:var(--brand-muted)] font-medium">{t("page", "Page")}</span>
           <input
             type="number"
             min={1}
@@ -120,7 +131,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm text-[color:var(--brand-muted)] font-medium">Width (pt)</span>
+          <span className="text-sm text-[color:var(--brand-muted)] font-medium">{t("widthPt", "Width (pt)")}</span>
           <input
             type="number"
             min={50}
@@ -130,7 +141,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm text-[color:var(--brand-muted)] font-medium">Right margin</span>
+          <span className="text-sm text-[color:var(--brand-muted)] font-medium">{t("rightMargin", "Right margin")}</span>
           <input
             type="number"
             min={0}
@@ -140,7 +151,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm text-[color:var(--brand-muted)] font-medium">Bottom margin</span>
+          <span className="text-sm text-[color:var(--brand-muted)] font-medium">{t("bottomMargin", "Bottom margin")}</span>
           <input
             type="number"
             min={0}
@@ -172,14 +183,14 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            Signing...
+            {t("signing", "Signing...")}
           </>
         ) : (
           <>
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
             </svg>
-            Apply Signature & Download
+            {t("applySignatureDownload", "Apply Signature & Download")}
           </>
         )}
       </button>

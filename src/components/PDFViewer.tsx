@@ -5,6 +5,7 @@ import { Document, Page } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface PDFViewerProps {
   file: File | string | null;
@@ -13,6 +14,7 @@ interface PDFViewerProps {
 
 export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
   configurePdfJsWorker();
+  const { t } = useLanguage();
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -31,9 +33,9 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
 
   const onDocumentLoadError = useCallback((error: Error) => {
     console.error("Error loading PDF:", error);
-    setError("Failed to load PDF. Please try again.");
+    setError(t("loadPdfFailedTryAgain", "Failed to load PDF. Please try again."));
     setLoading(false);
-  }, []);
+  }, [t]);
 
   const goToPrevPage = () => {
     setPageNumber((prev) => Math.max(prev - 1, 1));
@@ -54,7 +56,7 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
   if (!file) {
     return (
       <div className="flex items-center justify-center h-full bg-[color:var(--brand-cream)] rounded-lg">
-        <p className="text-[color:var(--brand-muted)]">No PDF file selected</p>
+        <p className="text-[color:var(--brand-muted)]">{t("noPdfSelected", "No PDF file selected")}</p>
       </div>
     );
   }
@@ -74,7 +76,9 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
             </svg>
           </button>
           <span className="text-sm text-[color:var(--brand-muted)]">
-            Page {pageNumber} of {numPages}
+            {t("pageOf", "Page {current} of {total}")
+              .replace("{current}", `${pageNumber}`)
+              .replace("{total}", `${numPages}`)}
           </span>
           <button
             onClick={goToNextPage}

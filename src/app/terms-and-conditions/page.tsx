@@ -2,8 +2,11 @@
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function TermsAndConditionsPage() {
+  const { t } = useLanguage();
+
   return (
     <main className="min-h-screen bg-white">
       <Header />
@@ -11,7 +14,9 @@ export default function TermsAndConditionsPage() {
       <section className="py-12 md:py-16">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto prose prose-gray">
-            <h1 className="text-4xl font-bold text-[color:var(--brand-ink)] mb-8">Terms & Conditions</h1>
+            <h1 className="text-4xl font-bold text-[color:var(--brand-ink)] mb-8">
+              {t("termsAndConditions", "Terms & Conditions")}
+            </h1>
 
             <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-8">
               <p className="text-[color:var(--brand-ink)]">

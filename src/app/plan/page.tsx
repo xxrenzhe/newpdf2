@@ -12,20 +12,21 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const features = [
-  { icon: "/assets/same-assets/1797688836.svg", title: "Powerful PDF Editor" },
-  { icon: "/assets/same-assets/2537515307.svg", title: "Digital Signatures", isNew: true },
-  { icon: "/assets/same-assets/1990291496.svg", title: "Workspace", subtitle: "with File Manager" },
-  { icon: "/assets/same-assets/3612369820.svg", title: "Unlimited File Conversion" },
-  { icon: "/assets/same-assets/867393456.svg", title: "Redaction Tool", isNew: true },
-  { icon: "/assets/same-assets/3533335575.svg", title: "Drive, OneDrive", subtitle: "& DropBox integration" },
-  { icon: "/assets/same-assets/3216288370.svg", title: "OCR technology" },
-  { icon: "/assets/same-assets/1530033771.svg", title: "Page Manipulation", isNew: true },
-  { icon: "/assets/same-assets/2231875426.svg", title: "No Software", subtitle: "Installation Required" },
-  { icon: "/assets/same-assets/4206478627.svg", title: "Multiple Security Tools" },
-  { icon: "/assets/same-assets/1702208235.svg", title: "SSO Sign in", isNew: true },
-  { icon: "/assets/same-assets/981624432.svg", title: "Access to All Upcoming", subtitle: "Features" },
+  { icon: "/assets/same-assets/1797688836.svg", titleKey: "planFeatureEditor", title: "Powerful PDF Editor" },
+  { icon: "/assets/same-assets/2537515307.svg", titleKey: "planFeatureSignatures", title: "Digital Signatures", isNew: true },
+  { icon: "/assets/same-assets/1990291496.svg", titleKey: "planFeatureWorkspace", title: "Workspace", subtitleKey: "planFeatureWorkspaceSubtitle", subtitle: "with File Manager" },
+  { icon: "/assets/same-assets/3612369820.svg", titleKey: "planFeatureConversion", title: "Unlimited File Conversion" },
+  { icon: "/assets/same-assets/867393456.svg", titleKey: "planFeatureRedaction", title: "Redaction Tool", isNew: true },
+  { icon: "/assets/same-assets/3533335575.svg", titleKey: "planFeatureIntegrations", title: "Drive, OneDrive", subtitleKey: "planFeatureIntegrationsSubtitle", subtitle: "& DropBox integration" },
+  { icon: "/assets/same-assets/3216288370.svg", titleKey: "planFeatureOcr", title: "OCR technology" },
+  { icon: "/assets/same-assets/1530033771.svg", titleKey: "planFeatureManipulation", title: "Page Manipulation", isNew: true },
+  { icon: "/assets/same-assets/2231875426.svg", titleKey: "planFeatureNoSoftware", title: "No Software", subtitleKey: "planFeatureNoSoftwareSubtitle", subtitle: "Installation Required" },
+  { icon: "/assets/same-assets/4206478627.svg", titleKey: "planFeatureSecurity", title: "Multiple Security Tools" },
+  { icon: "/assets/same-assets/1702208235.svg", titleKey: "planFeatureSso", title: "SSO Sign in", isNew: true },
+  { icon: "/assets/same-assets/981624432.svg", titleKey: "planFeatureUpcoming", title: "Access to All Upcoming", subtitleKey: "planFeatureUpcomingSubtitle", subtitle: "Features" },
 ];
 
 const brands = [
@@ -40,13 +41,13 @@ const brands = [
 ];
 
 const faqItems = [
-  { question: "What are my payment options?", answer: "We accept all major credit cards, PayPal, and other payment methods depending on your region." },
-  { question: "Why are certain websites offering PDF editing features for free?", answer: "Some websites offer limited free features but may have restrictions on file size, number of documents, or include watermarks." },
-  { question: "Is QwerPDF safe to use?", answer: "Yes, QwerPDF uses industry-standard encryption and security measures to protect your documents and personal information." },
-  { question: "Can I change my plan?", answer: "Yes, you can upgrade or downgrade your plan at any time from your account settings." },
-  { question: "What will happen if I cancel my subscription?", answer: "You will continue to have access to premium features until the end of your billing period." },
-  { question: "How can I cancel my subscription?", answer: "You can cancel your subscription from your account settings under the Subscription section." },
-  { question: "Will my subscription renew automatically?", answer: "Yes, subscriptions renew automatically unless you cancel before the renewal date." },
+  { questionKey: "planFaq1Q", question: "What are my payment options?", answerKey: "planFaq1A", answer: "We accept all major credit cards, PayPal, and other payment methods depending on your region." },
+  { questionKey: "planFaq2Q", question: "Why are certain websites offering PDF editing features for free?", answerKey: "planFaq2A", answer: "Some websites offer limited free features but may have restrictions on file size, number of documents, or include watermarks." },
+  { questionKey: "planFaq3Q", question: "Is QwerPDF safe to use?", answerKey: "planFaq3A", answer: "Yes, QwerPDF uses industry-standard encryption and security measures to protect your documents and personal information." },
+  { questionKey: "planFaq4Q", question: "Can I change my plan?", answerKey: "planFaq4A", answer: "Yes, you can upgrade or downgrade your plan at any time from your account settings." },
+  { questionKey: "planFaq5Q", question: "What will happen if I cancel my subscription?", answerKey: "planFaq5A", answer: "You will continue to have access to premium features until the end of your billing period." },
+  { questionKey: "planFaq6Q", question: "How can I cancel my subscription?", answerKey: "planFaq6A", answer: "You can cancel your subscription from your account settings under the Subscription section." },
+  { questionKey: "planFaq7Q", question: "Will my subscription renew automatically?", answerKey: "planFaq7A", answer: "Yes, subscriptions renew automatically unless you cancel before the renewal date." },
 ];
 
 export default function PlanPage() {
@@ -54,10 +55,11 @@ export default function PlanPage() {
   const [loading, setLoading] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleCheckout = async () => {
     if (!session) {
-      router.push("/sign-in");
+      router.push("/app/sign-in");
       return;
     }
 
@@ -77,11 +79,11 @@ export default function PlanPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert("Unable to create checkout session. Please try again.");
+        alert(t("checkoutCreateFailed", "Unable to create checkout session. Please try again."));
       }
     } catch (error) {
       console.error("Checkout error:", error);
-      alert("An error occurred. Please try again.");
+      alert(t("checkoutError", "An error occurred. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -95,7 +97,8 @@ export default function PlanPage() {
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-bold text-center mb-10">
-            Plans <span className="text-primary">&</span> Pricing
+            {t("plansAndPricingLeft", "Plans")} <span className="text-primary">&</span>{" "}
+            {t("plansAndPricingRight", "Pricing")}
           </h1>
 
           {/* Pricing Cards */}
@@ -112,7 +115,7 @@ export default function PlanPage() {
               >
                 {isAnnual && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary text-white text-xs font-medium px-3 py-1 rounded-full">
-                    Save 60%
+                    {t("save60", "Save 60%")}
                   </span>
                 )}
                 <div className="flex items-center gap-3 mb-4">
@@ -122,8 +125,10 @@ export default function PlanPage() {
                   <span className="text-3xl font-bold text-[color:var(--brand-ink)]">$19.95<span className="text-lg font-normal text-[color:var(--brand-muted)]">/mo</span></span>
                 </div>
                 <div>
-                  <p className="font-semibold text-[color:var(--brand-ink)]">Annual</p>
-                  <p className="text-sm text-[color:var(--brand-muted)]">Invoiced every year</p>
+                  <p className="font-semibold text-[color:var(--brand-ink)]">{t("annual", "Annual")}</p>
+                  <p className="text-sm text-[color:var(--brand-muted)]">
+                    {t("invoicedEveryYear", "Invoiced every year")}
+                  </p>
                 </div>
                 <div className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 ${
                   isAnnual ? "border-primary bg-primary" : "border-[color:var(--brand-line)]"
@@ -152,8 +157,10 @@ export default function PlanPage() {
                   <span className="text-3xl font-bold text-[color:var(--brand-ink)]">$49.95<span className="text-lg font-normal text-[color:var(--brand-muted)]">/mo</span></span>
                 </div>
                 <div>
-                  <p className="font-semibold text-[color:var(--brand-ink)]">Monthly</p>
-                  <p className="text-sm text-[color:var(--brand-muted)]">Invoiced every month</p>
+                  <p className="font-semibold text-[color:var(--brand-ink)]">{t("monthly", "Monthly")}</p>
+                  <p className="text-sm text-[color:var(--brand-muted)]">
+                    {t("invoicedEveryMonth", "Invoiced every month")}
+                  </p>
                 </div>
                 <div className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 ${
                   !isAnnual ? "border-primary bg-primary" : "border-[color:var(--brand-line)]"
@@ -172,14 +179,18 @@ export default function PlanPage() {
               disabled={loading}
               className="w-full mt-6 bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium py-4 h-14 rounded-xl text-lg disabled:opacity-50"
             >
-              {loading ? "Processing..." : session ? "Buy Now" : "Sign in to Subscribe"}
+              {loading
+                ? t("processing", "Processing...")
+                : session
+                ? t("buyNow", "Buy Now")
+                : t("signInToSubscribe", "Sign in to Subscribe")}
             </Button>
           </div>
 
           {/* Features */}
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)]">
-              Unlimited access to premium features
+              {t("unlimitedAccess", "Unlimited access to premium features")}
             </h2>
           </div>
 
@@ -191,13 +202,17 @@ export default function PlanPage() {
                 </div>
                 <div>
                   <p className="font-medium text-[color:var(--brand-ink)] text-sm flex items-center gap-2">
-                    {feature.title}
+                    {t(feature.titleKey, feature.title)}
                     {feature.isNew && (
-                      <span className="bg-secondary text-white text-[10px] px-2 py-0.5 rounded-full">new</span>
+                      <span className="bg-secondary text-white text-[10px] px-2 py-0.5 rounded-full">
+                        {t("new", "new")}
+                      </span>
                     )}
                   </p>
                   {feature.subtitle && (
-                    <p className="text-xs text-[color:var(--brand-muted)]">{feature.subtitle}</p>
+                    <p className="text-xs text-[color:var(--brand-muted)]">
+                      {t(feature.subtitleKey ?? "", feature.subtitle)}
+                    </p>
                   )}
                 </div>
               </div>
@@ -221,7 +236,7 @@ export default function PlanPage() {
           {/* FAQ Section */}
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] text-center mb-8">
-              Questions & Answers
+              {t("questionsAndAnswers", "Questions & Answers")}
             </h2>
             <Accordion type="single" collapsible className="space-y-3">
               {faqItems.map((item, index) => (
@@ -231,10 +246,10 @@ export default function PlanPage() {
                   className="bg-white rounded-xl border-none px-6 shadow-sm"
                 >
                   <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
-                    {item.question}
+                    {t(item.questionKey, item.question)}
                   </AccordionTrigger>
                   <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
-                    {item.answer}
+                    {t(item.answerKey, item.answer)}
                   </AccordionContent>
                 </AccordionItem>
               ))}

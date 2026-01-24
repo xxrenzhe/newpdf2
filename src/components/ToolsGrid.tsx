@@ -5,6 +5,7 @@ import Link from "@/components/AppLink";
 import { TOOLS, TOOL_CATEGORIES, getToolsByCategory, type ToolCategory } from "@/lib/tools";
 import { ToolIcon } from "@/lib/toolIcons";
 import { ChevronRight, Monitor } from "lucide-react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 // Colors for better visibility and theme handling - Muted styling
 const categoryStyles: Record<ToolCategory, string> = {
@@ -18,6 +19,7 @@ const categoryStyles: Record<ToolCategory, string> = {
 export default function ToolsGrid() {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>("all");
   const filteredTools = getToolsByCategory(activeCategory);
+  const { t } = useLanguage();
 
   return (
     <section className="py-20 bg-gradient-to-b from-[color:var(--brand-cream)] to-white" id="tools">
@@ -26,13 +28,16 @@ export default function ToolsGrid() {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[color:var(--brand-lilac)] text-primary text-sm font-semibold mb-4 border border-[color:var(--brand-line)]">
             <Monitor className="w-4 h-4" />
-            <span>Core Features</span>
+            <span>{t("coreFeatures", "Core Features")}</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-[color:var(--brand-ink)] mb-6 tracking-tight">
-            All PDF Tools You Need
+            {t("allPdfToolsTitle", "All PDF Tools You Need")}
           </h2>
           <p className="text-[color:var(--brand-muted)] text-lg md:text-xl leading-relaxed">
-            Choose from our comprehensive suite of <span className="font-semibold text-secondary">{TOOLS.length}+</span> powerful tools designed to make your PDF workflows seamless.
+            {t(
+              "allPdfToolsSubtitle",
+              "Choose from our comprehensive suite of {count}+ powerful tools designed to make your PDF workflows seamless."
+            ).replace("{count}", `${TOOLS.length}`)}
           </p>
         </div>
 
@@ -53,7 +58,7 @@ export default function ToolsGrid() {
                 `}
               >
                 <ToolIcon name={category.icon} className="w-5 h-5" />
-                <span>{category.label}</span>
+                <span>{t(category.labelKey, category.label)}</span>
                 {category.key !== "all" && (
                   <span className={`
                     text-xs px-2 py-0.5 rounded-full font-bold
@@ -96,20 +101,20 @@ export default function ToolsGrid() {
                   </div>
 
                   <div className="flex-1 w-full">
-                    <div className="flex items-center justify-between w-full mb-2">
+                  <div className="flex items-center justify-between w-full mb-2">
                     <h3 className="font-bold text-[color:var(--brand-ink)] text-lg group-hover:text-primary transition-colors">
-                      {tool.name}
+                      {t(tool.nameKey, tool.name)}
                     </h3>
                     <ChevronRight className="w-5 h-5 text-[color:var(--brand-line)] group-hover:text-primary transform -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
                   </div>
-                    <p className="text-sm text-[color:var(--brand-muted)] leading-relaxed font-medium">
-                      {tool.description}
-                    </p>
-                  </div>
+                  <p className="text-sm text-[color:var(--brand-muted)] leading-relaxed font-medium">
+                    {t(tool.descriptionKey, tool.description)}
+                  </p>
+                </div>
 
                   {tool.status === "comingSoon" && (
                     <span className="absolute top-4 right-4 inline-flex text-[10px] uppercase tracking-wider px-2 py-1 rounded-md bg-amber-50 text-amber-600 font-bold border border-amber-100">
-                      Soon
+                      {t("comingSoonShort", "Soon")}
                     </span>
                   )}
                 </Link>
@@ -125,7 +130,9 @@ export default function ToolsGrid() {
               onClick={() => setActiveCategory("all")}
               className="inline-flex items-center gap-2 text-primary hover:text-[color:var(--brand-purple-dark)] font-semibold text-lg transition-colors group"
             >
-              <span>View all {TOOLS.length} tools</span>
+              <span>
+                {t("viewAllTools", "View all {count} tools").replace("{count}", `${TOOLS.length}`)}
+              </span>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>

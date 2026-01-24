@@ -8,6 +8,7 @@ import FileDropzone from "@/components/tools/FileDropzone";
 import { toolByKey } from "@/lib/tools";
 import { createGuestDocument, loadGuestDocument, updateGuestDocumentFiles, updateGuestDocumentTool } from "@/lib/guestDocumentStore";
 import { chosenToolFromToolKey, displayToolKeyFromChosenTool, pdfEditorInitialTool, toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const PdfEditorTool = dynamic(() => import("@/features/pdf-editor/PdfEditorTool"), { ssr: false });
 const PdfCompressTool = dynamic(() => import("@/components/tools/PdfCompressTool"), { ssr: false });
@@ -21,21 +22,22 @@ const PdfUnlockTool = dynamic(() => import("@/components/tools/PdfUnlockTool"), 
 const PdfCropTool = dynamic(() => import("@/components/tools/PdfCropTool"), { ssr: false });
 const PdfRedactTool = dynamic(() => import("@/components/tools/PdfRedactTool"), { ssr: false });
 
-const TOOL_SWITCHER: { chosenTool: string; label: string }[] = [
-  { chosenTool: "annotate", label: "Annotate" },
-  { chosenTool: "edit-pdf", label: "Edit PDF" },
-  { chosenTool: "sign", label: "Sign" },
-  { chosenTool: "redact", label: "Redact" },
-  { chosenTool: "watermark", label: "Watermark" },
-  { chosenTool: "delete-pages", label: "Delete Pages" },
-  { chosenTool: "convert", label: "Convert" },
-  { chosenTool: "merge", label: "Merge" },
-  { chosenTool: "compress", label: "Compress" },
+const TOOL_SWITCHER = [
+  "annotate",
+  "edit-pdf",
+  "sign",
+  "redact",
+  "watermark",
+  "delete-pages",
+  "convert",
+  "merge",
+  "compress",
 ];
 
 export default function GuestDocumentClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useLanguage();
 
   const documentId = searchParams.get("documentId");
   const chosenTool = searchParams.get("chosenTool");
@@ -127,47 +129,51 @@ export default function GuestDocumentClient() {
     const activeChosenTool = chosenTool ?? chosenToolFromToolKey(toolKey);
     return (
       <div className="flex items-center gap-2 overflow-x-auto">
-        {TOOL_SWITCHER.map((t) => {
-          const active = activeChosenTool === t.chosenTool;
+        {TOOL_SWITCHER.map((chosen) => {
+          const active = activeChosenTool === chosen;
+          const mappedKey = toolKeyFromChosenTool(chosen);
+          const mappedTool = toolByKey[mappedKey] ?? toolByKey.annotate;
           return (
             <button
-              key={t.chosenTool}
+              key={chosen}
               type="button"
-              onClick={() => onSwitchTool(t.chosenTool)}
+              onClick={() => onSwitchTool(chosen)}
               className={
                 active
                   ? "shrink-0 px-3 py-2 rounded-lg bg-[color:var(--brand-lilac)] text-primary border border-[color:var(--brand-line)] text-sm font-medium"
                   : "shrink-0 px-3 py-2 rounded-lg bg-white text-[color:var(--brand-ink)] border border-[color:var(--brand-line)] text-sm hover:bg-[color:var(--brand-cream)]"
               }
             >
-              {t.label}
+              {t(mappedTool.nameKey, mappedTool.name)}
             </button>
           );
         })}
       </div>
     );
-  }, [chosenTool, documentId, onSwitchTool, toolKey]);
+  }, [chosenTool, documentId, onSwitchTool, t, toolKey]);
 
   return (
     <main className="min-h-screen bg-white">
       {!showEditor || !isPdfEditor ? (
         <header className="sticky top-0 z-40 bg-white border-b border-[color:var(--brand-line)]">
           <div className="h-20 md:h-24 px-4 flex items-center gap-3">
-            <Link href="/en" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <img src="/logo.png" alt="QwerPDF" className="h-20 md:h-24 w-auto" />
             </Link>
             <div className="flex-1 min-w-0">
               {showEditor && editorFile ? (
                 <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate">{editorFile.name}</p>
               ) : (
-                <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate">Upload Document</p>
+                <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate">
+                  {t("uploadDocument", "Upload Document")}
+                </p>
               )}
             </div>
             <Link href="/app/sign-in" className="text-sm text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] hidden sm:inline">
-              Sign in
+              {t("signIn", "Sign in")}
             </Link>
             <Link href="/app/sign-in" className="text-sm px-3 py-2 rounded-lg bg-primary text-white hover:bg-[color:var(--brand-purple-dark)] hidden sm:inline">
-              Continue with Google
+              {t("continueWithGoogle", "Continue with Google")}
             </Link>
           </div>
           {documentId ? <div className="px-3 py-2 border-t border-[color:var(--brand-line)]">{switcher}</div> : null}
@@ -177,14 +183,21 @@ export default function GuestDocumentClient() {
       <div className={showEditor && isPdfEditor ? "p-0" : showEditor ? "py-4 px-2 md:px-4 lg:px-6" : "py-12 px-4"}>
         {!documentId && (
           <div className="max-w-2xl mx-auto text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3">{toolDef.name}</h1>
-            <p className="text-[color:var(--brand-muted)]">{toolDef.description}</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3">
+              {t(toolDef.nameKey, toolDef.name)}
+            </h1>
+            <p className="text-[color:var(--brand-muted)]">
+              {t(toolDef.descriptionKey, toolDef.description)}
+            </p>
           </div>
         )}
 
         {missing && (
           <div className="max-w-2xl mx-auto mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            This document isn’t available on this device anymore. Upload a file to start again.
+            {t(
+              "guestDocMissing",
+              "This document isn’t available on this device anymore. Upload a file to start again."
+            )}
           </div>
         )}
 
@@ -198,8 +211,8 @@ export default function GuestDocumentClient() {
               accept={accept}
               multiple={isMulti}
               onFiles={(f) => void onFiles(f)}
-              title="Drop your file here"
-              subtitle="Supported: PDF and common formats"
+              title={t("dropFileHere", "Drop your file here")}
+              subtitle={t("dropzoneSupportedFormats", "Supported: PDF and common formats")}
             />
           </div>
         ) : (

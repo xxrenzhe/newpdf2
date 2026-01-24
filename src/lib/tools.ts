@@ -5,7 +5,9 @@ export type ToolCategory = "all" | "edit" | "convert" | "organize" | "security";
 export type ToolDefinition = {
   key: string;
   name: string;
+  nameKey: string;
   description: string;
+  descriptionKey: string;
   href: string;
   icon: string;
   iconName: string; // New field for Lucide icon name
@@ -13,12 +15,12 @@ export type ToolDefinition = {
   category: ToolCategory;
 };
 
-export const TOOL_CATEGORIES: { key: ToolCategory; label: string; icon: string }[] = [
-  { key: "all", label: "All Tools", icon: "LayoutGrid" },
-  { key: "edit", label: "Edit & Sign", icon: "PenTool" },
-  { key: "convert", label: "Convert", icon: "ArrowRightLeft" },
-  { key: "organize", label: "Organize", icon: "Layers" },
-  { key: "security", label: "Security", icon: "ShieldCheck" },
+export const TOOL_CATEGORIES: { key: ToolCategory; label: string; labelKey: string; icon: string }[] = [
+  { key: "all", label: "All Tools", labelKey: "allToolsTab", icon: "LayoutGrid" },
+  { key: "edit", label: "Edit & Sign", labelKey: "editAndSignTab", icon: "PenTool" },
+  { key: "convert", label: "Convert", labelKey: "convertTab", icon: "ArrowRightLeft" },
+  { key: "organize", label: "Organize", labelKey: "organizeTab", icon: "Layers" },
+  { key: "security", label: "Security", labelKey: "securityTab", icon: "ShieldCheck" },
 ];
 
 export const TOOLS: ToolDefinition[] = [
@@ -26,7 +28,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "annotate",
     name: "Annotate PDF",
+    nameKey: "annotatePdf",
     description: "Add text, shapes, drawings, highlights, and more.",
+    descriptionKey: "annotatePdfDesc",
     href: "/tools/annotate",
     icon: "/assets/icons/tools/annotate.svg",
     iconName: "Highlighter",
@@ -36,7 +40,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "edit",
     name: "Edit PDF",
+    nameKey: "editPdf",
     description: "Overlay edits with text, shapes, and annotations.",
+    descriptionKey: "editPdfDesc",
     href: "/tools/edit",
     icon: "/assets/icons/tools/edit.svg",
     iconName: "FilePenLine",
@@ -46,7 +52,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "sign",
     name: "Sign PDF",
+    nameKey: "signPdf",
     description: "Draw and apply your signature to a PDF.",
+    descriptionKey: "signPdfDesc",
     href: "/tools/sign",
     icon: "/assets/icons/tools/sign.svg",
     iconName: "Signature",
@@ -56,7 +64,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "redact",
     name: "Redact PDF",
+    nameKey: "redactPdf",
     description: "Permanently remove sensitive information (rasterize-based).",
+    descriptionKey: "redactPdfDesc",
     href: "/tools/redact",
     icon: "/assets/icons/tools/redact.svg",
     iconName: "Eraser",
@@ -66,7 +76,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "watermark",
     name: "Add Watermark",
+    nameKey: "addWatermark",
     description: "Add a text watermark to all pages.",
+    descriptionKey: "addWatermarkDesc",
     href: "/tools/watermark",
     icon: "/assets/icons/tools/watermark.svg",
     iconName: "Stamp",
@@ -78,7 +90,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "convert",
     name: "Convert Document",
+    nameKey: "convertDocument",
     description: "Convert PDF ↔ images/text, images → PDF, Office → PDF.",
+    descriptionKey: "convertDocumentDesc",
     href: "/tools/convert",
     icon: "/assets/icons/tools/convert.svg",
     iconName: "ArrowRightLeft",
@@ -88,7 +102,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "compress",
     name: "Compress PDF",
+    nameKey: "compressPdf",
     description: "Reduce file size (rasterize-based compression).",
+    descriptionKey: "compressPdfDesc",
     href: "/tools/compress",
     icon: "/assets/icons/tools/compress.svg",
     iconName: "Minimize2",
@@ -98,7 +114,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "merge",
     name: "Merge Documents",
+    nameKey: "mergeDocuments",
     description: "Combine multiple PDFs into one.",
+    descriptionKey: "mergeDocumentsDesc",
     href: "/tools/merge",
     icon: "/assets/icons/tools/merge.svg",
     iconName: "Files",
@@ -110,7 +128,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "split",
     name: "Split & Extract Pages",
+    nameKey: "splitExtractPages",
     description: "Split into PDFs or extract specific pages.",
+    descriptionKey: "splitExtractPagesDesc",
     href: "/tools/split",
     icon: "/assets/icons/tools/split.svg",
     iconName: "Scissors",
@@ -120,7 +140,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "organize",
     name: "Organize Pages",
+    nameKey: "organizePages",
     description: "Reorder, rotate, delete, and export pages.",
+    descriptionKey: "organizePagesDesc",
     href: "/tools/organize",
     icon: "/assets/icons/tools/organize.svg",
     iconName: "LayoutList",
@@ -130,7 +152,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "rotate",
     name: "Rotate Pages",
+    nameKey: "rotatePages",
     description: "Rotate pages (uses Organize Pages).",
+    descriptionKey: "rotatePagesDesc",
     href: "/tools/rotate",
     icon: "/assets/icons/tools/rotate.svg",
     iconName: "RotateCw",
@@ -140,7 +164,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "delete",
     name: "Delete Pages",
+    nameKey: "deletePages",
     description: "Delete pages from PDFs by page order.",
+    descriptionKey: "deletePagesDesc",
     href: "/tools/delete",
     icon: "/assets/icons/tools/delete.svg",
     iconName: "Trash2",
@@ -150,7 +176,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "crop",
     name: "Crop Pages",
+    nameKey: "cropPages",
     description: "Crop pages by margins.",
+    descriptionKey: "cropPagesDesc",
     href: "/tools/crop",
     icon: "/assets/icons/tools/crop.svg",
     iconName: "Crop",
@@ -162,7 +190,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "password",
     name: "Password Protect",
+    nameKey: "passwordProtect",
     description: "Encrypt a PDF with a password.",
+    descriptionKey: "passwordProtectDesc",
     href: "/tools/password",
     icon: "/assets/icons/tools/password.svg",
     iconName: "Lock",
@@ -172,7 +202,9 @@ export const TOOLS: ToolDefinition[] = [
   {
     key: "unlock",
     name: "Unlock PDF",
+    nameKey: "unlockPdf",
     description: "Remove PDF passwords (requires password).",
+    descriptionKey: "unlockPdfDesc",
     href: "/tools/unlock",
     icon: "/assets/icons/tools/unlock.svg",
     iconName: "Unlock",

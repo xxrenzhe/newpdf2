@@ -4,10 +4,12 @@ import Link from "@/components/AppLink";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/LanguageProvider";
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const { t } = useLanguage();
 
   return (
     <main className="min-h-screen bg-gradient-pink flex items-center justify-center">
@@ -31,11 +33,13 @@ function PaymentSuccessContent() {
           </div>
 
           <h1 className="text-2xl font-bold text-[color:var(--brand-ink)] mb-2">
-            Payment Successful!
+            {t("paymentSuccessTitle", "Payment Successful!")}
           </h1>
           <p className="text-[color:var(--brand-muted)] mb-6">
-            Thank you for subscribing to QwerPDF Premium. You now have
-            unlimited access to all our PDF tools.
+            {t(
+              "paymentSuccessDesc",
+              "Thank you for subscribing to QwerPDF Premium. You now have unlimited access to all our PDF tools."
+            )}
           </p>
 
           {sessionId && (
@@ -47,7 +51,7 @@ function PaymentSuccessContent() {
           <div className="space-y-3">
             <Link href="/">
               <Button className="w-full bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium h-12 rounded-lg">
-                Start Editing PDFs
+                {t("startEditing", "Start Editing PDFs")}
               </Button>
             </Link>
             <Link href="/plan">
@@ -55,7 +59,7 @@ function PaymentSuccessContent() {
                 variant="outline"
                 className="w-full border-[color:var(--brand-line)] text-[color:var(--brand-ink)] h-12 rounded-lg"
               >
-                View Subscription
+                {t("viewSubscription", "View Subscription")}
               </Button>
             </Link>
           </div>
