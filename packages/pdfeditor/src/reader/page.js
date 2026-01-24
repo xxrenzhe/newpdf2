@@ -251,6 +251,7 @@ export class PDFPage extends PDFPageBase {
         }
         let x = bounds.left;
         let y = bounds.top;
+        const paragraphText = this.#getParagraphText(textPart);
 
         let fontSize = parseFloat(baseElement.getAttribute('data-fontsize'));
         let color = baseElement.getAttribute('data-fontcolor');
@@ -261,7 +262,7 @@ export class PDFPage extends PDFPageBase {
             fontFamily: originalFontFamily,
             fontFile: originalFontFamily,
             fontName: originalFontName,
-            text: textPart.text
+            text: paragraphText
         });
         let fontFamily = resolvedFont.fontFamily;
         const coverWidth = bounds.width;
@@ -317,7 +318,7 @@ export class PDFPage extends PDFPageBase {
                 // size: fontSize / this.scale / this.outputScale,
                 size: fontSize / this.scale,
                 color: color,
-                text: textPart.text,
+                text: paragraphText,
                 lineHeight: lineHeight,
                 lineHeightMeasured: Boolean(lineHeight),
                 lineOffsets: hasLineOffsets ? lineOffsets : null,
@@ -666,6 +667,43 @@ export class PDFPage extends PDFPageBase {
     #getTextPartElement(textPart, fallback) {
         const elements = this.#getConnectedElements(textPart);
         return elements[0] || fallback;
+    }
+
+    #getParagraphText(textPart) {
+        if (!textPart) return '';
+        const rawText = typeof textPart.text === 'string' ? textPart.text : '';
+        if (rawText.includes('\n')) return rawText;
+        const elements = this.#getConnectedElements(textPart);
+        if (elements.length <= 1) return rawText;
+
+        const lineThreshold = 1;
+        const sorted = [...elements].sort((a, b) => {
+            const topDiff = this.#parsePx(a.style.top) - this.#parsePx(b.style.top);
+            if (Math.abs(topDiff) > lineThreshold) return topDiff;
+            return this.#parsePx(a.style.left) - this.#parsePx(b.style.left);
+        });
+
+        const lines = [];
+        let currentTop = null;
+        let currentLine = '';
+        sorted.forEach(el => {
+            const top = this.#parsePx(el.style.top);
+            const text = el.textContent || '';
+            if (currentTop === null || Math.abs(top - currentTop) > lineThreshold) {
+                if (currentTop !== null) {
+                    lines.push(trimSpace(currentLine));
+                }
+                currentTop = top;
+                currentLine = text;
+                return;
+            }
+            currentLine += text;
+        });
+        if (currentTop !== null) {
+            lines.push(trimSpace(currentLine));
+        }
+        if (!lines.length) return rawText;
+        return lines.join('\n');
     }
 
     #getConnectedElements(textPart) {
