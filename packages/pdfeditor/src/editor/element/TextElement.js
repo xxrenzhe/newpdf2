@@ -18,7 +18,13 @@ class TextElement extends BaseElement {
             italic: false,
             rotate: undefined,
             fontFamily: 'NotoSansCJKkr',
-            fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
+            fontFile: 'fonts/NotoSansCJKkr-Regular.otf',
+            boxWidth: null,
+            boxHeight: null,
+            lineOffsets: null,
+            lineHeightMeasured: false,
+            textIndent: null,
+            textPaddingLeft: null
         };
         this.attrs = Object.assign(attrs, this.attrs);
         this.options.draggableOptions.isCancelDefaultEvent = false;
@@ -54,6 +60,25 @@ class TextElement extends BaseElement {
         this.elText.style.fontFamily = this.attrs.fontFamily;
         this.elText.style.lineHeight = this.attrs.lineHeight + 'px';
         this.elText.style.opacity = this.attrs.opacity;
+        const hasBoxWidth = typeof this.attrs.boxWidth === 'number' && Number.isFinite(this.attrs.boxWidth);
+        const hasBoxHeight = typeof this.attrs.boxHeight === 'number' && Number.isFinite(this.attrs.boxHeight);
+        if (hasBoxWidth) {
+            this.el.style.width = (this.attrs.boxWidth * this.pageScale) + 'px';
+            this.elText.style.width = '100%';
+        }
+        if (hasBoxHeight) {
+            this.el.style.height = (this.attrs.boxHeight * this.pageScale) + 'px';
+            this.elText.style.height = '100%';
+        }
+        if (hasBoxWidth || hasBoxHeight) {
+            this.elText.style.boxSizing = 'border-box';
+        }
+        if (typeof this.attrs.textIndent === 'number' && Number.isFinite(this.attrs.textIndent)) {
+            this.elText.style.textIndent = (this.attrs.textIndent * this.pageScale) + 'px';
+        }
+        if (typeof this.attrs.textPaddingLeft === 'number' && Number.isFinite(this.attrs.textPaddingLeft)) {
+            this.elText.style.paddingLeft = (this.attrs.textPaddingLeft * this.pageScale) + 'px';
+        }
         if (this.attrs.rotate) {
             this.elText.style.transform = 'rotate('+ this.attrs.rotate +'deg)';
         }
@@ -77,6 +102,12 @@ class TextElement extends BaseElement {
         super.zoom(scale);
         this.elText.style.fontSize = this.attrs.size * this.pageScale + 'px';
         this.elText.style.lineHeight = this.attrs.lineHeight * this.pageScale + 'px';
+        if (typeof this.attrs.textIndent === 'number' && Number.isFinite(this.attrs.textIndent)) {
+            this.elText.style.textIndent = (this.attrs.textIndent * this.pageScale) + 'px';
+        }
+        if (typeof this.attrs.textPaddingLeft === 'number' && Number.isFinite(this.attrs.textPaddingLeft)) {
+            this.elText.style.paddingLeft = (this.attrs.textPaddingLeft * this.pageScale) + 'px';
+        }
     }
 
     childElement() {
@@ -160,7 +191,10 @@ class TextElement extends BaseElement {
         let thickness = this.attrs.lineStyle ? fontSize / 14 : 0;
         let x = this.getX();
         let y = this.page.height - (this.getY() + fontSize - fontSize * 0.3);
-        let lineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : (fontSize - 2)) + lineTop;
+        const hasExplicitLineHeight = typeof this.attrs.lineHeight === 'number' && Number.isFinite(this.attrs.lineHeight);
+        const baseLineHeight = hasExplicitLineHeight ? this.attrs.lineHeight : (fontSize - 2);
+        const useMeasuredLineHeight = Boolean(this.attrs.lineHeightMeasured && hasExplicitLineHeight);
+        let lineHeight = useMeasuredLineHeight ? baseLineHeight : (baseLineHeight + lineTop);
         //let lineHeight = options.font.heightAtSize(fontSize);
 
         const textRgb = hexToRgb(this.attrs.color) || [0, 0, 0];
@@ -275,10 +309,15 @@ class TextElement extends BaseElement {
                 opacity: options.opacity
             });
         }
+        const lineOffsets = Array.isArray(this.attrs.lineOffsets) ? this.attrs.lineOffsets : null;
+        const hasLineOffsets = Boolean(lineOffsets && lineOffsets.length === lineRuns.length);
         for (let i = 0; i < lineRuns.length; i++) {
             const runs = lineRuns[i];
-            const lineX = x + sin * lineHeight * i;
-            const lineY = y - cos * lineHeight * i;
+            const lineOffset = hasLineOffsets ? lineOffsets[i] : 0;
+            const offsetX = cos * lineOffset;
+            const offsetY = sin * lineOffset;
+            const lineX = x + sin * lineHeight * i + offsetX;
+            const lineY = y - cos * lineHeight * i + offsetY;
             let cursorX = lineX;
             let cursorY = lineY;
 
@@ -305,9 +344,10 @@ class TextElement extends BaseElement {
                 } else if (this.attrs.lineStyle == 'strike') {
                     lineY = options.y - options.lineHeight * i - thickness + (options.lineHeight / 2 - thickness - lineTop);
                 }
+                const lineOffset = hasLineOffsets ? lineOffsets[i] : 0;
                 this.page.pageProxy.drawLine({
-                    start: { x: x, y: lineY },
-                    end: { x: x + (lineWidths[i] || 0), y: lineY },
+                    start: { x: x + lineOffset, y: lineY },
+                    end: { x: x + lineOffset + (lineWidths[i] || 0), y: lineY },
                     thickness: thickness,
                     // color: options.color,
                     color: this.editor.PDFLib.componentsToColor(hexToRgb('#ff0000').map(v => (v / 255))),

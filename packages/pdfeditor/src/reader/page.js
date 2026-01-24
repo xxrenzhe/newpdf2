@@ -260,6 +260,8 @@ export class PDFPage extends PDFPageBase {
         const coverHeight = bounds.height;
         const lineHeightPx = (typeof textPart.lineHeight === 'number' && Number.isFinite(textPart.lineHeight)) ? textPart.lineHeight : null;
         const lineHeight = lineHeightPx ? lineHeightPx / this.scale : null;
+        const boxWidth = Number.isFinite(bounds.width) && this.scale ? bounds.width / this.scale : null;
+        const boxHeight = Number.isFinite(bounds.height) && this.scale ? bounds.height / this.scale : null;
 
         // Store a stable "cover box" in PDF units for export-time redaction.
         // This avoids relying on edited text metrics (which shrink when deleting text),
@@ -275,6 +277,20 @@ export class PDFPage extends PDFPageBase {
         const coverOffsetY = pxToPdfY ? -coverPaddingY * pxToPdfY : 0;
         const coverWidthPdf = pxToPdfX ? (coverWidth + coverPaddingX * 2) * pxToPdfX : 0;
         const coverHeightPdf = pxToPdfY ? (coverHeight + coverPaddingY * 2) * pxToPdfY : 0;
+        const offsetScale = pxToPdfX || (this.scale ? 1 / this.scale : 0);
+        const lineOffsetsPx = Array.isArray(textPart.lineOffsets) ? textPart.lineOffsets : null;
+        const lineOffsetsRaw = lineOffsetsPx && offsetScale
+            ? lineOffsetsPx.map(offset => offset * offsetScale)
+            : null;
+        const lineOffsets = lineOffsetsRaw
+            ? lineOffsetsRaw.map(offset => (Math.abs(offset) < 0.1 ? 0 : offset))
+            : null;
+        const hasLineOffsets = lineOffsets
+            ? lineOffsets.some(offset => Math.abs(offset) > 0.1)
+            : false;
+        const indentInfo = this.#deriveIndent(lineOffsetsPx);
+        const textIndent = indentInfo && this.scale ? indentInfo.textIndent / this.scale : null;
+        const textPaddingLeft = indentInfo && this.scale ? indentInfo.paddingLeft / this.scale : null;
 
         // textPart.elements.forEach(async (element, i) => {
         //     if (fontSize == 0) {
@@ -296,6 +312,11 @@ export class PDFPage extends PDFPageBase {
                 text: textPart.text,
                 lineHeight: lineHeight,
                 lineHeightMeasured: Boolean(lineHeight),
+                lineOffsets: hasLineOffsets ? lineOffsets : null,
+                boxWidth: boxWidth,
+                boxHeight: boxHeight,
+                textIndent: textIndent,
+                textPaddingLeft: textPaddingLeft,
                 fontFamily: fontFamily,
                 fontFile: fontFamily,
                 fontName: baseElement.getAttribute('data-fontname'),
@@ -442,7 +463,8 @@ export class PDFPage extends PDFPageBase {
             lastTop: line.top,
             lineCount: 1,
             gapTotal: 0,
-            gapCount: 0
+            gapCount: 0,
+            lineLefts: [line.left]
         };
     }
 
@@ -464,6 +486,7 @@ export class PDFPage extends PDFPageBase {
         current.gapCount += 1;
         current.lastTop = line.top;
         current.lineCount += 1;
+        current.lineLefts.push(line.left);
         if (typeof join.alignLeft === 'number') {
             current.alignLeft = join.alignLeft;
         }
@@ -471,11 +494,13 @@ export class PDFPage extends PDFPageBase {
 
     #finishParagraph(current) {
         const lineHeight = current.gapCount > 0 ? current.gapTotal / current.gapCount : null;
+        const lineOffsets = this.#normalizeLineOffsets(current.lineLefts, current.minLeft);
         return {
             text: current.text,
             elements: current.elements,
             width: current.width,
             lineHeight,
+            lineOffsets,
             bounds: {
                 left: current.minLeft,
                 top: current.top,
@@ -550,6 +575,30 @@ export class PDFPage extends PDFPageBase {
             fontName: element.getAttribute('data-loadedname') || '',
             color: element.getAttribute('data-fontcolor') || ''
         };
+    }
+
+    #normalizeLineOffsets(lineLefts, baseLeft) {
+        if (!Array.isArray(lineLefts) || !lineLefts.length) return null;
+        const offsets = lineLefts.map(left => left - baseLeft);
+        const hasOffsets = offsets.some(offset => Math.abs(offset) > 0.5);
+        if (!hasOffsets) return null;
+        return offsets.map(offset => (Math.abs(offset) < 0.5 ? 0 : offset));
+    }
+
+    #deriveIndent(lineOffsets) {
+        if (!Array.isArray(lineOffsets) || lineOffsets.length < 2) return null;
+        const first = lineOffsets[0];
+        const second = lineOffsets[1];
+        const threshold = 1;
+        const absFirst = Math.abs(first);
+        const absSecond = Math.abs(second);
+        if (absFirst > threshold && absSecond <= threshold) {
+            return { textIndent: first, paddingLeft: 0 };
+        }
+        if (absFirst <= threshold && absSecond > threshold) {
+            return { textIndent: -second, paddingLeft: second };
+        }
+        return null;
     }
 
     #getTextPartBounds(textPart, baseElement, forceRefresh = false) {
