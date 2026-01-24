@@ -7,19 +7,42 @@ const fontDomain = '../assets/';
 
 const fontList = [
     {
-        fontFamily: 'NotoSansCJKkr',
-        showName: 'Noto Sans KR',
-        fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
-    },
-    {
-        fontFamily: 'Arial',
-        showName: 'Arial',
+        fontFamily: 'Lato',
+        showName: 'Lato',
         fontFile: 'fonts/Lato-Regular.ttf'
     },
     {
-        fontFamily: 'SimSun',
-        showName: '宋体',
+        fontFamily: 'NotoSansCJKsc',
+        showName: 'Noto Sans CJK SC',
         fontFile: 'fonts/NotoSansCJKsc-Regular.otf'
+    },
+    {
+        fontFamily: 'NotoSansCJKtc',
+        showName: 'Noto Sans CJK TC',
+        fontFile: 'fonts/NotoSansCJKtc-Regular.otf'
+    },
+    {
+        fontFamily: 'NotoSansCJKjp',
+        showName: 'Noto Sans CJK JP',
+        fontFile: 'fonts/NotoSansCJKjp-Regular.otf'
+    },
+    {
+        fontFamily: 'NotoSansCJKkr',
+        showName: 'Noto Sans CJK KR',
+        fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
+    },
+    // Legacy aliases (hidden from UI but kept for backward compatibility).
+    {
+        fontFamily: 'Arial',
+        showName: 'Lato',
+        fontFile: 'fonts/Lato-Regular.ttf',
+        hidden: true
+    },
+    {
+        fontFamily: 'SimSun',
+        showName: 'Noto Sans CJK SC',
+        fontFile: 'fonts/NotoSansCJKsc-Regular.otf',
+        hidden: true
     }
 ];
 

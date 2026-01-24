@@ -74,6 +74,7 @@ export class PDFEditor {
     PDFLib = null;
     history = null;
     fontWorker = new Worker(new URL('./font_worker.js', import.meta.url));
+    fontWarningBanner = null;
 
     constructor(options, pdfData, reader) {
         if (typeof(options) == 'object') {
@@ -149,6 +150,10 @@ export class PDFEditor {
             // Match common PDF editor UX: default to selection tool, not edit mode.
             this.toolbar.get('mouse').click();
             PDFEvent.dispatch(Events.TOOLBAR_INIT);
+        });
+
+        PDFEvent.on(Events.FONT_WARNING, e => {
+            this.#showFontWarningBanner(e.data?.message);
         });
 
         PDFEvent.on(Events.SAVE, () => {
@@ -714,6 +719,35 @@ export class PDFEditor {
                 document.querySelector('#' + id).classList.add('active');
             });
         });
+    }
+
+    #showFontWarningBanner(message) {
+        if (this.fontWarningBanner) return;
+        const container = document.querySelector('.pdf-main');
+        if (!container) return;
+        const banner = document.createElement('div');
+        banner.classList.add('font-compliance-banner');
+        const text = document.createElement('span');
+        text.classList.add('font-compliance-text');
+        text.textContent = message || '';
+        const close = document.createElement('button');
+        close.classList.add('font-compliance-close');
+        close.setAttribute('type', 'button');
+        close.textContent = 'x';
+        close.addEventListener('click', () => {
+            banner.remove();
+            this.fontWarningBanner = null;
+        });
+        banner.appendChild(text);
+        banner.appendChild(close);
+
+        const header = container.querySelector('.pdf-header');
+        if (header && header.parentNode) {
+            header.parentNode.insertBefore(banner, header.nextSibling);
+        } else {
+            container.prepend(banner);
+        }
+        this.fontWarningBanner = banner;
     }
 
     #initActionsBar() {

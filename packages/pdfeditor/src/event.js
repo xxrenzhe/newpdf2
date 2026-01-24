@@ -52,6 +52,8 @@ export const Events = {
     //工具栏属性点击时
     TOOLBAR_ITEM_OPTION_CLICK: 'toolbar_item_option_click',
 
+    FONT_WARNING: 'font_warning',
+
     SAVE_BEFORE: 'save_before',
     SAVE: 'save',
     SAVE_AFTER: 'save_after',

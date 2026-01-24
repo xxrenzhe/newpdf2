@@ -255,7 +255,15 @@ export class PDFPage extends PDFPageBase {
         let fontSize = parseFloat(baseElement.getAttribute('data-fontsize'));
         let color = baseElement.getAttribute('data-fontcolor');
         let bgColor = baseElement.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), bounds.left * this.outputScale, bounds.top * this.outputScale);
-        let fontFamily = baseElement.getAttribute('data-loadedname') || 'Helvetica';
+        const originalFontFamily = baseElement.getAttribute('data-loadedname') || 'Helvetica';
+        const originalFontName = baseElement.getAttribute('data-fontname') || originalFontFamily;
+        const resolvedFont = Font.resolveSafeFont({
+            fontFamily: originalFontFamily,
+            fontFile: originalFontFamily,
+            fontName: originalFontName,
+            text: textPart.text
+        });
+        let fontFamily = resolvedFont.fontFamily;
         const coverWidth = bounds.width;
         const coverHeight = bounds.height;
         const lineHeightPx = (typeof textPart.lineHeight === 'number' && Number.isFinite(textPart.lineHeight)) ? textPart.lineHeight : null;
@@ -318,8 +326,9 @@ export class PDFPage extends PDFPageBase {
                 textIndent: textIndent,
                 textPaddingLeft: textPaddingLeft,
                 fontFamily: fontFamily,
-                fontFile: fontFamily,
-                fontName: baseElement.getAttribute('data-fontname'),
+                fontFile: resolvedFont.fontFile,
+                fontName: originalFontName,
+                showName: resolvedFont.showName,
                 opacity: 1,
                 underline: null,
                 // Cover the original glyphs when exporting without relying on PDF.js worker patches.

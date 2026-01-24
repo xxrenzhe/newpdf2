@@ -1,4 +1,4 @@
-import { hexToRgb, trimSpace } from '../../misc';
+import { embedImage, hexToRgb, trimSpace } from '../../misc';
 import { Events, PDFEvent } from '../../event';
 import { Font } from '../../font';
 import { BaseElement } from './BaseElement';
@@ -6,6 +6,7 @@ import { BaseElement } from './BaseElement';
 class TextElement extends BaseElement {
     init() {
         this.dataType = 'text';
+        const defaultFont = Font.getDefaultFont();
         let attrs = {
             size: 20,
             color: '#000000',
@@ -17,8 +18,9 @@ class TextElement extends BaseElement {
             bold: false,
             italic: false,
             rotate: undefined,
-            fontFamily: 'NotoSansCJKkr',
-            fontFile: 'fonts/NotoSansCJKkr-Regular.otf',
+            fontFamily: defaultFont.fontFamily,
+            fontFile: defaultFont.fontFile,
+            showName: defaultFont.showName,
             boxWidth: null,
             boxHeight: null,
             lineOffsets: null,
@@ -27,6 +29,17 @@ class TextElement extends BaseElement {
             textPaddingLeft: null
         };
         this.attrs = Object.assign(attrs, this.attrs);
+        const safeFont = Font.resolveSafeFont({
+            fontFamily: this.attrs.fontFamily,
+            fontFile: this.attrs.fontFile,
+            fontName: this.attrs.fontName,
+            text: this.attrs.text
+        });
+        this.attrs.fontFamily = safeFont.fontFamily;
+        this.attrs.fontFile = safeFont.fontFile;
+        if (!this.attrs.showName) {
+            this.attrs.showName = safeFont.showName;
+        }
         this.options.draggableOptions.isCancelDefaultEvent = false;
         this.options.draggableOptions.disabled = false;
         if (!this.attrs.lineHeight) {
@@ -266,15 +279,29 @@ class TextElement extends BaseElement {
         }
 
         const lineRuns = lines.map(line => Font.splitTextByFont(line, preferredFontFile));
+        const lineRunsWithFonts = [];
         const lineWidths = [];
+        let missingFont = false;
         for (const runs of lineRuns) {
             let width = 0;
+            const resolvedRuns = [];
             for (const run of runs) {
                 const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
-                if (!font) continue;
-                width += font.widthOfTextAtSize(run.text, fontSize);
+                if (!font) {
+                    missingFont = true;
+                } else {
+                    width += font.widthOfTextAtSize(run.text, fontSize);
+                }
+                resolvedRuns.push({ ...run, font });
             }
+            lineRunsWithFonts.push(resolvedRuns);
             lineWidths.push(width);
+        }
+
+        const forceRasterize = Boolean(this.attrs.rasterizeOnExport);
+        if (missingFont || forceRasterize) {
+            await this._insertTextAsImage();
+            return;
         }
 
         let options = {
@@ -311,8 +338,8 @@ class TextElement extends BaseElement {
         }
         const lineOffsets = Array.isArray(this.attrs.lineOffsets) ? this.attrs.lineOffsets : null;
         const hasLineOffsets = Boolean(lineOffsets && lineOffsets.length === lineRuns.length);
-        for (let i = 0; i < lineRuns.length; i++) {
-            const runs = lineRuns[i];
+        for (let i = 0; i < lineRunsWithFonts.length; i++) {
+            const runs = lineRunsWithFonts[i];
             const lineOffset = hasLineOffsets ? lineOffsets[i] : 0;
             const offsetX = cos * lineOffset;
             const offsetY = sin * lineOffset;
@@ -322,7 +349,7 @@ class TextElement extends BaseElement {
             let cursorY = lineY;
 
             for (const run of runs) {
-                const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
+                const font = run.font;
                 if (!font) continue;
                 this.page.pageProxy.drawText(run.text, {
                     ...options,
@@ -355,6 +382,84 @@ class TextElement extends BaseElement {
                 });
             }
         }
+    }
+
+    async _insertTextAsImage(options = {}) {
+        const includeBackground = options.includeBackground !== false;
+        const opacity = typeof options.opacity === 'number' ? options.opacity : this.attrs.opacity;
+        const lines = String(this.attrs.text || '').split(/[\n\f\r\u000B]/);
+        if (!this.elChild) return false;
+        const rect = this.elChild.getBoundingClientRect();
+        const lineTop = 2.5;
+        const fontScale = (this.pageScale < 2 ? 2 : this.pageScale) + this.scale;
+        const fontSize = this.attrs.size * fontScale;
+        const thickness = this.attrs.lineStyle ? fontSize / 14 : 0;
+        let lineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : fontSize) + lineTop;
+        lineHeight *= fontScale;
+
+        const padding = 0;
+        const offsetX = padding / 2;
+        const canvas = document.createElement('canvas');
+        const width = rect.width / this.scale * fontScale + padding;
+        const height = lines.length * (lineHeight + thickness) + padding;
+        canvas.width = Math.max(1, width - 6);
+        canvas.height = Math.max(1, height);
+        const ctx = canvas.getContext('2d');
+        if (includeBackground && this.attrs.background) {
+            ctx.fillStyle = this.attrs.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        const fontStyle = [];
+        if (this.attrs.italic) {
+            fontStyle.push('italic');
+        }
+        if (this.attrs.bold) {
+            fontStyle.push('bold');
+        }
+        fontStyle.push(fontSize + 'px');
+        fontStyle.push(this.attrs.fontFamily);
+        ctx.font = fontStyle.join(' ');
+        ctx.fillStyle = this.attrs.color;
+
+        for (let i = 0; i < lines.length; i++) {
+            const measureText = ctx.measureText(lines[i]);
+            const offsetY = lineHeight * (i + 1) - thickness + (padding / 2 - thickness);
+            ctx.fillText(lines[i], offsetX, offsetY - (this.attrs.lineStyle === 'underline' ? 10 : 15), canvas.width);
+
+            if (this.attrs.lineStyle) {
+                let lineY = offsetY;
+                if (this.attrs.lineStyle === 'strike') {
+                    lineY = offsetY - (lineHeight / 2 - thickness - lineTop);
+                }
+                ctx.beginPath();
+                ctx.moveTo(offsetX, lineY);
+                ctx.lineWidth = thickness;
+                ctx.lineTo(measureText.width + offsetX, lineY);
+                ctx.strokeStyle = '#ff0000';
+                ctx.stroke();
+            }
+        }
+
+        const embedded = await embedImage(this.page.pdfDocument.documentProxy, 'image/png', canvas.toDataURL('image/png', 1));
+        if (!embedded) return false;
+
+        const widthPdf = embedded.width / fontScale;
+        const heightPdf = embedded.height / fontScale;
+        const x = this.getX();
+        const y = this.page.height - (this.getY() + heightPdf);
+        const imageOptions = {
+            x,
+            y,
+            width: widthPdf,
+            height: heightPdf,
+            opacity: opacity
+        };
+        if (this.attrs.rotate) {
+            imageOptions.rotate = this.degrees(this.attrs.rotate);
+        }
+        this.page.pageProxy.drawImage(embedded, imageOptions);
+        return true;
     }
 }
 

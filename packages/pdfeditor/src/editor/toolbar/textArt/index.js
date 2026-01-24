@@ -1,4 +1,5 @@
 import { ToolbarItemBase } from '../ToolbarItemBase';
+import { Font } from '../../../font';
 import { sibling,CSSActive } from '../../../misc';
 import Pickr from '@simonwep/pickr';
 import { COLOR_ITEMS } from '../../../defines';
@@ -12,6 +13,7 @@ class TextArt extends ToolbarItemBase {
     init() {
         this.name = 'textArt';
         this.textArtSelect = 'text';
+        const defaultFont = Font.getDefaultFont();
         let attrs = {
             size: 30,
             color: '#4283AE',
@@ -23,9 +25,10 @@ class TextArt extends ToolbarItemBase {
             bold: false,
             italic: false,
             rotate: undefined,
-            fontFamily: 'NotoSansCJKkr', 
+            fontFamily: defaultFont.fontFamily,
             textArtType:'one',
-            fontFile: 'fonts/NotoSansCJKkr-Regular.otf',
+            fontFile: defaultFont.fontFile,
+            showName: defaultFont.showName,
             isGradient:'false',
             gradientType:null,
             gradientColor:null,
@@ -59,8 +62,10 @@ class TextArt extends ToolbarItemBase {
                 el.classList.add('active');
                 this.textArtSelect = 'text';
                 this.isAdd = true;
-                this.attrs.fontFamily='NotoSansCJKkr', 
-                this.attrs.fontFile='fonts/NotoSansCJKkr-Regular.otf',
+                const safeFont = Font.getDefaultFont();
+                this.attrs.fontFamily = safeFont.fontFamily;
+                this.attrs.fontFile = safeFont.fontFile;
+                this.attrs.showName = safeFont.showName;
                 this.attrs.isGradient = el.getAttribute('data-gradient');
                 if(this.attrs.isGradient == 'true'){
                     this.attrs.gradientColor = el.getAttribute('data-gradientColor');
@@ -342,12 +347,13 @@ class TextArt extends ToolbarItemBase {
                             this.dropdown.style.display = 'none';
                     },100)
                 },  (err)=>{
-                    loadDom.style.display = 'none';
-                    this.attrs.fontFamily= 'NotoSansCJKkr';
-                    this.attrs.fontFile='fonts/NotoSansCJKkr-Regular.otf';
-                    let _element = document.createElement('div');
-                    let readerScale = this.editor.reader.scale;
-                    let scale = window.devicePixelRatio || 1;
+                loadDom.style.display = 'none';
+                this.attrs.fontFamily = defaultFont.fontFamily;
+                this.attrs.fontFile = defaultFont.fontFile;
+                this.attrs.showName = defaultFont.showName;
+                let _element = document.createElement('div');
+                let readerScale = this.editor.reader.scale;
+                let scale = window.devicePixelRatio || 1;
                     _element.innerHTML = this.attrs.text;
                     _element.style.fontSize = this.attrs.size*readerScale*scale + 'px';
                     _element.style.fontFamily = this.attrs.fontFamily;

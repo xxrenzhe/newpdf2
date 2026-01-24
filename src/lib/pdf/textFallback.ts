@@ -38,8 +38,29 @@ const FONT_URLS = {
   ethiopic: `${FONT_BASE_URL}NotoSansEthiopic.woff`,
   tibetan: `${FONT_BASE_URL}NotoSerifTibetan.woff`,
   symbols: `${FONT_BASE_URL}NotoSansSymbols2.woff`,
-  cjk: `${FONT_BASE_URL}NotoSansCJKkr-Regular.otf`,
+  cjkSc: `${FONT_BASE_URL}NotoSansCJKsc-Regular.otf`,
+  cjkTc: `${FONT_BASE_URL}NotoSansCJKtc-Regular.otf`,
+  cjkJp: `${FONT_BASE_URL}NotoSansCJKjp-Regular.otf`,
+  cjkKr: `${FONT_BASE_URL}NotoSansCJKkr-Regular.otf`,
 } as const;
+
+const LOCALE_CODE =
+  typeof navigator !== "undefined" && navigator.language
+    ? navigator.language.toLowerCase()
+    : "en";
+
+function getCjkFontUrl(locale = LOCALE_CODE) {
+  const normalized = locale.replace("_", "-").toLowerCase();
+  if (normalized.startsWith("ja")) return FONT_URLS.cjkJp;
+  if (normalized.startsWith("ko")) return FONT_URLS.cjkKr;
+  if (normalized.startsWith("zh")) {
+    if (normalized.includes("hant") || normalized.includes("-tw") || normalized.includes("-hk") || normalized.includes("-mo")) {
+      return FONT_URLS.cjkTc;
+    }
+    return FONT_URLS.cjkSc;
+  }
+  return FONT_URLS.cjkSc;
+}
 
 export type PreparedRun = { text: string; font: PDFFont };
 export type PreparedLine = { runs: PreparedRun[]; width: number };
@@ -200,7 +221,7 @@ function isCommonTextPunctuation(codePoint: number) {
 }
 
 function fontUrlForCodePoint(codePoint: number) {
-  if (isCJK(codePoint)) return FONT_URLS.cjk;
+  if (isCJK(codePoint)) return getCjkFontUrl();
   if (isArabic(codePoint)) return FONT_URLS.arabic;
   if (isHebrew(codePoint)) return FONT_URLS.hebrew;
   if (isDevanagari(codePoint)) return FONT_URLS.devanagari;

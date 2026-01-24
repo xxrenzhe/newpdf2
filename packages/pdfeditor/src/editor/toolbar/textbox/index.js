@@ -3,10 +3,12 @@ import DrawRect from '../../../components/draw/rect';
 import Pickr from '@simonwep/pickr';
 import { CSSActive } from '../../../misc';
 import { COLOR_ITEMS } from '../../../defines';
+import { Font } from '../../../font';
 
 class TextBox extends Rect {
     init() {
         this.name = 'textbox';
+        const defaultFont = Font.getDefaultFont();
         let attrs = {
             background: '#fff000',
             opacity: 0.6,
@@ -22,8 +24,9 @@ class TextBox extends Rect {
             underline: false,
             bold: false,
             italic: false,
-            fontFamily: 'NotoSansCJKkr',
-            fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
+            fontFamily: defaultFont.fontFamily,
+            fontFile: defaultFont.fontFile,
+            showName: defaultFont.showName
         };
         if (TextBox.attrs) {
             attrs = Object.assign(attrs, TextBox.attrs);
@@ -43,7 +46,14 @@ class TextBox extends Rect {
         temp.innerHTML = require('./actions.phtml')();
 
         const elFontDropdown = temp.querySelector('.font-dropdown');
-        fontList.forEach((font, i) => {
+        const defaultFont = Font.getDefaultFont();
+        const uiFonts = Font.getUiFontList();
+        const fallbackFont = uiFonts.find(font => font.fontFamily === this.attrs.fontFamily) || uiFonts[0] || defaultFont;
+        this.attrs.fontFamily = fallbackFont.fontFamily;
+        this.attrs.fontFile = fallbackFont.fontFile;
+        this.attrs.showName = fallbackFont.showName || defaultFont.showName;
+
+        uiFonts.forEach((font) => {
             let elOption = document.createElement('div');
             elOption.classList.add('font-item');
             elOption.textContent = font.showName;
@@ -61,10 +71,6 @@ class TextBox extends Rect {
                 elFontDropdown.classList.remove('show');
             });
             elFontDropdown.appendChild(elOption);
-            if (i == 0) {
-                this.attrs.fontFamily = font.fontFamily;
-                this.attrs.fontFile = font.fontFile;
-            }
         });
 
         const btnFontList = temp.querySelector('.fontlist');

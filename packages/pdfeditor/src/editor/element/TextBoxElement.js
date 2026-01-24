@@ -5,6 +5,7 @@ import { TextElement } from './TextElement';
 class TextBoxElement extends TextElement {
     init() {
         this.dataType = 'textbox';
+        const defaultFont = Font.getDefaultFont();
         let attrs = {
             width: 50,
             height: 50,
@@ -23,10 +24,22 @@ class TextBoxElement extends TextElement {
             underline: false,
             bold: false,
             italic: false,
-            fontFamily: null,
-            fontFile: 'fonts/NotoSansCJKkr-Regular.otf'
+            fontFamily: defaultFont.fontFamily,
+            fontFile: defaultFont.fontFile,
+            showName: defaultFont.showName
         };
         this.attrs = Object.assign(attrs, this.attrs);
+        const safeFont = Font.resolveSafeFont({
+            fontFamily: this.attrs.fontFamily,
+            fontFile: this.attrs.fontFile,
+            fontName: this.attrs.fontName,
+            text: this.attrs.text
+        });
+        this.attrs.fontFamily = safeFont.fontFamily;
+        this.attrs.fontFile = safeFont.fontFile;
+        if (!this.attrs.showName) {
+            this.attrs.showName = safeFont.showName;
+        }
         this.options.draggableOptions.isCancelDefaultEvent = false;
         this.options.draggableOptions.disabled = false;
         if (!this.attrs.lineHeight) {
@@ -122,14 +135,22 @@ class TextBoxElement extends TextElement {
         const sin = Math.sin(angleRad);
 
         const lineRuns = lines.map(line => Font.splitTextByFont(line, preferredFontFile));
+        const lineRunsWithFonts = [];
         const lineWidths = [];
+        let missingFont = false;
         for (const runs of lineRuns) {
             let width = 0;
+            const resolvedRuns = [];
             for (const run of runs) {
                 const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
-                if (!font) continue;
-                width += font.widthOfTextAtSize(run.text, fontSize);
+                if (!font) {
+                    missingFont = true;
+                } else {
+                    width += font.widthOfTextAtSize(run.text, fontSize);
+                }
+                resolvedRuns.push({ ...run, font });
             }
+            lineRunsWithFonts.push(resolvedRuns);
             lineWidths.push(width);
         }
 
@@ -166,15 +187,21 @@ class TextBoxElement extends TextElement {
             this.page.pageProxy.drawRectangle(_options);
         }
 
-        for (let i = 0; i < lineRuns.length; i++) {
-            const runs = lineRuns[i];
+        const forceRasterize = Boolean(this.attrs.rasterizeOnExport);
+        if (missingFont || forceRasterize) {
+            await this._insertTextAsImage({ includeBackground: false, opacity: this.attrs.textOpacity });
+            return;
+        }
+
+        for (let i = 0; i < lineRunsWithFonts.length; i++) {
+            const runs = lineRunsWithFonts[i];
             const lineX = x + sin * lineHeight * i;
             const lineY = y - cos * lineHeight * i;
             let cursorX = lineX;
             let cursorY = lineY;
 
             for (const run of runs) {
-                const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
+                const font = run.font;
                 if (!font) continue;
                 this.page.pageProxy.drawText(run.text, {
                     ...options,

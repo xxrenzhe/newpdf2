@@ -78,6 +78,13 @@ export class PDFDocument {
 
     async getFont(pageId, text, fontFile) {
         // return this.documentProxy.embedFont(StandardFonts.Helvetica);
+        const resolved = Font.resolveSafeFont({
+            fontFamily: null,
+            fontFile,
+            fontName: fontFile,
+            text
+        });
+        fontFile = resolved.fontFile;
 
         if (!this.embedFonts[pageId]) {
             this.embedFonts[pageId] = Object.create(null);
@@ -118,7 +125,7 @@ export class PDFDocument {
             //如果包含CJK并需要补字体
             let isIncludeCJK = new RegExp(Font.CJK_RANGE);
             if (isIncludeCJK.test(text) && _text) {
-                arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
+                arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFile());
                 return this.setFont(pageId, fontFile, arrayBuffer);
             } else {
                 if (!isFetchFont) {
@@ -151,7 +158,7 @@ export class PDFDocument {
                         return this.setFont(pageId, fontFile, arrayBuffer);
                     }
                 } else {
-                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
+                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFile());
                     return this.setFont(pageId, fontFile, arrayBuffer);
                 }
             }
@@ -168,7 +175,7 @@ export class PDFDocument {
         }
 
         const embedUnicodeFallback = async () => {
-            const fallbackBuffer = await Font.fetchFont(pageId, 'A', Font.UNICODE_FONT);
+            const fallbackBuffer = await Font.fetchFont(pageId, 'A', Font.getCjkFontFile());
             if (fallbackBuffer) {
                 Font.setCache(pageId, fontFile, fallbackBuffer);
                 return this.documentProxy

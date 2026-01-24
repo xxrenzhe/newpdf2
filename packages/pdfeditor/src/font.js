@@ -1,11 +1,83 @@
 import opentype from 'opentype.js';
+import { Events, PDFEvent } from './event';
 import { trimSpace } from './misc';
 
 const CHARS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 's', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'S', 'Y', 'Z', ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '~', '!', '@', '#', '$', '%', '^', '&', '(', ')', '_', '+', '-', '=', '{', '}', '|', '[', ']', ';', "'", ':', '"', ',', '.', '/', '<', '>', '?', '*'];
-// Offline CJK fallback font (served from `ASSETS_URL + "fonts/..."`).
-// This font supports CJK + Hangul + Kana; we use it as a safe Unicode fallback
-// when the original PDF font can't be embedded/encoded.
-const UNICODE_FONT = 'fonts/NotoSansCJKkr-Regular.otf';
+const DEFAULT_LATIN_FONT_FILE = 'fonts/Lato-Regular.ttf';
+const DEFAULT_LATIN_FONT_FAMILY = 'Lato';
+const CJK_FONT_FILES = Object.freeze({
+    sc: 'fonts/NotoSansCJKsc-Regular.otf',
+    tc: 'fonts/NotoSansCJKtc-Regular.otf',
+    jp: 'fonts/NotoSansCJKjp-Regular.otf',
+    kr: 'fonts/NotoSansCJKkr-Regular.otf'
+});
+const CJK_FONT_FAMILIES = Object.freeze({
+    sc: 'NotoSansCJKsc',
+    tc: 'NotoSansCJKtc',
+    jp: 'NotoSansCJKjp',
+    kr: 'NotoSansCJKkr'
+});
+const FONT_DISPLAY_NAMES = Object.freeze({
+    Lato: 'Lato',
+    NotoSansCJKsc: 'Noto Sans CJK SC',
+    NotoSansCJKtc: 'Noto Sans CJK TC',
+    NotoSansCJKjp: 'Noto Sans CJK JP',
+    NotoSansCJKkr: 'Noto Sans CJK KR'
+});
+const SAFE_FONT_FAMILIES = new Set([
+    DEFAULT_LATIN_FONT_FAMILY,
+    ...Object.values(CJK_FONT_FAMILIES)
+]);
+const SAFE_FONT_FILE_PREFIXES = ['fonts/notosans', 'fonts/notoserif'];
+const SAFE_FONT_FILES = new Set([DEFAULT_LATIN_FONT_FILE]);
+const BUILTIN_FONT_NAMES = new Set([
+    'Helvetica',
+    'Helvetica-Bold',
+    'Helvetica-Oblique',
+    'Helvetica-BoldOblique',
+    'Times-Roman',
+    'Times-Bold',
+    'Times-Italic',
+    'Times-BoldItalic',
+    'Courier',
+    'Courier-Bold',
+    'Courier-Oblique',
+    'Courier-BoldOblique',
+    'Symbol',
+    'ZapfDingbats'
+]);
+const FONT_NAME_ALIASES = [
+    {
+        test: /arial/i,
+        fontFamily: DEFAULT_LATIN_FONT_FAMILY,
+        fontFile: DEFAULT_LATIN_FONT_FILE
+    },
+    {
+        test: /helvetica/i,
+        fontFamily: DEFAULT_LATIN_FONT_FAMILY,
+        fontFile: DEFAULT_LATIN_FONT_FILE
+    },
+    {
+        test: /simsun|songti/i,
+        fontFamily: CJK_FONT_FAMILIES.sc,
+        fontFile: CJK_FONT_FILES.sc
+    },
+    {
+        test: /mingliu|pmingliu/i,
+        fontFamily: CJK_FONT_FAMILIES.tc,
+        fontFile: CJK_FONT_FILES.tc
+    },
+    {
+        test: /ms gothic|ms mincho|hiragino|meiryo|yu gothic|yu mincho/i,
+        fontFamily: CJK_FONT_FAMILIES.jp,
+        fontFile: CJK_FONT_FILES.jp
+    },
+    {
+        test: /malgun|gulim|dotum|batang/i,
+        fontFamily: CJK_FONT_FAMILIES.kr,
+        fontFile: CJK_FONT_FILES.kr
+    }
+];
 // Include: Hangul Jamo/Compatibility/Syllables, Hiragana/Katakana, CJK ideographs.
 const CJK_RANGE = '[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]';
 
@@ -37,7 +109,7 @@ const FALLBACK_FONTS = Object.freeze({
     ethiopic: 'fonts/NotoSansEthiopic.woff',
     tibetan: 'fonts/NotoSerifTibetan.woff',
     symbols: 'fonts/NotoSansSymbols2.woff',
-    cjk: UNICODE_FONT,
+    cjk: CJK_FONT_FILES.kr,
 });
 
 export class Font {
@@ -47,18 +119,234 @@ export class Font {
     static fontUrl = '';
     static fontkit = null;
     static #fallbackFont = null;
+    static #complianceWarned = false;
     static CHARS = CHARS;
-    static UNICODE_FONT = UNICODE_FONT;
     static CJK_RANGE = CJK_RANGE;
     static FALLBACK_FONTS = FALLBACK_FONTS;
+    static DEFAULT_LATIN_FONT_FILE = DEFAULT_LATIN_FONT_FILE;
+    static DEFAULT_LATIN_FONT_FAMILY = DEFAULT_LATIN_FONT_FAMILY;
+    static CJK_FONT_FILES = CJK_FONT_FILES;
+    static CJK_FONT_FAMILIES = CJK_FONT_FAMILIES;
+    static FONT_DISPLAY_NAMES = FONT_DISPLAY_NAMES;
+
+    static get UNICODE_FONT() {
+        return Font.getCjkFontFile();
+    }
 
     static async fetchFallbackFont() {
         if (Font.#fallbackFont) {
             return Font.#fallbackFont;
         }
-        let url = ASSETS_URL + 'temp.otf';
+        const fallbackFile = Font.getFallbackSubsetFontFile();
+        let url = ASSETS_URL + fallbackFile;
         Font.#fallbackFont = fetch(url).then(res => res.arrayBuffer());
         return Font.#fallbackFont;
+    }
+
+    static getLocaleCode() {
+        const langCode = typeof LANG_CODE !== 'undefined' && LANG_CODE
+            ? String(LANG_CODE).toLowerCase()
+            : '';
+        if (langCode && langCode !== 'en') {
+            return langCode;
+        }
+        if (typeof navigator !== 'undefined' && navigator.language) {
+            return navigator.language.toLowerCase();
+        }
+        return langCode || 'en';
+    }
+
+    static #normalizeLocale(locale) {
+        return String(locale || '').replace('_', '-').toLowerCase();
+    }
+
+    static #isCjkLocale(locale) {
+        const normalized = Font.#normalizeLocale(locale);
+        return normalized.startsWith('zh') || normalized.startsWith('ja') || normalized.startsWith('ko');
+    }
+
+    static getCjkVariant(locale = Font.getLocaleCode()) {
+        const normalized = Font.#normalizeLocale(locale);
+        if (normalized.startsWith('ja')) return 'jp';
+        if (normalized.startsWith('ko')) return 'kr';
+        if (normalized.startsWith('zh')) {
+            if (normalized.includes('hant') || normalized.includes('-tw') || normalized.includes('-hk') || normalized.includes('-mo')) {
+                return 'tc';
+            }
+            return 'sc';
+        }
+        return 'sc';
+    }
+
+    static getCjkFontFile(locale = Font.getLocaleCode()) {
+        const variant = Font.getCjkVariant(locale);
+        return CJK_FONT_FILES[variant] || CJK_FONT_FILES.sc;
+    }
+
+    static getCjkFontFamily(locale = Font.getLocaleCode()) {
+        const variant = Font.getCjkVariant(locale);
+        return CJK_FONT_FAMILIES[variant] || CJK_FONT_FAMILIES.sc;
+    }
+
+    static getFontDisplayName(fontFamily) {
+        if (fontFamily && FONT_DISPLAY_NAMES[fontFamily]) {
+            return FONT_DISPLAY_NAMES[fontFamily];
+        }
+        return fontFamily || '';
+    }
+
+    static getFallbackSubsetFontFile() {
+        return DEFAULT_LATIN_FONT_FILE;
+    }
+
+    static hasCjk(text) {
+        if (!text) return false;
+        return new RegExp(CJK_RANGE).test(String(text));
+    }
+
+    static getDefaultFont() {
+        const locale = Font.getLocaleCode();
+        if (Font.#isCjkLocale(locale)) {
+            const family = Font.getCjkFontFamily(locale);
+            return {
+                fontFamily: family,
+                fontFile: Font.getFontFileForFamily(family),
+                showName: Font.getFontDisplayName(family)
+            };
+        }
+        return {
+            fontFamily: DEFAULT_LATIN_FONT_FAMILY,
+            fontFile: DEFAULT_LATIN_FONT_FILE,
+            showName: FONT_DISPLAY_NAMES[DEFAULT_LATIN_FONT_FAMILY]
+        };
+    }
+
+    static getDefaultFontForText(text) {
+        if (Font.hasCjk(text)) {
+            const family = Font.getCjkFontFamily();
+            return {
+                fontFamily: family,
+                fontFile: Font.getFontFileForFamily(family),
+                showName: Font.getFontDisplayName(family)
+            };
+        }
+        return Font.getDefaultFont();
+    }
+
+    static getFontFileForFamily(fontFamily) {
+        switch (fontFamily) {
+            case DEFAULT_LATIN_FONT_FAMILY:
+                return DEFAULT_LATIN_FONT_FILE;
+            case CJK_FONT_FAMILIES.sc:
+                return CJK_FONT_FILES.sc;
+            case CJK_FONT_FAMILIES.tc:
+                return CJK_FONT_FILES.tc;
+            case CJK_FONT_FAMILIES.jp:
+                return CJK_FONT_FILES.jp;
+            case CJK_FONT_FAMILIES.kr:
+                return CJK_FONT_FILES.kr;
+            default:
+                return null;
+        }
+    }
+
+    static isBuiltinFontName(fontName) {
+        return BUILTIN_FONT_NAMES.has(String(fontName || ''));
+    }
+
+    static isSafeFontFile(fontFile) {
+        if (!fontFile) return false;
+        const value = String(fontFile);
+        if (Font.isBuiltinFontName(value)) return true;
+        if (SAFE_FONT_FILES.has(value)) return true;
+        const lower = value.toLowerCase();
+        return SAFE_FONT_FILE_PREFIXES.some(prefix => lower.startsWith(prefix));
+    }
+
+    static isSafeFontFamily(fontFamily) {
+        return SAFE_FONT_FAMILIES.has(String(fontFamily || ''));
+    }
+
+    static #findAlias(name) {
+        const normalized = String(name || '');
+        if (!normalized) return null;
+        for (const alias of FONT_NAME_ALIASES) {
+            if (alias.test.test(normalized)) {
+                return alias;
+            }
+        }
+        return null;
+    }
+
+    static normalizeFontFamily(fontFamily, fontName, text) {
+        const family = String(fontFamily || '');
+        if (Font.isSafeFontFamily(family)) {
+            return family;
+        }
+        const alias = Font.#findAlias(fontName || family);
+        if (alias) {
+            return alias.fontFamily;
+        }
+        return Font.getDefaultFontForText(text).fontFamily;
+    }
+
+    static normalizeFontFile(fontFile, fontFamily, text, fontName) {
+        if (Font.isSafeFontFile(fontFile)) {
+            return fontFile;
+        }
+        const alias = Font.#findAlias(fontName || fontFamily || fontFile);
+        if (alias) {
+            return alias.fontFile;
+        }
+        const mapped = Font.getFontFileForFamily(fontFamily);
+        if (mapped) {
+            return mapped;
+        }
+        return Font.getDefaultFontForText(text).fontFile;
+    }
+
+    static resolveSafeFont({ fontFamily, fontFile, fontName, text }) {
+        const originalFamily = fontFamily;
+        const originalFile = fontFile;
+        const safeFamily = Font.normalizeFontFamily(fontFamily, fontName, text);
+        const safeFile = Font.normalizeFontFile(fontFile, safeFamily, text, fontName);
+        const showName = Font.getFontDisplayName(safeFamily);
+        const replaced = safeFamily !== originalFamily || safeFile !== originalFile;
+        if (replaced) {
+            Font.#warnComplianceOnce();
+        }
+        return {
+            fontFamily: safeFamily,
+            fontFile: safeFile,
+            showName,
+            replaced
+        };
+    }
+
+    static getUiFontList() {
+        if (typeof fontList === 'undefined' || !Array.isArray(fontList)) {
+            return [];
+        }
+        return fontList.filter(font => !font.hidden);
+    }
+
+    static #warnComplianceOnce() {
+        if (Font.#complianceWarned) return;
+        Font.#complianceWarned = true;
+        const message = Font.getComplianceMessage();
+        try {
+            PDFEvent.dispatch(Events.FONT_WARNING, { message });
+        } catch (e) {
+            console.warn(message);
+        }
+    }
+
+    static getComplianceMessage() {
+        const locale = Font.getLocaleCode();
+        if (locale.startsWith('zh')) {
+            return '检测到部分字体未获明确授权，已自动替换为安全字体；导出时可能对受影响文本进行栅格化。';
+        }
+        return 'Some fonts are unsupported or unlicensed. They were replaced with safe fonts, and affected text may be rasterized on export.';
     }
 
     /**
@@ -344,7 +632,7 @@ export class Font {
     }
 
     static getFontFileForCodePoint(codePoint, preferredFontFile) {
-        if (Font.#isCJK(codePoint)) return FALLBACK_FONTS.cjk;
+        if (Font.#isCJK(codePoint)) return Font.getCjkFontFile();
         if (Font.#isArabic(codePoint)) return FALLBACK_FONTS.arabic;
         if (Font.#isHebrew(codePoint)) return FALLBACK_FONTS.hebrew;
         if (Font.#isDevanagari(codePoint)) return FALLBACK_FONTS.devanagari;
@@ -378,13 +666,14 @@ export class Font {
     }
 
     static splitTextByFont(text, preferredFontFile) {
+        const safePreferred = Font.normalizeFontFile(preferredFontFile, null, text);
         const runs = [];
         let currentFontFile = null;
         let currentText = '';
 
         const flush = () => {
             if (!currentText) return;
-            runs.push({ text: currentText, fontFile: currentFontFile || (preferredFontFile || FALLBACK_FONTS.latin) });
+            runs.push({ text: currentText, fontFile: currentFontFile || (safePreferred || FALLBACK_FONTS.latin) });
             currentText = '';
         };
 
@@ -394,13 +683,13 @@ export class Font {
             // Keep combining marks/variation selectors with the previous run.
             if (Font.#isCombiningMark(codePoint) || Font.#isVariationSelector(codePoint) || codePoint === 0x200d) {
                 if (!currentText) {
-                    currentFontFile = preferredFontFile || FALLBACK_FONTS.latin;
+                    currentFontFile = safePreferred || FALLBACK_FONTS.latin;
                 }
                 currentText += ch;
                 continue;
             }
 
-            const nextFontFile = Font.getFontFileForCodePoint(codePoint, preferredFontFile);
+            const nextFontFile = Font.getFontFileForCodePoint(codePoint, safePreferred);
             if (currentFontFile && nextFontFile !== currentFontFile) {
                 flush();
             }
