@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 
 const brands = [
@@ -15,6 +16,7 @@ const brands = [
 
 export default function BrandsMarquee() {
   const { t } = useLanguage();
+  const marqueeBrands = useMemo(() => [...brands, ...brands, ...brands], []);
 
   return (
     <section className="py-8 md:py-12 bg-white overflow-hidden">
@@ -29,7 +31,7 @@ export default function BrandsMarquee() {
         <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10" />
 
         <div className="marquee-content">
-          {[...brands, ...brands, ...brands].map((brand, index) => (
+          {marqueeBrands.map((brand, index) => (
             <img
               key={index}
               src={brand}

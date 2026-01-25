@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FilePenLine, FileUp, Monitor, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -273,7 +273,7 @@ const buildPreviewCards = (t: (key: string, fallback?: string) => string) => ({
 export default function AdvantagesSection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const { t } = useLanguage();
-  const previewCards = buildPreviewCards(t);
+  const previewCards = useMemo(() => buildPreviewCards(t), [t]);
 
   return (
     <section className="py-20 md:py-28 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">

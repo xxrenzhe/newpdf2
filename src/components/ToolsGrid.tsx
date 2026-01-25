@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "@/components/AppLink";
 import { TOOLS, TOOL_CATEGORIES, getToolsByCategory, type ToolCategory } from "@/lib/tools";
 import { ToolIcon } from "@/lib/toolIcons";
@@ -18,7 +18,7 @@ const categoryStyles: Record<ToolCategory, string> = {
 
 export default function ToolsGrid() {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>("all");
-  const filteredTools = getToolsByCategory(activeCategory);
+  const filteredTools = useMemo(() => getToolsByCategory(activeCategory), [activeCategory]);
   const { t } = useLanguage();
 
   return (
