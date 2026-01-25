@@ -20,6 +20,11 @@ if (isProd) {
     { key: "STRIPE_WEBHOOK_SECRET", desc: "Stripe Webhook 密钥" },
     { key: "GOOGLE_CLIENT_ID", desc: "Google OAuth 客户端 ID" },
     { key: "GOOGLE_CLIENT_SECRET", desc: "Google OAuth 客户端密钥" },
+    { key: "NEXT_PUBLIC_GOOGLE_CLIENT_ID", desc: "Google Drive Picker 客户端 ID" },
+    { key: "NEXT_PUBLIC_GOOGLE_API_KEY", desc: "Google Drive Picker API Key" },
+    { key: "NEXT_PUBLIC_DROPBOX_APP_KEY", desc: "Dropbox Chooser App Key" },
+    { key: "NEXT_PUBLIC_ONEDRIVE_CLIENT_ID", desc: "OneDrive Picker Client ID" },
+    { key: "NEXT_PUBLIC_ONEDRIVE_REDIRECT_URI", desc: "OneDrive Picker Redirect URI" },
   ];
 
   const missing = requiredEnvVars.filter((key) => !process.env[key]);
@@ -59,13 +64,13 @@ const nextConfig = {
     const isProd = process.env.NODE_ENV === "production";
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://www.dropbox.com https://js.live.net",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       isProd ? "connect-src 'self' https:" : "connect-src 'self' https: http: ws: wss:",
       "worker-src 'self' blob:",
-      "frame-src 'self'",
+      "frame-src 'self' https://accounts.google.com https://docs.google.com https://drive.google.com https://www.dropbox.com https://onedrive.live.com https://login.live.com https://login.microsoftonline.com https://*.sharepoint.com https://*.sharepoint-df.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

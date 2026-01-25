@@ -36,6 +36,10 @@ npm run dev
   - `NEXTAUTH_SECRET`
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`（可选，配置后才会显示 Google 登录）
   - `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET`（可选，配置后才会显示 Facebook 登录）
+- Cloud Upload（可选，配置后首页/工具页的 “Upload from Google Drive/Dropbox/OneDrive” 可用）
+  - `NEXT_PUBLIC_GOOGLE_CLIENT_ID` / `NEXT_PUBLIC_GOOGLE_API_KEY`
+  - `NEXT_PUBLIC_DROPBOX_APP_KEY`
+  - `NEXT_PUBLIC_ONEDRIVE_CLIENT_ID` / `NEXT_PUBLIC_ONEDRIVE_REDIRECT_URI`
 - Stripe（订阅/支付相关）
   - `STRIPE_SECRET_KEY`
   - `STRIPE_WEBHOOK_SECRET`

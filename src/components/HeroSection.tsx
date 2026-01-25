@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createGuestDocument } from "@/lib/guestDocumentStore";
 import { toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
 import { useLanguage } from "@/components/LanguageProvider";
+import CloudUploadOptions from "@/components/CloudUploadOptions";
 
 export default function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
@@ -195,32 +196,12 @@ export default function HeroSection() {
           </div>
 
           {/* Cloud upload options */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
-              <svg className="w-6 h-6" viewBox="0 0 24 24">
-                <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C6.477 2 1.545 6.932 1.545 13s4.932 11 11 11c6.076 0 10.545-4.268 10.545-10.545 0-.707-.082-1.391-.235-2.055l-10.31-.161z" fill="#4285F4"/>
-              </svg>
-              <span className="text-[color:var(--brand-muted)] font-medium">
-                {t("uploadFromGoogleDrive", "Upload from Google Drive")}
-              </span>
-            </button>
-            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#0061FF">
-                <path d="M12 2L6 6.5l6 4.5 6-4.5L12 2zM6 11.5L0 16l6 4.5 6-4.5-6-4.5zm12 0l-6 4.5 6 4.5 6-4.5-6-4.5zM12 14l-6 4.5L12 23l6-4.5L12 14z"/>
-              </svg>
-              <span className="text-[color:var(--brand-muted)] font-medium">
-                {t("uploadFromDropbox", "Upload from Dropbox")}
-              </span>
-            </button>
-            <button className="flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300 opacity-60 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#0078D4">
-                <path d="M10.5 2.5H2.5v9h8v-9zm11 0h-8v9h8v-9zm-11 11h-8v9h8v-9zm11 0h-8v9h8v-9z"/>
-              </svg>
-              <span className="text-[color:var(--brand-muted)] font-medium">
-                {t("uploadFromOneDrive", "Upload from OneDrive")}
-              </span>
-            </button>
-          </div>
+          <CloudUploadOptions
+            variant="hero"
+            disabled={isBusy}
+            onFiles={(files) => void openWithFiles(files)}
+            onError={(message) => setUploadError(message)}
+          />
         </div>
       </div>
     </section>

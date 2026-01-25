@@ -2,6 +2,7 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
+import CloudUploadOptions from "@/components/CloudUploadOptions";
 import {
   validateFileType,
   validatePdfStructure,
@@ -311,27 +312,16 @@ export default function FileDropzone({
         </div>
       </div>
 
-      {/* Cloud upload options (disabled) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C6.477 2 1.545 6.932 1.545 13s4.932 11 11 11c6.076 0 10.545-4.268 10.545-10.545 0-.707-.082-1.391-.235-2.055l-10.31-.161z" fill="#4285F4"/>
-          </svg>
-          <span className="text-[color:var(--brand-muted)] font-medium text-sm">Google Drive</span>
-        </button>
-        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#0061FF">
-            <path d="M12 2L6 6.5l6 4.5 6-4.5L12 2zM6 11.5L0 16l6 4.5 6-4.5-6-4.5zm12 0l-6 4.5 6 4.5 6-4.5-6-4.5zM12 14l-6 4.5L12 23l6-4.5L12 14z"/>
-          </svg>
-          <span className="text-[color:var(--brand-muted)] font-medium text-sm">Dropbox</span>
-        </button>
-        <button className="cloud-btn justify-center opacity-50 cursor-not-allowed" type="button" disabled title={t("comingSoon", "Coming soon")}>
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#0078D4">
-            <path d="M10.5 2.5H2.5v9h8v-9zm11 0h-8v9h8v-9zm-11 11h-8v9h8v-9zm11 0h-8v9h8v-9z"/>
-          </svg>
-          <span className="text-[color:var(--brand-muted)] font-medium text-sm">OneDrive</span>
-        </button>
-      </div>
+      <CloudUploadOptions
+        variant="dropzone"
+        disabled={isValidating}
+        multiple={multiple}
+        onFiles={(files) => void emitFiles(files)}
+        onError={(message) => {
+          setError(message);
+          setTimeout(() => setError(null), 5000);
+        }}
+      />
     </div>
   );
 }
