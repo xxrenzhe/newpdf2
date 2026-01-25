@@ -276,7 +276,7 @@ export default function AdvantagesSection() {
   const previewCards = useMemo(() => buildPreviewCards(t), [t]);
 
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">
+    <section className="pt-10 md:pt-12 pb-12 md:pb-16 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center max-w-4xl mx-auto mb-16 md:mb-20">

@@ -94,7 +94,7 @@ export default function HeroSection() {
       <div className="blur-pink bottom-20 right-20 opacity-50" />
       <div className="absolute -top-24 right-10 h-48 w-48 rounded-full bg-[color:var(--brand-peach)] opacity-70 blur-3xl" />
 
-      <div className="container mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-20 lg:py-28">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 pt-6 md:pt-8 lg:pt-10 pb-12 md:pb-16 lg:pb-20">
         {/* Title */}
         <div className="text-center max-w-4xl mx-auto mb-12 md:mb-16">
           <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-[color:var(--brand-ink)] mb-6 leading-tight tracking-tight">

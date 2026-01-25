@@ -22,7 +22,7 @@ export default function ToolsGrid() {
   const { t } = useLanguage();
 
   return (
-    <section className="py-20 bg-gradient-to-b from-[color:var(--brand-cream)] to-white" id="tools">
+    <section className="pt-10 md:pt-12 pb-12 md:pb-16 bg-gradient-to-b from-[color:var(--brand-cream)] to-white" id="tools">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         {/* Section Title */}
         <div className="text-center max-w-3xl mx-auto mb-16">

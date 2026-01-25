@@ -68,7 +68,7 @@ export default function StatsSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-16 md:py-20 bg-white">
+    <section ref={sectionRef} className="py-12 md:py-16 bg-white">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex flex-wrap justify-center gap-10 md:gap-16 lg:gap-28">
           {stats.map((stat, index) => (

@@ -57,7 +57,7 @@ export default function FAQSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">
+    <section className="pt-10 md:pt-12 pb-12 md:pb-16 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-14 md:mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[color:var(--brand-ink)] mb-4">

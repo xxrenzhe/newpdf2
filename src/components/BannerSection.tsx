@@ -8,7 +8,7 @@ export default function BannerSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-r from-[color:var(--brand-peach)] via-white to-[color:var(--brand-lilac)] relative overflow-hidden">
+    <section className="pt-10 md:pt-12 pb-10 md:pb-12 bg-gradient-to-r from-[color:var(--brand-peach)] via-white to-[color:var(--brand-lilac)] relative overflow-hidden">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-10">
           {/* Left Image */}
