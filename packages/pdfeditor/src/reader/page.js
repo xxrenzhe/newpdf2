@@ -976,7 +976,7 @@ export class PDFPage extends PDFPageBase {
             const row = Math.floor(height * ratio);
             return Math.max(0, Math.min(height - 1, row));
         });
-        const stepX = Math.max(1, Math.floor(width / 24));
+        const stepX = Math.max(1, Math.floor(width / 60));
 
         const record = (r, g, b) => {
             const rq = Math.max(0, Math.min(255, Math.round(r / quant) * quant));
@@ -1020,18 +1020,45 @@ export class PDFPage extends PDFPageBase {
         }
 
         if (!counts.size) return null;
-        let bestKey = null;
-        let bestCount = -1;
+        const parseKey = (key) => {
+            const parts = key.split(',').map(v => parseInt(v, 10));
+            if (parts.length < 3 || parts.some(v => !Number.isFinite(v))) return null;
+            return parts;
+        };
+
+        const contrast = (rgb) => {
+            if (!bg) return 0;
+            return Math.abs(rgb[0] - bg.r) + Math.abs(rgb[1] - bg.g) + Math.abs(rgb[2] - bg.b);
+        };
+
+        // Prefer the best-contrast color among the top-K most frequent samples.
+        // This avoids picking anti-aliased gray edge pixels as the "dominant" text color.
+        const entries = [];
         counts.forEach((count, key) => {
-            if (count > bestCount) {
-                bestCount = count;
-                bestKey = key;
-            }
+            const rgb = parseKey(key);
+            if (!rgb) return;
+            if (bg && this.#isNearColor(rgb[0], rgb[1], rgb[2], bg, tolerance)) return;
+            entries.push({ key, count, rgb });
         });
-        if (!bestKey) return null;
-        const parts = bestKey.split(',').map(v => parseInt(v, 10));
-        if (parts.length < 3 || parts.some(v => !Number.isFinite(v))) return null;
-        return `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+        if (!entries.length) return null;
+        entries.sort((a, b) => b.count - a.count);
+
+        const top = entries.slice(0, 6);
+        let chosen = top[0];
+        if (bg) {
+            let best = null;
+            let bestC = -1;
+            for (const item of top) {
+                const c = contrast(item.rgb);
+                if (!best || c > bestC || (c === bestC && item.count > best.count)) {
+                    best = item;
+                    bestC = c;
+                }
+            }
+            if (best) chosen = best;
+        }
+
+        return `rgb(${chosen.rgb[0]}, ${chosen.rgb[1]}, ${chosen.rgb[2]})`;
     }
 
     #refineLineBoundsByCanvas(bounds, bgColor, fontSize) {

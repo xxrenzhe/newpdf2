@@ -141,6 +141,9 @@ class Toolbar {
         this.toolActive = tool;
         this.reader.mainBox.classList.add('__cursor_' + this.toolActive.name);
         this.toolActive.container.classList.add('active');
+        // Ensure draw layer z-index matches the active tool even when switching programmatically
+        // (e.g. auto-switch on text conversion).
+        this.toolActive.__setzIndex?.();
         // PDFEvent.dispatch(Events.TOOLBAR_ITEM_ACTIVE, this.toolActive);
     }
 

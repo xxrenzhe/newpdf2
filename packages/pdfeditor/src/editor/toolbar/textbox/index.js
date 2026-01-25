@@ -351,12 +351,15 @@ class TextBox extends Rect {
             background: this.attrs.background,
             opacity: this.attrs.opacity,
             onFinished: rect => {
-                if (rect.width < this.minWidth && rect.height < this.minHeight) {
-                    return;
+                let width = rect.width;
+                let height = rect.height;
+                if (width < this.minWidth && height < this.minHeight) {
+                    width = Math.max(180, this.minWidth);
+                    height = Math.max(48, this.minHeight);
                 }
                 const objElement = page.elements.add('textbox', Object.assign({
-                    width: rect.width,
-                    height: rect.height
+                    width,
+                    height
                 }, this.attrs), {
                     pos: {
                         x: rect.x,
