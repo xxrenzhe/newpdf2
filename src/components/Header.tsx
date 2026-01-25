@@ -33,7 +33,7 @@ export default function Header() {
             <img
               src="/logo.png"
               alt="QwerPDF"
-              className="h-24 md:h-28 w-auto"
+              className="h-6 md:h-7 w-auto"
             />
           </Link>
 

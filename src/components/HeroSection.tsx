@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useId } from "react";
+import { useRef, useState, useCallback, useId, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { createGuestDocument } from "@/lib/guestDocumentStore";
@@ -10,12 +10,19 @@ import { useLanguage } from "@/components/LanguageProvider";
 export default function HeroSection() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isPreparing, setIsPreparing] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
   const router = useRouter();
   const { t } = useLanguage();
 
+  useEffect(() => {
+    router.prefetch("/app/guest/document");
+  }, [router]);
+
   const openWithFiles = useCallback(async (files: FileList | File[]) => {
+    if (isPreparing) return;
     setUploadError(null);
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
@@ -27,10 +34,15 @@ export default function HeroSection() {
     const chosenTool = isPdf ? "edit-pdf" : isImage ? "convert" : "convert";
     const toolKey = toolKeyFromChosenTool(chosenTool);
     try {
+      setIsPreparing(true);
       const documentId = await createGuestDocument(toolKey, fileArray);
-      router.push(`/app/guest/document?chosenTool=${encodeURIComponent(chosenTool)}&documentId=${encodeURIComponent(documentId)}`);
+      const target = `/app/guest/document?chosenTool=${encodeURIComponent(chosenTool)}&documentId=${encodeURIComponent(documentId)}`;
+      startTransition(() => {
+        router.push(target);
+      });
     } catch (err) {
       console.error("Failed to create guest document", err);
+      setIsPreparing(false);
       setUploadError(
         t(
           "uploadErrorFallback",
@@ -38,12 +50,13 @@ export default function HeroSection() {
         )
       );
     }
-  }, [router, t]);
+  }, [isPreparing, router, startTransition, t]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    if (isPreparing) return;
     setIsDragging(true);
-  }, []);
+  }, [isPreparing]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -52,18 +65,22 @@ export default function HeroSection() {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    if (isPreparing) return;
     setIsDragging(false);
     void openWithFiles(e.dataTransfer.files);
-  }, [openWithFiles]);
+  }, [isPreparing, openWithFiles]);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isPreparing) return;
       if (!e.target.files || e.target.files.length === 0) return;
       void openWithFiles(e.target.files);
       e.target.value = "";
     },
-    [openWithFiles]
+    [isPreparing, openWithFiles]
   );
+
+  const isBusy = isPreparing || isPending;
 
   return (
     <section className="relative overflow-hidden">
@@ -89,11 +106,12 @@ export default function HeroSection() {
         {/* Upload Card */}
         <div className="max-w-3xl mx-auto">
           <div
+            aria-busy={isBusy}
             className={`bg-white/90 rounded-3xl border-2 border-dashed shadow-xl ${
-              isDragging
+              isDragging && !isBusy
                 ? "border-primary bg-[color:rgba(242,236,255,0.4)] scale-[1.02]"
                 : "border-[color:var(--brand-line)] hover:border-primary/50"
-            } p-10 md:p-14 transition-all duration-300`}
+            } ${isBusy ? "pointer-events-none opacity-80" : ""} p-10 md:p-14 transition-all duration-300`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -129,24 +147,35 @@ export default function HeroSection() {
                   accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.bmp,.txt"
                   onChange={handleFileSelect}
                   ref={fileInputRef}
+                  disabled={isBusy}
                 />
-                <Button
-                  asChild
-                  className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-[rgba(91,75,183,0.35)] transition-all duration-300"
-                >
-                  <label
-                    htmlFor={fileInputId}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter" && e.key !== " ") return;
-                      e.preventDefault();
-                      fileInputRef.current?.click();
-                    }}
+                {isBusy ? (
+                  <div className="inline-flex items-center justify-center gap-3 bg-[color:var(--brand-cream)] text-[color:var(--brand-ink)] font-semibold px-12 py-4 h-14 rounded-xl text-lg">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>{t("loadingPleaseWait", "Loading, please wait...")}</span>
+                  </div>
+                ) : (
+                  <Button
+                    asChild
+                    className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-[rgba(91,75,183,0.35)] transition-all duration-300"
                   >
-                    {t("browseFiles", "Browse files")}
-                  </label>
-                </Button>
+                    <label
+                      htmlFor={fileInputId}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }}
+                    >
+                      {t("browseFiles", "Browse files")}
+                    </label>
+                  </Button>
+                )}
               </div>
 
               {/* File size info */}

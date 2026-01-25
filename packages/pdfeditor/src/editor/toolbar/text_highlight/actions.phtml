@@ -1,16 +1,23 @@
+<div class="__act_item __act_highlight_icon">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        <path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/>
+    </svg>
+</div>
 <div class="__act_item __act_colors">
-    <span class="color-item" data-name="orange" data-color="#ffcd45"></span>
-    <span class="color-item" data-name="blue" data-color="#25d2d1"></span>
-    <span class="color-item" data-name="green" data-color="#00cc63"></span>
-    <span class="color-item" data-name="lilac" data-color="#e2a1e6"></span>
+    <span class="color-item" data-name="yellow" data-color="#FBBF24" style="background-color:#FBBF24"></span>
+    <span class="color-item" data-name="green" data-color="#34D399" style="background-color:#34D399"></span>
+    <span class="color-item" data-name="blue" data-color="#60A5FA" style="background-color:#60A5FA"></span>
+    <span class="color-item" data-name="pink" data-color="#F472B6" style="background-color:#F472B6"></span>
+    <span class="color-item" data-name="purple" data-color="#A78BFA" style="background-color:#A78BFA"></span>
+    <span class="color-item" data-name="orange" data-color="#FB923C" style="background-color:#FB923C"></span>
     <span class="color-picker"><img src="<%= ASSETS_URL %>img/picker-1.png" /></span>
 </div>
-<div class="__act_item">
-    <span data-locale="opacity" class="width-max-content">${LANG_MESSAGES.opacity}: </span>
-    <div class="__act_range_reduce __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomreduce.svg"></div>
-    <input class="__act_bg_opacity" type="range" value="0" max="10" min="0" step="0.1">
-    <div class="__act_range_plus __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomadd.svg"></div>
-    <span class="__act_bg_opacity_text"></span>
+<div class="__act_item __act_opacity_section">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="#6B7280">
+        <path d="M17.66 8L12 2.35 6.34 8C4.78 9.56 4 11.64 4 13.64s.78 4.11 2.34 5.67 3.61 2.35 5.66 2.35 4.1-.79 5.66-2.35S20 15.64 20 13.64 19.22 9.56 17.66 8zM6 14c.01-2 .62-3.27 1.76-4.4L12 5.27l4.24 4.38C17.38 10.77 17.99 12 18 14H6z"/>
+    </svg>
+    <input class="__act_bg_opacity" type="range" value="10" max="10" min="1" step="1">
+    <span class="__act_bg_opacity_text">100%</span>
 </div>
-
 <div class="__act_item __act_color_preview"></div>

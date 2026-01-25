@@ -26,7 +26,8 @@ class TextBoxElement extends TextElement {
             italic: false,
             fontFamily: defaultFont.fontFamily,
             fontFile: defaultFont.fontFile,
-            showName: defaultFont.showName
+            showName: defaultFont.showName,
+            textMode: 'paragraph'
         };
         this.attrs = Object.assign(attrs, this.attrs);
         const safeFont = Font.resolveSafeFont({

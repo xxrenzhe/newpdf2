@@ -21,6 +21,8 @@ class TextElement extends BaseElement {
             fontFamily: defaultFont.fontFamily,
             fontFile: defaultFont.fontFile,
             showName: defaultFont.showName,
+            displayFontFamily: null,
+            textMode: 'paragraph',
             boxWidth: null,
             boxHeight: null,
             lineOffsets: null,
@@ -71,7 +73,21 @@ class TextElement extends BaseElement {
         this.elText.style.fontWeight = this.attrs.bold ? 'bold' : 'normal';
         this.elText.style.fontStyle = this.attrs.italic ? 'italic' : 'normal';
         this.elText.style.background = this.attrs.background;
-        this.elText.style.fontFamily = this.attrs.fontFamily;
+        const displayFontFamily = this.attrs.displayFontFamily;
+        if (displayFontFamily && displayFontFamily !== this.attrs.fontFamily) {
+            this.elText.style.fontFamily = `${displayFontFamily}, ${this.attrs.fontFamily}`;
+        } else {
+            this.elText.style.fontFamily = this.attrs.fontFamily;
+        }
+        if (this.attrs.textMode === 'paragraph') {
+            this.elText.style.whiteSpace = 'pre-wrap';
+            this.elText.style.wordBreak = 'break-word';
+            this.elText.style.wordWrap = 'break-word';
+        } else {
+            this.elText.style.whiteSpace = 'pre';
+            this.elText.style.wordBreak = 'normal';
+            this.elText.style.wordWrap = 'normal';
+        }
         this.elText.style.lineHeight = this.attrs.lineHeight + 'px';
         this.elText.style.opacity = this.attrs.opacity;
         const hasBoxWidth = typeof this.attrs.boxWidth === 'number' && Number.isFinite(this.attrs.boxWidth);
@@ -122,6 +138,17 @@ class TextElement extends BaseElement {
         if (typeof this.attrs.textPaddingLeft === 'number' && Number.isFinite(this.attrs.textPaddingLeft)) {
             this.elText.style.paddingLeft = (this.attrs.textPaddingLeft * this.pageScale) + 'px';
         }
+    }
+
+    edit(attrs) {
+        const nextAttrs = Object.assign({}, attrs);
+        const hasFontFamily = Object.prototype.hasOwnProperty.call(attrs, 'fontFamily');
+        const hasFontFile = Object.prototype.hasOwnProperty.call(attrs, 'fontFile');
+        if ((hasFontFamily || hasFontFile)
+            && !Object.prototype.hasOwnProperty.call(attrs, 'displayFontFamily')) {
+            nextAttrs.displayFontFamily = null;
+        }
+        super.edit(nextAttrs);
     }
 
     childElement() {
@@ -264,7 +291,15 @@ class TextElement extends BaseElement {
 
         // When editing existing PDF text, we store a "cover box" that can fully hide
         // the original glyphs even if the new text becomes shorter/empty.
-        const hasCoverBox = Boolean(
+        const coverRects = Array.isArray(this.attrs.coverRects)
+            ? this.attrs.coverRects.filter(rect => rect
+                && Number.isFinite(rect.left)
+                && Number.isFinite(rect.top)
+                && Number.isFinite(rect.width)
+                && Number.isFinite(rect.height))
+            : null;
+        const hasCoverRects = Boolean(coverRects && coverRects.length);
+        const hasCoverBox = hasCoverRects || Boolean(
             this.attrs.coverOriginal
             && typeof this.attrs.coverWidth === 'number'
             && Number.isFinite(this.attrs.coverWidth)
@@ -274,7 +309,21 @@ class TextElement extends BaseElement {
             && this.attrs.coverHeight > 0
         );
 
-        if (this.attrs.background && hasCoverBox) {
+        if (this.attrs.background && hasCoverRects) {
+            const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
+            coverRects.forEach(rect => {
+                const coverTopY = rect.top;
+                const coverY = this.page.height - (coverTopY + rect.height);
+                this.page.pageProxy.drawRectangle({
+                    x: rect.left,
+                    y: coverY,
+                    width: rect.width,
+                    height: rect.height,
+                    color: this.editor.PDFLib.componentsToColor(bgRgb.map(v => (v / 255))),
+                    opacity: this.attrs.opacity
+                });
+            });
+        } else if (this.attrs.background && hasCoverBox) {
             const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
             const coverOffsetX = (typeof this.attrs.coverOffsetX === 'number' && Number.isFinite(this.attrs.coverOffsetX))
                 ? this.attrs.coverOffsetX

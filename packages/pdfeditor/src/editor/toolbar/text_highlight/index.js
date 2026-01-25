@@ -149,14 +149,27 @@ class TextHighLight extends ToolbarItemBase {
             elPreview.remove();
         }
 
+        // Color selection with active state (pdf.net style)
         const elColors = temp.querySelector('.__act_colors');
-        elColors.querySelectorAll('.color-item').forEach(elColor => {
+        const colorItems = elColors.querySelectorAll('.color-item');
+
+        const updateActiveColor = (color) => {
+            colorItems.forEach(item => {
+                const itemColor = item.getAttribute('data-color');
+                if (itemColor && itemColor.toLowerCase() === color.toLowerCase()) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        };
+        updateActiveColor(this.attrs.background);
+
+        colorItems.forEach(elColor => {
             elColor.addEventListener('click', e => {
                 let background = elColor.getAttribute('data-color');
-                this.updateAttrs({
-                    background
-                }, objElement);
-
+                this.updateAttrs({ background }, objElement);
+                updateActiveColor(background);
                 this.__setPreview(elPreview);
             });
         });
@@ -189,14 +202,12 @@ class TextHighLight extends ToolbarItemBase {
         });
         colorPickr.on('change', color => {
             let background = color.toHEXA().toString().toLocaleLowerCase();
-            this.updateAttrs({
-                background
-            }, objElement);
-
+            this.updateAttrs({ background }, objElement);
+            updateActiveColor(background);
             this.__setPreview(elPreview);
         });
 
-
+        // Opacity slider
         const elBGOpacityText = temp.querySelector('.__act_bg_opacity_text');
         elBGOpacityText.textContent = (this.attrs.opacity * 100) + '%';
         const elBGOpacity = temp.querySelector('.__act_bg_opacity');
@@ -205,25 +216,10 @@ class TextHighLight extends ToolbarItemBase {
         const opacityChange = () => {
             elBGOpacityText.textContent = (elBGOpacity.value * 10) + '%';
             let opacity = elBGOpacity.value / 10;
-            this.updateAttrs({
-                opacity
-            }, objElement);
-
+            this.updateAttrs({ opacity }, objElement);
             this.__setPreview(elPreview);
         };
         elBGOpacity.addEventListener('input', opacityChange);
-
-        const elBGOpacityReduce = temp.querySelector('.__act_range_reduce');
-        elBGOpacityReduce.addEventListener('click', () => {
-            elBGOpacity.stepDown();
-            opacityChange();
-        });
-
-        const elBGOpacityPlus = temp.querySelector('.__act_range_plus');
-        elBGOpacityPlus.addEventListener('click', () => {
-            elBGOpacity.stepUp();
-            opacityChange();
-        });
 
         let elActions = [];
         for (let elChild of temp.children) {

@@ -7,32 +7,37 @@
 .pdf-toolbar {
     display: flex;
     align-items: center;
-    height: 60px;
-    /* padding: 8px 0; */
+    height: var(--toolbar-height);
+    padding: 0 12px;
+    background: var(--toolbar-bg);
     border-bottom: var(--border);
-    /* overflow: hidden; */
+    gap: 2px;
 }
+
 .pdf-toolbar .tools-box {
     display: none;
     align-items: center;
-    height: 60px;
-    /* border-bottom: var(--border);
-    overflow: hidden; */
+    height: 100%;
+    gap: 2px;
 }
 
-.pdf-toolbar .tools-box.active {
+.pdf-toolbar .tools-box.active,
+.pdf-toolbar .tools-box.unified-toolbar {
     display: flex;
 }
 
 .pdf-toolbar .line {
     width: 1px;
-    height: 100%;
-    border-right: var(--border);
+    height: var(--toolbar-divider-height);
+    background: #E5E7EB;
+    margin: 0 var(--toolbar-divider-margin);
+    border: none;
 }
+
 .pdf-toolbar .tool-items {
     height: 100%;
-    padding: 0 5px;
-    font-size: var(--tool-items-text-size);
+    padding: 0 2px;
+    font-size: var(--tool-btn-font-size);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -40,53 +45,71 @@
 }
 
 .pdf-toolbar .tool-items img {
-    width: 15px;
-    height: 15px;
+    width: var(--tool-btn-icon-size);
+    height: var(--tool-btn-icon-size);
 }
-.pdf-toolbar .tool_textArt{
+
+.pdf-toolbar .tool_textArt {
     margin-right: 10px;
 }
 
 .pdf-toolbar .tool-item-text img {
-    width: 13px;
-    height: 13px;
+    width: 16px;
+    height: 16px;
 }
 
 .pdf-toolbar .tool-item-single {
-    padding: 0 10px;
-    border: 1px solid transparent;
+    padding: 4px 6px;
+    border: none;
+    border-radius: var(--tool-btn-radius);
+    transition: background-color 0.15s ease;
 }
 
 .pdf-toolbar .tool-item-single img {
-    width: 20px;
-    height: 20px;
+    width: var(--tool-btn-icon-size);
+    height: var(--tool-btn-icon-size);
 }
-.pdf-toolbar .stamp_preset img,.pdf-toolbar .stamp_upload img{
+
+.pdf-toolbar .stamp_preset img, .pdf-toolbar .stamp_upload img {
     width: 50px;
     height: auto;
 }
 
 .pdf-toolbar .tool-item {
     display: flex;
-    padding: 0 5px;
-    width: 100%;
-    height: 40%;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    min-width: var(--tool-btn-min-width);
+    height: var(--tool-btn-height);
     cursor: pointer;
+    border-radius: var(--tool-btn-radius);
+    transition: background-color 0.15s ease, color 0.15s ease;
+    color: #374151;
 }
 
-.pdf-toolbar .tool-item.active,
-.pdf-toolbar .tool-item-single.active,
+/* 悬停状态 - pdf.net 风格 */
 .pdf-toolbar .tool-item:hover,
 .pdf-toolbar .tool-item-single:hover {
-    background-color: var(--hover-bg-color);
-    border-radius: var(--border-radius);
-    transition: background-color var(--hover-ms), 
-                border var(--hover-ms);
+    background-color: var(--tool-btn-hover-bg);
 }
-.pdf-toolbar .tool-item-single.active,
-.pdf-toolbar .tool-item-single:hover {
-    border-color: var(--hover-border-bg-color);
+
+/* 激活状态 - 品牌色背景 + 白色文字/图标 */
+.pdf-toolbar .tool-item.active,
+.pdf-toolbar .tool-item-single.active {
+    background-color: var(--tool-btn-active-bg);
+    color: var(--tool-btn-active-color);
+}
+
+.pdf-toolbar .tool-item.active img,
+.pdf-toolbar .tool-item-single.active img {
+    filter: brightness(0) invert(1);
+}
+
+.pdf-toolbar .tool-item.active svg,
+.pdf-toolbar .tool-item-single.active svg {
+    filter: brightness(0) invert(1);
 }
 
 .pdf-toolbar .tool-item-single .tool-item:hover {
@@ -97,6 +120,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-top: var(--tool-btn-gap);
+    font-size: var(--tool-btn-font-size);
 }
 
 .pdf-toolbar .tool-item-text span {
@@ -533,6 +558,454 @@
     width: 60px;
     height: var(--element-actions-item-height);
 }
+
+/* === pdf.net 风格 Draw 浮动面板 === */
+.__act_draw_icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--brand-primary, #5A58F2);
+}
+
+.__act_stroke_options {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+}
+
+.__act_stroke_btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.__act_stroke_btn:hover {
+    background-color: var(--brand-primary-light, #ECEBFE);
+}
+
+.__act_stroke_btn.active {
+    background-color: var(--brand-primary, #5A58F2);
+}
+
+.__act_stroke_btn.active .stroke-preview {
+    background-color: #FFFFFF;
+}
+
+.stroke-preview {
+    background-color: #374151;
+    border-radius: 2px;
+    width: 20px;
+}
+
+.stroke-preview.stroke-thin {
+    height: 2px;
+}
+
+.stroke-preview.stroke-medium {
+    height: 4px;
+}
+
+.stroke-preview.stroke-thick {
+    height: 8px;
+}
+
+.__act_colors_grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--color-dot-gap, 6px);
+    padding: 4px 8px;
+}
+
+.color-dot {
+    width: var(--color-dot-size, 26px);
+    height: var(--color-dot-size, 26px);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.color-dot:hover {
+    transform: scale(1.1);
+}
+
+.color-dot.active {
+    border-color: var(--brand-primary, #5A58F2);
+    transform: scale(1.1);
+}
+
+.color-picker-dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--color-dot-size, 26px);
+    height: var(--color-dot-size, 26px);
+    cursor: pointer;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #45B7D1, #96E6A1, #DDA0DD, #FFD93D);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    transition: transform 0.15s ease;
+}
+
+.color-picker-dot:hover {
+    transform: scale(1.1);
+}
+
+.color-picker-dot img {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+/* === pdf.net 风格 Draw 浮动面板结束 === */
+
+/* === pdf.net 风格 More 下拉菜单 === */
+.tool_more {
+    position: relative;
+}
+
+.more-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 180px;
+    background: var(--panel-bg, #FFFFFF);
+    border-radius: var(--panel-radius, 12px);
+    box-shadow: var(--panel-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+    padding: 8px 0;
+    z-index: 1000;
+    display: none;
+}
+
+.tool_more:hover .more-dropdown,
+.tool_more.open .more-dropdown {
+    display: block;
+}
+
+.more-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    font-size: 13px;
+    color: #374151;
+}
+
+.more-dropdown-item:hover {
+    background-color: var(--brand-primary-light, #ECEBFE);
+}
+
+.more-dropdown-item.active {
+    background-color: var(--brand-primary, #5A58F2);
+    color: #FFFFFF;
+}
+
+.more-dropdown-item.active img {
+    filter: brightness(0) invert(1);
+}
+
+.more-dropdown-item img {
+    width: 20px;
+    height: 20px;
+}
+
+.more-dropdown-item span {
+    white-space: nowrap;
+}
+
+.more-dropdown-divider {
+    height: 1px;
+    background-color: #E5E7EB;
+    margin: 6px 12px;
+}
+/* === pdf.net 风格 More 下拉菜单结束 === */
+
+/* === pdf.net 风格通用浮动面板优化 === */
+/* 浮动面板容器 */
+.pdf-el-actions,
+.__pdf_el_actions {
+    background: var(--panel-bg, #FFFFFF);
+    border-radius: var(--panel-radius, 12px);
+    box-shadow: var(--panel-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+    border: none;
+    padding: 8px 12px;
+}
+
+/* 面板项目间距 */
+.__pdf_el_actions .__act_item,
+.pdf-el-actions .__act_item {
+    padding: 0 8px;
+}
+
+/* 通用颜色网格 (用于所有带颜色选择的工具) */
+.__act_colors_grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--color-dot-gap, 6px);
+    padding: 4px 8px;
+}
+
+/* 旧的颜色选择器样式优化 */
+.__act_colors {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.__act_colors .color-item {
+    width: var(--color-dot-size, 26px);
+    height: var(--color-dot-size, 26px);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    margin: 0;
+    padding: 0;
+    background-clip: padding-box;
+}
+
+.__act_colors .color-item:hover {
+    transform: scale(1.1);
+}
+
+.__act_colors .color-item.active,
+.__act_colors .color-item[checked] {
+    border-color: var(--brand-primary, #5A58F2);
+    transform: scale(1.1);
+}
+
+.__act_colors .color-picker {
+    width: var(--color-dot-size, 26px);
+    height: var(--color-dot-size, 26px);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #45B7D1, #96E6A1, #DDA0DD, #FFD93D);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    transition: transform 0.15s ease;
+    margin: 0;
+    padding: 0;
+}
+
+.__act_colors .color-picker:hover {
+    transform: scale(1.1);
+}
+
+.__act_colors .color-picker img {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+/* 操作按钮优化 */
+.__act_item_btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.__act_item_btn:hover {
+    background-color: var(--brand-primary-light, #ECEBFE);
+}
+
+.__act_item_btn img {
+    width: 14px;
+    height: 14px;
+}
+
+/* 范围滑块优化 */
+.__act_item input[type=range] {
+    appearance: none;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, var(--brand-primary-light, #ECEBFE), var(--brand-primary, #5A58F2));
+    border-radius: 10px;
+    height: 4px;
+    outline: none;
+    width: 60px;
+    margin: 0 4px;
+}
+
+.__act_item input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #FFFFFF;
+    cursor: pointer;
+    border: 2px solid var(--brand-primary, #5A58F2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 文字标签优化 */
+.__act_item span {
+    font-size: 12px;
+    color: #6B7280;
+    white-space: nowrap;
+}
+
+/* 预览区域优化 */
+.__act_color_preview,
+.__act_draw_preview {
+    border-radius: 6px;
+    border: 1px solid #E5E7EB;
+}
+
+/* 子项按钮优化 */
+.child-item-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.child-item-btn:hover {
+    background-color: var(--brand-primary-light, #ECEBFE);
+}
+
+.child-item-btn.active {
+    background-color: var(--brand-primary, #5A58F2);
+}
+
+.child-item-btn.active img {
+    filter: brightness(0) invert(1);
+}
+
+/* 字体选择器优化 */
+.font-dropdown {
+    border-radius: var(--panel-radius, 12px);
+    box-shadow: var(--panel-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+    border: none;
+}
+
+.font-dropdown .font-item {
+    padding: 8px 12px;
+    transition: background-color 0.15s ease;
+}
+
+.font-dropdown .font-item:hover {
+    background-color: var(--brand-primary-light, #ECEBFE);
+}
+
+/* 颜色下拉框优化 */
+.colors-dropdown {
+    border-radius: 6px;
+    padding: 4px 8px;
+    transition: background-color 0.15s ease;
+}
+
+.colors-dropdown:hover {
+    background-color: var(--brand-primary-light, #ECEBFE);
+}
+
+.colors-dropdown .color_preview {
+    height: 3px;
+    border-radius: 2px;
+}
+
+/* 工具图标区域 */
+.__act_highlight_icon,
+.__act_shape_icon,
+.__act_arrow_icon,
+.__act_draw_icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--brand-primary, #5A58F2);
+    padding: 0 4px;
+}
+
+/* 透明度区域 */
+.__act_opacity_section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 字体控制区域 */
+.__act_font_controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 字体颜色区域 */
+.__act_font_colors {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 形状选择器 */
+.__act_shapes_picker {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.__act_shapes_picker .child-item-btn {
+    width: 36px;
+    height: 36px;
+}
+
+.__act_shapes_picker .child-item-btn img {
+    width: 20px;
+    height: 20px;
+}
+
+/* === 功能工具按钮 (撤销/重做、缩放、视图模式等) - 较小图标 === */
+.utility-tools .tool-item {
+    min-width: 32px;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+}
+
+.utility-tools .tool-item img,
+.utility-tools .tool-item svg {
+    width: 16px;
+    height: 16px;
+}
+
+.utility-tools .tool-row {
+    gap: 2px;
+}
+
+.utility-tools .tool-row .tool-item {
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
+    padding: 5px;
+}
+
+.utility-tools .tool-row .tool-item img,
+.utility-tools .tool-row .tool-item svg {
+    width: 14px;
+    height: 14px;
+}
+/* === 功能工具按钮结束 === */
+/* === pdf.net 风格通用浮动面板优化结束 === */
 
 .__act_item .select {
     width: 70px;

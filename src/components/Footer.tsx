@@ -32,7 +32,7 @@ export default function Footer() {
                 <img
                   src="/logo.png"
                   alt="QwerPDF"
-                  className="h-28 w-auto block -mb-2"
+                  className="h-7 w-auto block -mb-2"
                 />
               </Link>
               <p className="-mt-1 text-[color:var(--brand-muted)] font-medium text-base">

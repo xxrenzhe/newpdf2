@@ -26,6 +26,41 @@
     --border-radius: 6px;
     /* Common end */
 
+    /* === pdf.net 风格变量 === */
+    /* 品牌色系 */
+    --brand-primary: #5A58F2;
+    --brand-primary-light: #ECEBFE;
+    --brand-primary-dark: #3B38ED;
+
+    /* 工具栏 */
+    --toolbar-height: 64px;
+    --toolbar-bg: #FFFFFF;
+
+    /* 工具按钮 */
+    --tool-btn-min-width: 52px;
+    --tool-btn-height: 52px;
+    --tool-btn-icon-size: 22px;
+    --tool-btn-font-size: 11px;
+    --tool-btn-gap: 4px;
+    --tool-btn-radius: 8px;
+    --tool-btn-active-bg: var(--brand-primary);
+    --tool-btn-active-color: #FFFFFF;
+    --tool-btn-hover-bg: var(--brand-primary-light);
+
+    /* 分隔线 */
+    --toolbar-divider-height: 32px;
+    --toolbar-divider-margin: 8px;
+
+    /* 浮动面板 */
+    --panel-bg: #FFFFFF;
+    --panel-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --panel-radius: 12px;
+
+    /* 颜色选择器 */
+    --color-dot-size: 26px;
+    --color-dot-gap: 6px;
+    /* === pdf.net 风格变量结束 === */
+
     --pdf-header-bg-color: #2d85de;
     --pdf-header-text-color: #ffffff;
     --pdf-header-tab-item-active-bg-color: #ffffff;

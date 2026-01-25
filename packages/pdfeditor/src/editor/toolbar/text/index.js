@@ -7,6 +7,7 @@ import { Font } from '../../../font';
 class Text extends ToolbarItemBase {
     init() {
         this.name = 'text';
+        this.allowAdd = Boolean(Text.allowAdd);
         const defaultFont = Font.getDefaultFont();
         let attrs = {
             size: 16,
@@ -313,6 +314,9 @@ class Text extends ToolbarItemBase {
     }
 
     pageClick(e) {
+        if (!this.allowAdd) {
+            return;
+        }
         if (e.data.evt.button != 0) {
             return;
         }

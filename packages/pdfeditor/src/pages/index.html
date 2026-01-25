@@ -8,32 +8,58 @@
     <%= htmlWebpackPlugin.tags.headTags %>
     <style>
         :root {
-            --brand-purple: #5b4bb7;
+            --brand-purple: #5A58F2;
             --brand-orange: #f28c28;
-            --brand-cream: #fff7ee;
-            --brand-line: #efe2d2;
-            --brand-ink: #2c1e4a;
-            --brand-muted: #6a5f84;
+            --brand-cream: #F9F9FB;
+            --brand-line: #E5E7EB;
+            --brand-ink: #1F2937;
+            --brand-muted: #6B7280;
         }
 
         body {
             background: var(--brand-cream);
             color: var(--brand-ink);
-            font-family: "Lato", "NotoSansCJKsc", "NotoSansCJKtc", "NotoSansCJKjp", "NotoSansCJKkr", "Helvetica Neue", Arial, sans-serif;
+            font-family: "Inter", "Lato", "NotoSansCJKsc", "NotoSansCJKtc", "NotoSansCJKjp", "NotoSansCJKkr", "Helvetica Neue", Arial, sans-serif;
         }
 
         .pdf-header {
-            background: rgba(255, 247, 238, 0.9);
-            border-bottom: 1px solid var(--brand-line);
+            background: #FFFFFF;
+            display: flex;
+            align-items: center;
+            padding: 6px 16px;
         }
 
-        .tab-item {
+        .pdf-header .logo {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            line-height: 0;
+        }
+
+        .pdf-header .logo img {
+            display: block;
+            height: 24px;
+            width: auto;
+        }
+
+        @media (min-width: 768px) {
+            .pdf-header .logo img {
+                height: 28px;
+            }
+        }
+
+        .pdf-header .file-name {
+            flex: 1;
+            text-align: center;
+            font-size: 14px;
             color: var(--brand-muted);
         }
 
-        .tab-item.active {
-            color: var(--brand-purple);
-            border-bottom: 2px solid var(--brand-purple);
+        html.embed .pdf-header {
+            display: none;
+            height: 0;
+            padding: 0;
+            border: 0;
         }
 
         .pdf-toolbar {
@@ -42,13 +68,22 @@
         }
 
         .tool-item {
-            border-color: var(--brand-line);
+            border-color: transparent;
         }
 
-        .tool-item.active,
+        /* pdf.net 风格：激活状态使用品牌色背景 */
+        .tool-item.active {
+            background: var(--brand-purple) !important;
+            color: #FFFFFF !important;
+        }
+
+        .tool-item.active img,
+        .tool-item.active svg {
+            filter: brightness(0) invert(1);
+        }
+
         .tool-item:hover {
-            background: rgba(242, 236, 255, 0.6);
-            color: var(--brand-purple);
+            background: rgba(90, 88, 242, 0.08);
         }
     </style>
 </head>
@@ -58,25 +93,13 @@
         <div class="pdf-header">
             <div class="logo">
                 <a href="#">
-                    <img src="/logo.png" alt="logo" style="height:160px; width:auto;">
+                    <img src="/logo.png" alt="logo">
                 </a>
-            </div>
-            <div class="tabs">
-                <div class="tab-item active" data-locale="edit" data-for="edit-tools">
-                    ${LANG_MESSAGES.edit}
-                </div>
-                <div class="tab-item" data-locale="insert" data-for="insert-tools">
-                    ${LANG_MESSAGES.insert}
-                </div>
-                <!-- 
-                <div class="tab-item" data-locale="other_tools" data-for="other-tools>
-                    Tools
-                </div> -->
             </div>
             <div id="file-name" class="file-name"></div>
         </div>
         <div id="pdf-toolbar" class="pdf-toolbar">
-            <div class="tool-items">
+            <div class="tool-items utility-tools">
                 <div id="tool_undo" class="tool-item undo disabled">
                     <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="15" height="15">
                         <path d="M609.28 396.8H193.536l201.728-199.168c17.92-17.92 17.92-43.008 0-60.928s-41.472-18.432-59.392-1.024L62.976 402.432c-17.92 17.92-17.92 41.472 0 59.392l273.408 267.264c17.92 17.92 41.472 17.92 59.392 0s17.92-40.96 0-58.88L193.536 474.112H609.28c166.4 0 311.296 129.536 311.296 289.792v41.472c0 23.552 14.848 41.472 38.912 41.472s38.912-17.92 38.912-41.472v-41.472c-0.512-207.36-175.616-367.104-389.12-367.104z"></path>
@@ -89,7 +112,7 @@
                 </div>
             </div>
             <div class="line"></div>
-            <div class="tool-items">
+            <div class="tool-items utility-tools">
                 <div id="tool_hand" class="tool-item tool-item-text tool_hand">
                     <img src="<%= ASSETS_URL %>img/hand.svg" data-locale="hand_tool" data-locale-attrs="alt" alt="${LANG_MESSAGES.hand_tool}" />
                 </div>
@@ -98,7 +121,7 @@
                 </div>
             </div>
             <div class="line"></div>
-            <div class="tool-items">
+            <div class="tool-items utility-tools">
                 <div class="tool-row">
                     <div class="tool-item rotate_prev">
                         <img src="<%= ASSETS_URL %>img/inverseRotation.svg" />
@@ -117,7 +140,7 @@
                 </div>
             </div>
             <div class="line"></div>
-            <div class="tool-items">
+            <div class="tool-items utility-tools">
                 <div class="tool-row">
                     <div class="tool-item view_mode" data-mode="auto_zoom">
                         <img src="<%= ASSETS_URL %>img/onepage.svg" data-locale="auto_zoom" data-locale-attrs="alt" alt="${LANG_MESSAGES.auto_zoom}">
@@ -142,7 +165,7 @@
                 </div>
             </div>
             <div class="line"></div>
-            <div id="edit-tools" class="tools-box active">
+            <div id="edit-tools" class="tools-box unified-toolbar">
                 <!-- <div class="tool-items tool-item-single">
                     <div id="open_pdf" class="tool-item">
                         <img src="<%= ASSETS_URL %>img/open.svg" data-locale="open" data-locale-attrs="alt" alt="${LANG_MESSAGES.open}" />
@@ -151,8 +174,14 @@
                 </div> -->
                 <div class="tool-items tool-item-single tool_text">
                     <div id="tool_text" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/edit.svg" data-locale="text" data-locale-attrs="alt" alt="${LANG_MESSAGES.text}" />
-                        <span data-locale="text">${LANG_MESSAGES.text}</span>
+                        <img src="<%= ASSETS_URL %>img/edit.svg" data-locale="edit_text" data-locale-attrs="alt" alt="${LANG_MESSAGES.edit_text}" />
+                        <span data-locale="edit_text">${LANG_MESSAGES.edit_text}</span>
+                    </div>
+                </div>
+                <div class="tool-items tool-item-single tool_textbox">
+                    <div id="tool_textbox" class="tool-item">
+                        <img src="<%= ASSETS_URL %>img/textbox.svg" data-locale="textbox" data-locale-attrs="alt" alt="${LANG_MESSAGES.textbox}" />
+                        <span data-locale="textbox">${LANG_MESSAGES.textbox}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_image">
@@ -213,12 +242,6 @@
                         <span data-locale="draw">${LANG_MESSAGES.draw}</span>
                     </div>
                 </div>
-                <div class="tool-items tool-item-single tool_textbox">
-                    <div id="tool_textbox" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/textbox.svg" data-locale="textbox" data-locale-attrs="alt" alt="${LANG_MESSAGES.textbox}" />
-                        <span data-locale="textbox">${LANG_MESSAGES.textbox}</span>
-                    </div>
-                </div>
                 <div class="tool-items tool-item-single tool_signature">
                     <div id="tool_signature" class="tool-item">
                         <img src="<%= ASSETS_URL %>img/signature.svg" data-locale="signature" data-locale-attrs="alt" alt="${LANG_MESSAGES.signature}" />
@@ -235,8 +258,8 @@
                         <img src="<%= ASSETS_URL %>img/fontstrikethrough.svg" data-locale="strikethrough" data-locale-attrs="alt" alt="${LANG_MESSAGES.strikethrough}" />
                     </div>
                 </div>
-            </div>
-            <div id="insert-tools" class="tools-box">
+                <div class="line"></div>
+                <!-- 页面工具（原 Insert 标签页） -->
                 <div class="tool-items tool-item-single tool_insert_pages">
                     <div id="tool_insert_pages" class="tool-item">
                         <img src="<%= ASSETS_URL %>img/Insertpages.svg" data-locale="insert_pages" data-locale-attrs="alt" alt="${LANG_MESSAGES.insert_pages}" />
@@ -249,74 +272,40 @@
                         <span data-locale="delete_pages">${LANG_MESSAGES.delete_pages}</span>
                     </div>
                 </div>
-                <div class="tool-items tool-item-single tool_watermark">
-                    <div id="tool_watermark" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/watermark.svg" />
-                        <span data-locale="watermark">${LANG_MESSAGES.watermark}</span>
+                <!-- More dropdown menu (pdf.net style) -->
+                <div class="tool-items tool-item-single tool_more">
+                    <div id="tool_more" class="tool-item">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="12" cy="12" r="2"/>
+                            <circle cx="12" cy="19" r="2"/>
+                        </svg>
+                        <span data-locale="more">${LANG_MESSAGES.more || 'More'}</span>
                     </div>
-                </div>
-                <div class="tool-items tool-item-single tool_page_number">
-                    <div id="tool_page_number" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/pagenumber.svg" />
-                        <span data-locale="page_number">${LANG_MESSAGES.page_number}</span>
-                    </div>
-                </div>
-                <div class="tool-items tool-item-single tool_header_footer">
-                    <div id="tool_header_footer" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/Header&Footer.svg" />
-                        <span data-locale="header_footer">${LANG_MESSAGES.header_footer}</span>
-                    </div>
-                </div>
-                <div class="tool-items tool-item-single tool_stamp">
-                    <div id="tool_seal" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/stamp.svg" alt=${LANG_MESSAGES.textart}""/>
-                        <div class="tool-items-text"> 
+                    <div id="more_dropdown" class="more-dropdown">
+                        <div class="more-dropdown-item tool_watermark" data-tool="watermark">
+                            <img src="<%= ASSETS_URL %>img/watermark.svg" />
+                            <span data-locale="watermark">${LANG_MESSAGES.watermark}</span>
+                        </div>
+                        <div class="more-dropdown-item tool_page_number" data-tool="page_number">
+                            <img src="<%= ASSETS_URL %>img/pagenumber.svg" />
+                            <span data-locale="page_number">${LANG_MESSAGES.page_number}</span>
+                        </div>
+                        <div class="more-dropdown-item tool_header_footer" data-tool="header_footer">
+                            <img src="<%= ASSETS_URL %>img/Header&Footer.svg" />
+                            <span data-locale="header_footer">${LANG_MESSAGES.header_footer}</span>
+                        </div>
+                        <div class="more-dropdown-divider"></div>
+                        <div class="more-dropdown-item tool_stamp" data-tool="seal">
+                            <img src="<%= ASSETS_URL %>img/stamp.svg" />
                             <span data-locale="seal_stamp">${LANG_MESSAGES.seal_stamp}</span>
-                            <img width="12" height="12" loading="lazy" src="<%= ASSETS_URL %>img/down1.svg" alt="down">
+                        </div>
+                        <div class="more-dropdown-item tool_textArt" data-tool="textArt">
+                            <img src="<%= ASSETS_URL %>img/textart.svg" />
+                            <span data-locale="textart">${LANG_MESSAGES.textart}</span>
                         </div>
                     </div>
                 </div>
-                <div class="tool-items tool-item-single tool_textArt">
-                    <div id="tool_textArt" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/textart.svg" data-locale="Text Art" data-locale-attrs="alt" alt="${LANG_MESSAGES.textart}" />
-                        <div class="tool-items-text"> 
-                            <span data-locale="textart">
-                                ${LANG_MESSAGES.textart}
-                            </span>
-                            <img width="12" height="12" loading="lazy" src="<%= ASSETS_URL %>img/down1.svg" alt="down">
-                        </div>
-                    </div>
-                </div>
-                <!-- <div class="tool-items tool-item-single tool_line_numbers">
-                    <div id="tool_line_numbers" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/linenumbers.svg" />
-                        <span data-locale="line_numbers">${LANG_MESSAGES.line_numbers}</span>
-                    </div>
-                </div>
-                <div class="tool-items tool-item-single tool_comment">
-                    <div id="tool_comment" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/comment.svg" />
-                        <span data-locale="comment">${LANG_MESSAGES.comment}</span>
-                    </div>
-                </div>
-                <div class="tool-items tool-item-single tool_link">
-                    <div id="tool_link" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/link.svg" />
-                        <span data-locale="link">${LANG_MESSAGES.link}</span>
-                    </div>
-                </div>
-                <div class="tool-items tool-item-single tool_table">
-                    <div id="tool_table" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/Table.svg" />
-                        <span data-locale="table">${LANG_MESSAGES.table}</span>
-                    </div>
-                </div>
-                <div class="tool-items tool-item-single tool_chart">
-                    <div id="tool_chart" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/chart.svg" />
-                        <span data-locale="chart">${LANG_MESSAGES.chart}</span>
-                    </div>
-                </div> -->
             </div>
             <div id="other-tools" class="tools-box"></div>
         </div>

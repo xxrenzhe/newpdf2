@@ -482,6 +482,49 @@ export class PDFEditor {
             });
         }
 
+        // More dropdown menu (pdf.net style)
+        this.btnMore = document.getElementById('tool_more');
+        this.moreDropdown = document.getElementById('more_dropdown');
+        if (this.btnMore && this.moreDropdown) {
+            // Toggle dropdown on click
+            this.btnMore.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const toolMore = this.btnMore.closest('.tool_more');
+                toolMore.classList.toggle('open');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                const toolMore = this.btnMore.closest('.tool_more');
+                if (!toolMore.contains(e.target)) {
+                    toolMore.classList.remove('open');
+                }
+            });
+
+            // Handle dropdown item clicks
+            this.moreDropdown.querySelectorAll('.more-dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const tool = item.getAttribute('data-tool');
+                    const toolMore = this.btnMore.closest('.tool_more');
+                    toolMore.classList.remove('open');
+
+                    // Trigger the corresponding tool
+                    if (tool === 'watermark' && this.options.tools.indexOf('watermark') >= 0) {
+                        this.toolbar.get('watermark').click();
+                    } else if (tool === 'page_number' && this.options.tools.indexOf('pageNumber') >= 0) {
+                        this.toolbar.get('pageNumber').click();
+                    } else if (tool === 'header_footer' && this.options.tools.indexOf('headerFooter') >= 0) {
+                        this.toolbar.get('headerFooter').click();
+                    } else if (tool === 'seal' && this.options.tools.indexOf('stamp') >= 0) {
+                        this.toolbar.get('stamp').click();
+                    } else if (tool === 'textArt' && this.options.tools.indexOf('textArt') >= 0) {
+                        this.toolbar.get('textArt').click();
+                    }
+                });
+            });
+        }
+
 
         //顶部工具栏设置
         this.#initActionsBar();
@@ -738,25 +781,7 @@ export class PDFEditor {
             }
         });
 
-
-        document.querySelectorAll('.' + TAB_ITEM_CLASS).forEach(tabItem => {
-            tabItem.addEventListener('click', () => {
-                let oldActive = document.querySelector('.' + TAB_ITEM_CLASS + '.active');
-                if (oldActive) {
-                    oldActive.classList.remove('active');
-                    document.querySelector('.' + TOOLS_BOX_CLASS + '.active').classList.remove('active');
-                }
-                tabItem.classList.add('active');
-                let id = tabItem.getAttribute('data-for');
-                document.querySelector('#' + id).classList.add('active');
-                if (id === 'edit-tools') {
-                    const activeTool = this.toolbar?.toolActive;
-                    if (activeTool && activeTool.name === 'delete_pages') {
-                        this.toolbar.get('mouse')?.click();
-                    }
-                }
-            });
-        });
+        // Tab switching logic removed - unified toolbar now used
     }
 
     #showFontWarningBanner(message) {

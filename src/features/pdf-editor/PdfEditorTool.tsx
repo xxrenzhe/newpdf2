@@ -14,6 +14,7 @@ type PdfProgressMessage = { type: "pdf-progress"; loaded: number; total?: number
 type PdfPasswordErrorMessage = { type: "pdf-password-error"; loadToken?: number };
 type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number };
 type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
+type PdfOpenToolMessage = { type: "open-tool"; tool?: string };
 
 const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 
@@ -128,6 +129,7 @@ export default function PdfEditorTool({
   onBack,
   onReplaceFile,
   onConvert,
+  onOpenTool,
   variant = "card",
   showChangeFile = true,
   initialTool,
@@ -139,6 +141,7 @@ export default function PdfEditorTool({
   onBack: () => void;
   onReplaceFile: (file: File) => void;
   onConvert?: () => void;
+  onOpenTool?: (toolKey: string) => void;
   variant?: "card" | "shell";
   showChangeFile?: boolean;
   initialTool?: string | null;
@@ -430,10 +433,16 @@ export default function PdfEditorTool({
         setPdfLoaded(false);
         setLoadCancelled(true);
       }
+      if (hasMessageType<PdfOpenToolMessage["type"]>(evt.data, "open-tool")) {
+        const toolKey = (evt.data as PdfOpenToolMessage).tool;
+        if (typeof toolKey === "string" && toolKey.trim().length > 0) {
+          onOpenTool?.(toolKey);
+        }
+      }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [t]);
+  }, [onOpenTool, t]);
 
   useEffect(() => {
     if (!pdfLoaded) return;
@@ -484,20 +493,40 @@ export default function PdfEditorTool({
       ? "bg-white overflow-hidden flex flex-col h-screen h-[100dvh]"
       : "bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm overflow-hidden";
 
+  const viewerShellClassName =
+    variant === "shell"
+      ? "flex-1 min-h-0 bg-white"
+      : "h-[75vh] min-h-[560px] bg-white";
+
+  const viewerClassName =
+    actionsPosition === "top-right"
+      ? `${viewerShellClassName} pt-2`
+      : viewerShellClassName;
+
   const headerClassName =
     actionsPosition === "top-right"
-      ? "relative flex items-center gap-3 px-5 py-3 border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur"
+      ? "flex items-center justify-between gap-3 px-5 py-2 bg-white/80 backdrop-blur"
       : "flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur";
 
   const titleClassName =
     actionsPosition === "top-right"
-      ? "min-w-0 flex items-center gap-3 pr-80"
+      ? "min-w-0 flex items-center gap-3"
       : "min-w-0 flex items-center gap-3";
 
   const actionsClassName =
     actionsPosition === "top-right"
-      ? "absolute top-3 right-5 flex items-center gap-2"
+      ? "flex items-center gap-2"
       : "flex items-center gap-2";
+
+  const secondaryActionClassName =
+    actionsPosition === "top-right"
+      ? "px-3 py-1 text-sm rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
+      : "px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]";
+
+  const primaryActionClassName =
+    actionsPosition === "top-right"
+      ? "px-4 py-1 text-sm rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
+      : "px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50";
 
   const statusText = busy
     ? t("statusWorking", "Working...")
@@ -520,8 +549,8 @@ export default function PdfEditorTool({
       <div className={headerClassName}>
         <div className={titleClassName}>
           {showBrand ? (
-            <Link href="/" className="flex items-center">
-              <img src="/logo.png" alt="QwerPDF" className="h-20 md:h-24 w-auto" />
+            <Link href="/" className="flex items-center self-center leading-none">
+              <img src="/logo.png" alt="QwerPDF" className="h-6 md:h-7 w-auto block" />
             </Link>
           ) : (
             <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
@@ -529,8 +558,8 @@ export default function PdfEditorTool({
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate">{file.name}</p>
-            <p className="text-xs text-[color:var(--brand-muted)]">{statusText}</p>
+            <p className="text-sm font-medium text-[color:var(--brand-ink)] truncate leading-[1.15]">{file.name}</p>
+            <p className="text-xs text-[color:var(--brand-muted)] leading-none">{statusText}</p>
           </div>
         </div>
 
@@ -557,7 +586,7 @@ export default function PdfEditorTool({
               e.preventDefault();
               fileInputRef.current?.click();
             }}
-            className={`px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] ${
+            className={`${secondaryActionClassName} ${
               busy ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
             }`}
           >
@@ -565,7 +594,7 @@ export default function PdfEditorTool({
           </label>
           <button
             type="button"
-            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
+            className={`${secondaryActionClassName} disabled:opacity-50`}
             onClick={() => void goToConvert()}
             disabled={busy}
           >
@@ -573,7 +602,7 @@ export default function PdfEditorTool({
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
+            className={primaryActionClassName}
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
           >
@@ -582,7 +611,7 @@ export default function PdfEditorTool({
           {showChangeFile && (
             <button
               type="button"
-              className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
+              className={`${secondaryActionClassName} disabled:opacity-50`}
               onClick={onBack}
               disabled={busy}
             >
@@ -604,7 +633,7 @@ export default function PdfEditorTool({
         </div>
       ) : null}
 
-      <div className={variant === "shell" ? "flex-1 min-h-0 bg-white" : "h-[75vh] min-h-[560px] bg-white"}>
+      <div className={viewerClassName}>
         <iframe
           ref={iframeRef}
           title={t("pdfEditorTitle", "PDF Editor")}

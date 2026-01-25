@@ -43,14 +43,27 @@ class Arrow extends ToolbarItemBase {
             elPreview.remove();
         }
 
+        // Color selection with active state (pdf.net style)
         const elColors = temp.querySelector('.__act_colors');
-        elColors.querySelectorAll('.color-item').forEach(elColor => {
+        const colorItems = elColors.querySelectorAll('.color-item');
+
+        const updateActiveColor = (color) => {
+            colorItems.forEach(item => {
+                const itemColor = item.getAttribute('data-color');
+                if (itemColor && itemColor.toLowerCase() === color.toLowerCase()) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        };
+        updateActiveColor(this.attrs.color);
+
+        colorItems.forEach(elColor => {
             elColor.addEventListener('click', e => {
                 let color = elColor.getAttribute('data-color');
-                this.updateAttrs({
-                    color
-                }, objElement);
-
+                this.updateAttrs({ color }, objElement);
+                updateActiveColor(color);
                 this.__setPreview(elPreview);
             });
         });
@@ -83,74 +96,37 @@ class Arrow extends ToolbarItemBase {
         });
         colorPickr.on('change', color => {
             let _color = color.toHEXA().toString().toLocaleLowerCase();
-            this.updateAttrs({
-                color: _color
-            }, objElement);
-
+            this.updateAttrs({ color: _color }, objElement);
+            updateActiveColor(_color);
             this.__setPreview(elPreview);
         });
 
+        // Stroke thickness buttons (pdf.net style)
+        const elStrokeOptions = temp.querySelector('.__act_stroke_options');
+        if (elStrokeOptions) {
+            const strokeBtns = elStrokeOptions.querySelectorAll('.__act_stroke_btn');
 
-        const elOpacityText = temp.querySelector('.__act_opacity_text');
-        elOpacityText.textContent = (this.attrs.opacity * 100) + '%';
+            const updateActiveStroke = (lineWidth) => {
+                strokeBtns.forEach(btn => {
+                    const stroke = parseInt(btn.getAttribute('data-stroke'));
+                    if (stroke === parseInt(lineWidth)) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            };
+            updateActiveStroke(this.attrs.lineWidth);
 
-        const elOpacity = temp.querySelector('.__act_opacity');
-        elOpacity.value = this.attrs.opacity * 10;
-
-
-        const opacityChange = () => {
-            elOpacityText.textContent = (elOpacity.value * 10) + '%';
-            let opacity = elOpacity.value / 10;
-            this.updateAttrs({
-                opacity
-            }, objElement);
-
-            this.__setPreview(elPreview);
-        };
-        elOpacity.addEventListener('input', opacityChange);
-
-        const elOpacityReduce = temp.querySelector('.__act_range_reduce');
-        elOpacityReduce.addEventListener('click', () => {
-            elOpacity.stepDown();
-            opacityChange();
-        });
-
-        const elOpacityPlus = temp.querySelector('.__act_range_plus');
-        elOpacityPlus.addEventListener('click', () => {
-            elOpacity.stepUp();
-            opacityChange();
-        });
-
-
-        const elDrawStrokeText = temp.querySelector('.__act_draw_text');
-        elDrawStrokeText.textContent = this.attrs.lineWidth + 'px';
-
-        const elDrawStroke = temp.querySelector('.__act_draw');
-        elDrawStroke.value = this.attrs.lineWidth;
-
-
-        const drawStrokeChange = () => {
-            elDrawStrokeText.textContent = elDrawStroke.value + 'px';
-            let lineWidth = elDrawStroke.value;
-            this.updateAttrs({
-                lineWidth
-            }, objElement);
-
-            this.__setPreview(elPreview);
-        };
-        elDrawStroke.addEventListener('input', drawStrokeChange);
-
-        const elDrawStrokeReduce = temp.querySelector('.__act_draw_range_reduce');
-        elDrawStrokeReduce.addEventListener('click', () => {
-            elOpacity.stepDown();
-            drawStrokeChange();
-        });
-
-        const elDrawStrokePlus = temp.querySelector('.__act_draw_range_plus');
-        elDrawStrokePlus.addEventListener('click', () => {
-            elDrawStroke.stepUp();
-            drawStrokeChange();
-        });
+            strokeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const lineWidth = parseInt(btn.getAttribute('data-stroke'));
+                    this.updateAttrs({ lineWidth }, objElement);
+                    updateActiveStroke(lineWidth);
+                    this.__setPreview(elPreview);
+                });
+            });
+        }
 
         let elActions = [];
         for (let elChild of temp.children) {

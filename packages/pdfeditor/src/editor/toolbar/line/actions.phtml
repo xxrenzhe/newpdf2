@@ -1,24 +1,31 @@
-<div class="__act_item __act_colors">
-    <span class="color-item" data-name="orange" data-color="#ffcd45"></span>
-    <span class="color-item" data-name="blue" data-color="#25d2d1"></span>
-    <span class="color-item" data-name="green" data-color="#00cc63"></span>
-    <span class="color-item" data-name="lilac" data-color="#e2a1e6"></span>
-    <span class="color-picker"><img src="<%= ASSETS_URL %>img/picker-1.png" /></span>
+<div class="__act_item __act_draw_icon">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+    </svg>
 </div>
-<div class="__act_item">
-    <span data-locale="opacity" class="width-max-content">${LANG_MESSAGES.opacity}: </span>
-    <div class="__act_range_reduce __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomreduce.svg"></div>
-    <input class="__act_opacity" type="range" value="0" max="10" min="0" step="0.1">
-    <div class="__act_range_plus __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomadd.svg"></div>
-    <span class="__act_opacity_text"></span>
+<div class="__act_item __act_stroke_options">
+    <div class="__act_stroke_btn" data-stroke="2" title="Thin">
+        <div class="stroke-preview stroke-thin"></div>
+    </div>
+    <div class="__act_stroke_btn" data-stroke="4" title="Medium">
+        <div class="stroke-preview stroke-medium"></div>
+    </div>
+    <div class="__act_stroke_btn" data-stroke="8" title="Thick">
+        <div class="stroke-preview stroke-thick"></div>
+    </div>
 </div>
-
-<div class="__act_item">
-    <span data-locale="stroke">${LANG_MESSAGES.stroke}: </span>
-    <div class="__act_range_reduce __act_draw_range_reduce __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomreduce.svg"></div>
-    <input class="__act_draw" type="range" value="0" max="10" min="1" step="1">
-    <div class="__act_range_plus __act_draw_range_plus __act_item_btn"><img src="<%= ASSETS_URL %>img/zoomadd.svg"></div>
-    <span class="__act_draw_text"></span>
+<div class="__act_item __act_colors_grid">
+    <span class="color-dot" data-color="#000000" style="background-color:#000000"></span>
+    <span class="color-dot" data-color="#4B5563" style="background-color:#4B5563"></span>
+    <span class="color-dot" data-color="#EF4444" style="background-color:#EF4444"></span>
+    <span class="color-dot" data-color="#F97316" style="background-color:#F97316"></span>
+    <span class="color-dot" data-color="#EAB308" style="background-color:#EAB308"></span>
+    <span class="color-dot" data-color="#22C55E" style="background-color:#22C55E"></span>
+    <span class="color-dot" data-color="#14B8A6" style="background-color:#14B8A6"></span>
+    <span class="color-dot" data-color="#3B82F6" style="background-color:#3B82F6"></span>
+    <span class="color-dot" data-color="#8B5CF6" style="background-color:#8B5CF6"></span>
+    <span class="color-dot" data-color="#EC4899" style="background-color:#EC4899"></span>
+    <span class="color-dot" data-color="#5A58F2" style="background-color:#5A58F2"></span>
+    <span class="color-picker-dot"><img src="<%= ASSETS_URL %>img/picker-1.png" /></span>
 </div>
-
 <div class="__act_item __act_draw_preview"></div>
