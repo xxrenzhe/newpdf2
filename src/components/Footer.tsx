@@ -27,15 +27,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-14 pb-10 border-b border-[color:var(--brand-line)]">
           {/* Logo and tagline */}
           <div className="lg:col-span-2">
-            <div className="flex flex-col items-start gap-0">
+            <div className="flex flex-col items-start gap-1">
               <Link href="/" className="inline-flex items-center gap-2">
                 <img
                   src="/logo.png"
                   alt="QwerPDF"
-                  className="h-7 w-auto block -mb-2"
+                  className="h-7 w-auto block"
                 />
               </Link>
-              <p className="-mt-1 text-[color:var(--brand-muted)] font-medium text-base">
+              <p className="text-[color:var(--brand-muted)] font-medium text-base leading-snug">
                 {t("footerTagline", "All-in-one PDF solutions")}
               </p>
             </div>
