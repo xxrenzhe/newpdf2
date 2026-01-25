@@ -37,9 +37,9 @@ export function SecurityInitializer() {
 
       // 1. 域名锁定 - 防止代码被复制到其他域名
       // 开发环境自动允许 localhost
-      domainLock(allowedDomains, {
-        allowLocalhost: process.env.NODE_ENV !== "production",
-      });
+      const allowLocalhost =
+        process.env.NEXT_PUBLIC_E2E === "1" || process.env.NODE_ENV !== "production";
+      domainLock(allowedDomains, { allowLocalhost });
     };
 
     run();

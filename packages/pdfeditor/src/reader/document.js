@@ -14,7 +14,9 @@ export class PDFDocument {
     }
 
     get pageCount() {
-        return this.documentProxy.numPages;
+        const proxyCount = this.documentProxy?.numPages || 0;
+        const knownCount = this.pages.length;
+        return Math.max(proxyCount, knownCount);
     }
 
     get scale() {

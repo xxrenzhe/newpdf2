@@ -75,6 +75,8 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           <input
             type="number"
             min={0}
+            name="cropLeft"
+            autoComplete="off"
             value={marginLeft}
             onChange={(e) => setMarginLeft(Number(e.target.value || 0))}
             className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
@@ -85,6 +87,8 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           <input
             type="number"
             min={0}
+            name="cropRight"
+            autoComplete="off"
             value={marginRight}
             onChange={(e) => setMarginRight(Number(e.target.value || 0))}
             className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
@@ -95,6 +99,8 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           <input
             type="number"
             min={0}
+            name="cropTop"
+            autoComplete="off"
             value={marginTop}
             onChange={(e) => setMarginTop(Number(e.target.value || 0))}
             className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
@@ -105,6 +111,8 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
           <input
             type="number"
             min={0}
+            name="cropBottom"
+            autoComplete="off"
             value={marginBottom}
             onChange={(e) => setMarginBottom(Number(e.target.value || 0))}
             className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
@@ -120,7 +128,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
         onClick={run}
         className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
       >
-        {busy ? t("working", "Working...") : t("cropDownload", "Crop & Download")}
+        {busy ? t("working", "Working…") : t("cropDownload", "Crop & Download")}
       </button>
     </div>
   );

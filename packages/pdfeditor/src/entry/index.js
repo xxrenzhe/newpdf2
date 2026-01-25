@@ -83,6 +83,7 @@ if (lang && lang != 'en') {
         Locale.langCode = lang;
         Locale.load(lang).then(() => {
             Locale.bind();
+            setupButtonA11y();
         });
     }
 }
@@ -107,6 +108,7 @@ langChecked.addEventListener('click',(e)=>{
             Locale.langCode = langCode;
             Locale.load(langCode).then(() => {
                 Locale.bind();
+                setupButtonA11y();
             });
         }
     }
@@ -121,6 +123,53 @@ if (window.parent && window.parent !== window) {
 }
 
 let hostLoadToken = 0;
+
+const interactiveSelectors = [
+    '.tool-item',
+    '.pdf-page-btn',
+    '.view-btn',
+    '.slide-item',
+    '.more-dropdown-item',
+    '.__act_item_btn',
+    '.btn-download',
+    '#pdf_thumbs_close',
+    '.lang_item',
+    '.lang_checked_item'
+];
+
+const setupButtonA11y = () => {
+    const selector = interactiveSelectors.join(',');
+    document.querySelectorAll(selector).forEach(el => {
+        if (!(el instanceof HTMLElement)) return;
+        if (!el.hasAttribute('role')) {
+            el.setAttribute('role', 'button');
+        }
+        if (!el.hasAttribute('tabindex')) {
+            const disabled = el.classList.contains('disabled') || el.getAttribute('aria-disabled') === 'true';
+            el.setAttribute('tabindex', disabled ? '-1' : '0');
+        }
+        if (!el.hasAttribute('aria-label')) {
+            const title = el.getAttribute('title');
+            if (title) {
+                el.setAttribute('aria-label', title);
+            }
+        }
+        if (el.classList.contains('disabled') && !el.hasAttribute('aria-disabled')) {
+            el.setAttribute('aria-disabled', 'true');
+        }
+    });
+};
+
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const selector = interactiveSelectors.join(',');
+    if (!target.matches(selector)) return;
+    if (target.classList.contains('disabled') || target.getAttribute('aria-disabled') === 'true') return;
+    event.preventDefault();
+    target.click();
+});
 
 function postToParent(message) {
     try {
@@ -160,6 +209,7 @@ const reader = new PDFReader({
 }, pdfjsLib);
 
 reader.init();
+setupButtonA11y();
 
 const editor = new PDFEditor({
     producer: 'QWERPDF (https://qwerpdf.com)',

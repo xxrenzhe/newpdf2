@@ -75,6 +75,8 @@ export class PDFEditor {
     history = null;
     fontWorker = new Worker(new URL('./font_worker.js', import.meta.url));
     fontWarningBanner = null;
+    actionsBarReady = false;
+    actionsBarInitAttempts = 0;
 
     constructor(options, pdfData, reader) {
         if (typeof(options) == 'object') {
@@ -520,10 +522,10 @@ export class PDFEditor {
 	                        parent.postMessage({ type: 'open-tool', tool: 'redact' }, '*');
 	                    } else if (tool === 'watermark' && this.options.tools.indexOf('watermark') >= 0) {
 	                        this.toolbar.get('watermark').click();
-	                    } else if (tool === 'page_number' && this.options.tools.indexOf('pageNumber') >= 0) {
-	                        this.toolbar.get('pageNumber').click();
-	                    } else if (tool === 'header_footer' && this.options.tools.indexOf('headerFooter') >= 0) {
-	                        this.toolbar.get('headerFooter').click();
+                    } else if (tool === 'page_number' && this.options.tools.indexOf('page_number') >= 0) {
+                        this.toolbar.get('page_number').click();
+                    } else if (tool === 'header_footer' && this.options.tools.indexOf('header_footer') >= 0) {
+                        this.toolbar.get('header_footer').click();
 	                    } else if (tool === 'seal' && this.options.tools.indexOf('stamp') >= 0) {
                         this.toolbar.get('stamp').click();
                     } else if (tool === 'textArt' && this.options.tools.indexOf('textArt') >= 0) {
@@ -821,16 +823,40 @@ export class PDFEditor {
         this.fontWarningBanner = banner;
     }
 
+    #retryInitActionsBar() {
+        if (this.actionsBarReady) return;
+        if (this.actionsBarInitAttempts >= 10) return;
+        this.actionsBarInitAttempts += 1;
+        setTimeout(() => this.#initActionsBar(), 50);
+    }
+
     #initActionsBar() {
+        if (this.actionsBarReady) return;
         this.pdfElActionsWrapper = document.getElementById(pdfElActionsWrapper);
+        if (!this.pdfElActionsWrapper) {
+            this.#retryInitActionsBar();
+            return;
+        }
         this.pdfElActions = this.pdfElActionsWrapper.querySelector('#' + pdfElActions);
-        let mainBoxRect = this.reader.mainBox.getBoundingClientRect();
-        const scrollWidth = this.reader.parentElement.offsetWidth - this.reader.parentElement.clientWidth;
-        this.pdfElActionsWrapper.style.width = (mainBoxRect.width - scrollWidth) + 'px';
-        window.addEventListener('resize', () => {
-            mainBoxRect = this.reader.mainBox.getBoundingClientRect();
-            this.pdfElActionsWrapper.style.width = (mainBoxRect.width - scrollWidth) + 'px';
-        });
+        if (!this.pdfElActions) {
+            this.#retryInitActionsBar();
+            return;
+        }
+        this.actionsBarReady = true;
+
+        const updateActionsWidth = () => {
+            if (!this.reader?.mainBox || !this.reader?.parentElement) {
+                this.pdfElActionsWrapper.style.width = '100%';
+                return;
+            }
+            const mainBoxRect = this.reader.mainBox.getBoundingClientRect();
+            const scrollWidth = this.reader.parentElement.offsetWidth - this.reader.parentElement.clientWidth;
+            const width = Math.max(0, Math.round(mainBoxRect.width - scrollWidth));
+            this.pdfElActionsWrapper.style.width = width > 0 ? width + 'px' : '100%';
+        };
+        updateActionsWidth();
+        requestAnimationFrame(updateActionsWidth);
+        window.addEventListener('resize', updateActionsWidth);
         let bindedLang = {};
 
         const showActions = e => {

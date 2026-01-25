@@ -12,7 +12,7 @@ test("guest edit-pdf keeps actions top-right and renders PDF", async ({ page }) 
     buffer: Buffer.from(pdfBytes),
   });
 
-  await expect(page).toHaveURL(/\/app\/guest\/document\?chosenTool=edit-pdf&documentId=/);
+  await expect(page).toHaveURL(/\/edit\/[^/?#]+/);
 
   const exportButton = page.getByRole("button", { name: "Save & Download" });
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });

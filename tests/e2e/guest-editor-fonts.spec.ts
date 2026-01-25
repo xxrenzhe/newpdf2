@@ -24,10 +24,12 @@ test("guest edit-pdf download completes and output reopens without font extracti
   const frame = page.frameLocator('iframe[title="PDF Editor"]');
   await expect(frame.locator("#pdf-main .__pdf_page_preview").first()).toBeVisible({ timeout: 120_000 });
 
-  await frame.locator(".tab-item", { hasText: "Edit" }).click();
   await frame.locator("#tool_text").click();
-  await frame.locator("#pdf-main .__pdf_page_preview").first().click({ position: { x: 160, y: 160 } });
+  const firstTextDiv = frame.locator(".text-border").first();
+  await expect(firstTextDiv).toBeVisible({ timeout: 120_000 });
+  await firstTextDiv.click({ force: true });
 
+  await expect(frame.locator(".__pdf_editor_element").first()).toBeVisible({ timeout: 120_000 });
   const editable = frame.locator("#pdf-main .__pdf_editor_element [contenteditable='true']").last();
   await expect(editable).toBeVisible({ timeout: 120_000 });
   await editable.click();

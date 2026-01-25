@@ -4,6 +4,8 @@
     --font-size: 14px;
     --input-bg-color: #FEFEFE;
     --input-border: 1px solid #d6d6d6;
+    --focus-ring-color: rgba(90, 88, 242, 0.6);
+    --focus-ring-offset: 2px;
 
     --scroll-width: 8px;
     --scroll-height: 8px;

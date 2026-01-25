@@ -4,14 +4,14 @@ import { useMemo } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 
 const brands = [
-  "/assets/same-assets/3959512356.png",
-  "/assets/same-assets/2364094864.png",
-  "/assets/same-assets/2448600377.png",
-  "/assets/same-assets/2983692322.png",
-  "/assets/same-assets/2317977816.png",
-  "/assets/same-assets/3923762797.png",
-  "/assets/same-assets/3953556544.png",
-  "/assets/same-assets/2908841443.png",
+  { src: "/assets/same-assets/3959512356.png", width: 232, height: 66 },
+  { src: "/assets/same-assets/2364094864.png", width: 220, height: 56 },
+  { src: "/assets/same-assets/2448600377.png", width: 212, height: 62 },
+  { src: "/assets/same-assets/2983692322.png", width: 226, height: 48 },
+  { src: "/assets/same-assets/2317977816.png", width: 232, height: 30 },
+  { src: "/assets/same-assets/3923762797.png", width: 220, height: 60 },
+  { src: "/assets/same-assets/3953556544.png", width: 226, height: 60 },
+  { src: "/assets/same-assets/2908841443.png", width: 216, height: 46 },
 ];
 
 export default function BrandsMarquee() {
@@ -34,9 +34,12 @@ export default function BrandsMarquee() {
           {marqueeBrands.map((brand, index) => (
             <img
               key={index}
-              src={brand}
+              src={brand.src}
               alt=""
-              className="h-6 md:h-8 mx-6 md:mx-10 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300"
+              width={brand.width}
+              height={brand.height}
+              loading="lazy"
+              className="h-6 md:h-8 mx-6 md:mx-10 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-[opacity,filter] duration-300"
             />
           ))}
         </div>

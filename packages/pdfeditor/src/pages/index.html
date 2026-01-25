@@ -93,19 +93,19 @@
         <div class="pdf-header">
             <div class="logo">
                 <a href="#">
-                    <img src="/logo.png" alt="logo">
+                    <img src="/logo.png" alt="logo" width="982" height="167">
                 </a>
             </div>
             <div id="file-name" class="file-name"></div>
         </div>
         <div id="pdf-toolbar" class="pdf-toolbar">
             <div class="tool-items utility-tools">
-                <div id="tool_undo" class="tool-item undo disabled">
+                <div id="tool_undo" class="tool-item undo disabled" data-locale="undo" data-locale-attrs="title" title="${LANG_MESSAGES.undo}">
                     <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="15" height="15">
                         <path d="M609.28 396.8H193.536l201.728-199.168c17.92-17.92 17.92-43.008 0-60.928s-41.472-18.432-59.392-1.024L62.976 402.432c-17.92 17.92-17.92 41.472 0 59.392l273.408 267.264c17.92 17.92 41.472 17.92 59.392 0s17.92-40.96 0-58.88L193.536 474.112H609.28c166.4 0 311.296 129.536 311.296 289.792v41.472c0 23.552 14.848 41.472 38.912 41.472s38.912-17.92 38.912-41.472v-41.472c-0.512-207.36-175.616-367.104-389.12-367.104z"></path>
                     </svg>
                 </div>
-                <div id="tool_redo" class="tool-item redo disabled">
+                <div id="tool_redo" class="tool-item redo disabled" data-locale="redo" data-locale-attrs="title" title="${LANG_MESSAGES.redo}">
                     <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="15" height="15">
                         <path d="M438.272 396.8h415.744l-201.728-199.168c-17.92-17.92-17.92-43.008 0-60.928s41.472-18.432 59.392-1.024l272.896 266.752c17.92 17.92 17.92 41.472 0 59.392L711.68 729.088c-17.92 17.92-41.472 17.92-59.392 0s-17.92-40.96 0-58.88l201.728-195.584H438.272c-166.4 0-311.296 129.536-311.296 289.792v41.472c0 23.552-14.848 41.472-38.912 41.472s-38.912-17.92-38.912-41.472v-41.472c0.512-207.872 175.616-367.616 389.12-367.616z"></path>
                     </svg>
@@ -113,37 +113,34 @@
             </div>
             <div class="line"></div>
             <div class="tool-items utility-tools">
-                <div id="tool_hand" class="tool-item tool-item-text tool_hand">
-                    <img src="<%= ASSETS_URL %>img/hand.svg" data-locale="hand_tool" data-locale-attrs="alt" alt="${LANG_MESSAGES.hand_tool}" />
+                <div id="tool_hand" class="tool-item tool-item-text tool_hand" data-locale="hand_tool" data-locale-attrs="title" title="${LANG_MESSAGES.hand_tool}">
+                    <img src="<%= ASSETS_URL %>img/hand.svg" data-locale="hand_tool" data-locale-attrs="alt" alt="${LANG_MESSAGES.hand_tool}" width="22" height="22" />
                 </div>
-                <div id="tool_mouse" class="tool-item tool-item-text tool_mouse">
-                    <img src="<%= ASSETS_URL %>img/select.svg" data-locale="select_tool" data-locale-attrs="alt" alt="${LANG_MESSAGES.select_tool}" />
-                </div>
-            </div>
-            <div class="line"></div>
-            <div class="tool-items utility-tools">
-                <div class="tool-row">
-                    <div class="tool-item rotate_prev">
-                        <img src="<%= ASSETS_URL %>img/inverseRotation.svg" />
-                    </div>
-                    <div class="tool-item rotate_next">
-                        <img src="<%= ASSETS_URL %>img/rotation.svg" />
-                    </div>
-                </div>
-                <div class="tool-row">
-                    <div class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/readingbrightness.svg" />
-                    </div>
-                    <div class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/search.svg" />
-                    </div>
+                <div id="tool_mouse" class="tool-item tool-item-text tool_mouse" data-locale="select_tool" data-locale-attrs="title" title="${LANG_MESSAGES.select_tool}">
+                    <img src="<%= ASSETS_URL %>img/select.svg" data-locale="select_tool" data-locale-attrs="alt" alt="${LANG_MESSAGES.select_tool}" width="22" height="22" />
                 </div>
             </div>
             <div class="line"></div>
             <div class="tool-items utility-tools">
                 <div class="tool-row">
-                    <div class="tool-item view_mode" data-mode="auto_zoom">
-                        <img src="<%= ASSETS_URL %>img/onepage.svg" data-locale="auto_zoom" data-locale-attrs="alt" alt="${LANG_MESSAGES.auto_zoom}">
+                    <div class="tool-item rotate_prev" data-locale="rotation" data-locale-attrs="title" title="${LANG_MESSAGES.rotation}">
+                        <img src="<%= ASSETS_URL %>img/inverseRotation.svg" alt="" aria-hidden="true" width="22" height="22" />
+                    </div>
+                    <div class="tool-item rotate_next" data-locale="rotation" data-locale-attrs="title" title="${LANG_MESSAGES.rotation}">
+                        <img src="<%= ASSETS_URL %>img/rotation.svg" alt="" aria-hidden="true" width="22" height="22" />
+                    </div>
+                </div>
+                <div class="tool-row">
+                    <div id="tool_find_text" class="tool-item" data-locale="find" data-locale-attrs="title" title="${LANG_MESSAGES.find}">
+                        <img src="<%= ASSETS_URL %>img/search.svg" alt="" aria-hidden="true" width="22" height="22" />
+                    </div>
+                </div>
+            </div>
+            <div class="line"></div>
+            <div class="tool-items utility-tools">
+                <div class="tool-row">
+                    <div class="tool-item view_mode" data-mode="auto_zoom" data-locale="auto_zoom" data-locale-attrs="title" title="${LANG_MESSAGES.auto_zoom}">
+                        <img src="<%= ASSETS_URL %>img/onepage.svg" data-locale="auto_zoom" data-locale-attrs="alt" alt="${LANG_MESSAGES.auto_zoom}" width="22" height="22">
                     </div>
                     <!-- <div class="tool-item view_mode" data-mode="view_2page">
                         <img src="<%= ASSETS_URL %>img/twopage.svg">
@@ -151,16 +148,16 @@
                     <div class="tool-item">
                         <img src="<%= ASSETS_URL %>img/separator.svg">
                     </div> -->
-                    <div class="tool-item view_mode" data-mode="actual_size">
-                        <img src="<%= ASSETS_URL %>img/1vs1.svg" data-locale="actual_size" data-locale-attrs="alt" alt="${LANG_MESSAGES.actual_size}">
+                    <div class="tool-item view_mode" data-mode="actual_size" data-locale="actual_size" data-locale-attrs="title" title="${LANG_MESSAGES.actual_size}">
+                        <img src="<%= ASSETS_URL %>img/1vs1.svg" data-locale="actual_size" data-locale-attrs="alt" alt="${LANG_MESSAGES.actual_size}" width="22" height="22">
                     </div>
                 </div>
                 <div class="tool-row">
-                    <div class="tool-item view_mode" data-mode="fit_width">
-                        <img src="<%= ASSETS_URL %>img/fullScreen.svg" data-locale="fit_width" data-locale-attrs="alt" alt="${LANG_MESSAGES.fit_width}">
+                    <div class="tool-item view_mode" data-mode="fit_width" data-locale="fit_width" data-locale-attrs="title" title="${LANG_MESSAGES.fit_width}">
+                        <img src="<%= ASSETS_URL %>img/fullScreen.svg" data-locale="fit_width" data-locale-attrs="alt" alt="${LANG_MESSAGES.fit_width}" width="22" height="22">
                     </div>
-                    <div class="tool-item view_mode" data-mode="fit_page">
-                        <img src="<%= ASSETS_URL %>img/adaptivescreen.svg" data-locale="fit_page" data-locale-attrs="alt" alt="${LANG_MESSAGES.fit_page}">
+                    <div class="tool-item view_mode" data-mode="fit_page" data-locale="fit_page" data-locale-attrs="title" title="${LANG_MESSAGES.fit_page}">
+                        <img src="<%= ASSETS_URL %>img/adaptivescreen.svg" data-locale="fit_page" data-locale-attrs="alt" alt="${LANG_MESSAGES.fit_page}" width="22" height="22">
                     </div>
                 </div>
             </div>
@@ -168,55 +165,55 @@
             <div id="edit-tools" class="tools-box unified-toolbar">
                 <!-- <div class="tool-items tool-item-single">
                     <div id="open_pdf" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/open.svg" data-locale="open" data-locale-attrs="alt" alt="${LANG_MESSAGES.open}" />
+                        <img src="<%= ASSETS_URL %>img/open.svg" data-locale="open" data-locale-attrs="alt" alt="${LANG_MESSAGES.open}" width="22" height="22" />
                         <span data-locale="open">${LANG_MESSAGES.open}</span>
                     </div>
                 </div> -->
                 <div class="tool-items tool-item-single tool_text">
                     <div id="tool_text" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/edit.svg" data-locale="edit_text" data-locale-attrs="alt" alt="${LANG_MESSAGES.edit_text}" />
+                        <img src="<%= ASSETS_URL %>img/edit.svg" data-locale="edit_text" data-locale-attrs="alt" alt="${LANG_MESSAGES.edit_text}" width="22" height="22" />
                         <span data-locale="edit_text">${LANG_MESSAGES.edit_text}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_textbox">
                     <div id="tool_textbox" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/textbox.svg" data-locale="textbox" data-locale-attrs="alt" alt="${LANG_MESSAGES.textbox}" />
+                        <img src="<%= ASSETS_URL %>img/textbox.svg" data-locale="textbox" data-locale-attrs="alt" alt="${LANG_MESSAGES.textbox}" width="22" height="22" />
                         <span data-locale="textbox">${LANG_MESSAGES.textbox}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_image">
                     <div id="tool_image" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/addimages.svg" data-locale="add_image" data-locale-attrs="alt" alt="${LANG_MESSAGES.add_image}" />
+                        <img src="<%= ASSETS_URL %>img/addimages.svg" data-locale="add_image" data-locale-attrs="alt" alt="${LANG_MESSAGES.add_image}" width="22" height="22" />
                         <span data-locale="add_image">${LANG_MESSAGES.add_image}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_highlight">
                     <div id="tool_highlight" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/HighlightArea.svg" data-locale="highlight_area" data-locale-attrs="alt" alt="${LANG_MESSAGES.highlight_area}" />
+                        <img src="<%= ASSETS_URL %>img/HighlightArea.svg" data-locale="highlight_area" data-locale-attrs="alt" alt="${LANG_MESSAGES.highlight_area}" width="22" height="22" />
                         <span data-locale="highlight_area">${LANG_MESSAGES.highlight_area}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_text_highlight">
                     <div id="tool_text_highlight" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/HighlightText.svg" />
+                        <img src="<%= ASSETS_URL %>img/HighlightText.svg" alt="" aria-hidden="true" width="22" height="22" />
                         <span data-locale="highlight_text">${LANG_MESSAGES.highlight_text}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_eraser">
                     <div id="tool_eraser" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/eraser.svg" data-locale="eraser" data-locale-attrs="alt" alt="${LANG_MESSAGES.eraser}" />
+                        <img src="<%= ASSETS_URL %>img/eraser.svg" data-locale="eraser" data-locale-attrs="alt" alt="${LANG_MESSAGES.eraser}" width="22" height="22" />
                         <span data-locale="eraser">${LANG_MESSAGES.eraser}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_shapes">
                     <div id="tool_shapes" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/shapes.svg" data-locale="shapes" data-locale-attrs="alt" alt="${LANG_MESSAGES.shapes}" />
+                        <img src="<%= ASSETS_URL %>img/shapes.svg" data-locale="shapes" data-locale-attrs="alt" alt="${LANG_MESSAGES.shapes}" width="22" height="22" />
                         <span data-locale="shapes">${LANG_MESSAGES.shapes}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_forms">
                     <div id="tool_forms" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/forms.svg" data-locale="forms" data-locale-attrs="alt" alt="${LANG_MESSAGES.forms}" />
+                        <img src="<%= ASSETS_URL %>img/forms.svg" data-locale="forms" data-locale-attrs="alt" alt="${LANG_MESSAGES.forms}" width="22" height="22" />
                         <span data-locale="forms">${LANG_MESSAGES.forms}</span>
                     </div>
                 </div>
@@ -244,7 +241,7 @@
                 </div>
                 <div class="tool-items tool-item-single tool_signature">
                     <div id="tool_signature" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/signature.svg" data-locale="signature" data-locale-attrs="alt" alt="${LANG_MESSAGES.signature}" />
+                        <img src="<%= ASSETS_URL %>img/signature.svg" data-locale="signature" data-locale-attrs="alt" alt="${LANG_MESSAGES.signature}" width="22" height="22" />
                         <span data-locale="signature">${LANG_MESSAGES.signature}</span>
                     </div>
                 </div>
@@ -252,23 +249,23 @@
                 <div class="line"></div>
                 <div class="tool-items">
                     <div id="tool_underline" class="tool-item tool-item-text tool_underline">
-                        <img src="<%= ASSETS_URL %>img/fontunderscore.svg" data-locale="underline" data-locale-attrs="alt" alt="${LANG_MESSAGES.underline}" />
+                        <img src="<%= ASSETS_URL %>img/fontunderscore.svg" data-locale="underline" data-locale-attrs="alt" alt="${LANG_MESSAGES.underline}" width="22" height="22" />
                     </div>
                     <div id="tool_strikethrough" class="tool-item tool-item-text tool_strikethrough">
-                        <img src="<%= ASSETS_URL %>img/fontstrikethrough.svg" data-locale="strikethrough" data-locale-attrs="alt" alt="${LANG_MESSAGES.strikethrough}" />
+                        <img src="<%= ASSETS_URL %>img/fontstrikethrough.svg" data-locale="strikethrough" data-locale-attrs="alt" alt="${LANG_MESSAGES.strikethrough}" width="22" height="22" />
                     </div>
                 </div>
                 <div class="line"></div>
                 <!-- 页面工具（原 Insert 标签页） -->
                 <div class="tool-items tool-item-single tool_insert_pages">
                     <div id="tool_insert_pages" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/Insertpages.svg" data-locale="insert_pages" data-locale-attrs="alt" alt="${LANG_MESSAGES.insert_pages}" />
+                        <img src="<%= ASSETS_URL %>img/Insertpages.svg" data-locale="insert_pages" data-locale-attrs="alt" alt="${LANG_MESSAGES.insert_pages}" width="22" height="22" />
                         <span data-locale="insert_pages">${LANG_MESSAGES.insert_pages}</span>
                     </div>
                 </div>
                 <div class="tool-items tool-item-single tool_delete_pages">
                     <div id="tool_delete_pages" class="tool-item">
-                        <img src="<%= ASSETS_URL %>img/deletepages.svg" />
+                        <img src="<%= ASSETS_URL %>img/deletepages.svg" alt="" aria-hidden="true" width="22" height="22" />
                         <span data-locale="delete_pages">${LANG_MESSAGES.delete_pages}</span>
                     </div>
                 </div>
@@ -318,24 +315,24 @@
 	                        </div>
 	                        <div class="more-dropdown-divider"></div>
 	                        <div class="more-dropdown-item tool_watermark" data-tool="watermark">
-	                            <img src="<%= ASSETS_URL %>img/watermark.svg" />
+	                            <img src="<%= ASSETS_URL %>img/watermark.svg" alt="" aria-hidden="true" width="20" height="20" />
 	                            <span data-locale="watermark">${LANG_MESSAGES.watermark}</span>
 	                        </div>
                         <div class="more-dropdown-item tool_page_number" data-tool="page_number">
-                            <img src="<%= ASSETS_URL %>img/pagenumber.svg" />
+                            <img src="<%= ASSETS_URL %>img/pagenumber.svg" alt="" aria-hidden="true" width="20" height="20" />
                             <span data-locale="page_number">${LANG_MESSAGES.page_number}</span>
                         </div>
                         <div class="more-dropdown-item tool_header_footer" data-tool="header_footer">
-                            <img src="<%= ASSETS_URL %>img/Header&Footer.svg" />
+                            <img src="<%= ASSETS_URL %>img/Header&Footer.svg" alt="" aria-hidden="true" width="20" height="20" />
                             <span data-locale="header_footer">${LANG_MESSAGES.header_footer}</span>
                         </div>
                         <div class="more-dropdown-divider"></div>
                         <div class="more-dropdown-item tool_stamp" data-tool="seal">
-                            <img src="<%= ASSETS_URL %>img/stamp.svg" />
+                            <img src="<%= ASSETS_URL %>img/stamp.svg" alt="" aria-hidden="true" width="20" height="20" />
                             <span data-locale="seal_stamp">${LANG_MESSAGES.seal_stamp}</span>
                         </div>
                         <div class="more-dropdown-item tool_textArt" data-tool="textArt">
-                            <img src="<%= ASSETS_URL %>img/textart.svg" />
+                            <img src="<%= ASSETS_URL %>img/textart.svg" alt="" aria-hidden="true" width="20" height="20" />
                             <span data-locale="textart">${LANG_MESSAGES.textart}</span>
                         </div>
                     </div>
@@ -346,8 +343,8 @@
 
         <div class="pdf-wrapper">
             <div class="pdf-left-slider">
-                <div id="pdf_thumbs_slider" class="slide-item">
-                    <img src="<%= ASSETS_URL %>img/sideshow.svg">
+                <div id="pdf_thumbs_slider" class="slide-item" data-locale="toggle_sidebar" data-locale-attrs="title" title="${LANG_MESSAGES.toggle_sidebar}">
+                    <img src="<%= ASSETS_URL %>img/sideshow.svg" alt="" aria-hidden="true" width="20" height="20">
                 </div>
                 <!-- <div class="slide-item">
                     <img src="<%= ASSETS_URL %>img/pagesize.svg">
@@ -356,7 +353,7 @@
             <div id="pdf_thumbs_wrapper" class="pdf-thumbs-wrapper">
                 <div class="pdf-thumbs-title">
                     <span data-locale="thumbnail">${LANG_MESSAGES.thumbnail}</span>
-                    <img id="pdf_thumbs_close" src="<%= ASSETS_URL %>img/close.svg" />
+                    <img id="pdf_thumbs_close" src="<%= ASSETS_URL %>img/close.svg" data-locale="toggle_sidebar" data-locale-attrs="alt,title" alt="${LANG_MESSAGES.toggle_sidebar}" title="${LANG_MESSAGES.toggle_sidebar}" width="20" height="20" />
                 </div>
                 <div id="pdf-thumbs" class="pdf-thumbs"></div>
             </div>
@@ -408,55 +405,55 @@
                         <div class="history-list forms-box">
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_text}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/text.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/text.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_text}</div>
                             </div>
                             <div class="history-item forms_sign">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/signature.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/signature.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_sign}</div>
                             </div>
                             <div class="history-item forms_date" data-value="DD/MM/YY">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/date.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/date.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_date}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="123456">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/number.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/number.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_number}</div>
                             </div>
                             <div class="history-item forms_checkbox">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/checkbox.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/checkbox.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_checkbox}</div>
                             </div>
                             <div class="history-item forms_dropdown">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/dropdown.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/dropdown.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_dropdown}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_initials}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/initials.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/initials.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_initials}</div>
                             </div>
                             <div class="history-item forms_radiogroup">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/radio_button.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/radio_button.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_radio}</div>
                             </div>
                             <!-- <div class="history-item forms_formula">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/formula.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/formula.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_formula}</div>
                             </div> -->
@@ -467,73 +464,73 @@
                         <div class="history-list forms-box">
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_name}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/name.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/name.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_name}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_email}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/email.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/email.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_email}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_company}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/company.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/company.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_company}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_title}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/title.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/title.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_title}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_phone_number}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/phone_number.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/phone_number.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_phone_number}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_zipcode}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/zip_code.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/zip_code.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_zipcode}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="$">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/currency.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/currency.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_currency}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_age}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/age.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/age.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_age}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="XXX-XX-XXXX">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/ssn.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/ssn.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_ssn}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_credit_card}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/credit_card.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/credit_card.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_credit_card}</div>
                             </div>
                             <div class="history-item forms_textfield" data-value="${LANG_MESSAGES.forms_states}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/states_collection.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/states_collection.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_states}</div>
                             </div>
                             <div class="history-item forms_dropdown" data-value="${LANG_MESSAGES.forms_male}|${LANG_MESSAGES.forms_female}">
                                 <div class="history-item-icon">
-                                    <img src="<%= ASSETS_URL %>img/forms/gender.svg">
+                                    <img src="<%= ASSETS_URL %>img/forms/gender.svg" alt="" aria-hidden="true" width="18" height="18">
                                 </div>
                                 <div class="history-item-text">${LANG_MESSAGES.forms_gender}</div>
                             </div>
@@ -542,22 +539,22 @@
                 </div>
             </div>
             <div class="pdf-right-slider">
-                <div id="history_slider" class="slide-item">
-                    <img src="<%= ASSETS_URL %>img/history.svg">
+                <div id="history_slider" class="slide-item" data-locale="history" data-locale-attrs="title" title="${LANG_MESSAGES.history}">
+                    <img src="<%= ASSETS_URL %>img/history.svg" alt="" aria-hidden="true" width="20" height="20">
                     <span>0</span>
                 </div>
-                <div id="forms_slider" class="slide-item">
-                    <img src="<%= ASSETS_URL %>img/forms.svg">
+                <div id="forms_slider" class="slide-item" data-locale="forms" data-locale-attrs="title" title="${LANG_MESSAGES.forms}">
+                    <img src="<%= ASSETS_URL %>img/forms.svg" alt="" aria-hidden="true" width="20" height="20">
                 </div>
             </div>
         </div>
         <div class="pdf-footer">
             <div class="pdf-footer-left">
-                <div id="pdf_page_to_first" class="pdf-page-btn" data-locale="first_page" data-locale-attrs="title" title="${LANG_MESSAGES.first_page}"><img src="<%= ASSETS_URL %>img/goonepage.svg"></div>
-                <div id="pdf_page_to_prev" class="pdf-page-btn" data-locale="prev_page" data-locale-attrs="title" title="${LANG_MESSAGES.prev_page}"><img src="<%= ASSETS_URL %>img/pre_page.svg"></div>
-                <input id="pdf_page_to_number" type="text" value="1" class="pdf-page-number">
-                <div id="pdf_page_to_next" class="pdf-page-btn" data-locale="next_page" data-locale-attrs="title" title="${LANG_MESSAGES.next_page}"><img src="<%= ASSETS_URL %>img/nextPage.svg"></div>
-                <div id="pdf_page_to_last" class="pdf-page-btn" data-locale="last_page" data-locale-attrs="title" title="${LANG_MESSAGES.last_page}"><img src="<%= ASSETS_URL %>img/lastpage.svg"></div>
+                <div id="pdf_page_to_first" class="pdf-page-btn" data-locale="first_page" data-locale-attrs="title" title="${LANG_MESSAGES.first_page}"><img src="<%= ASSETS_URL %>img/goonepage.svg" alt="" aria-hidden="true" width="12" height="12"></div>
+                <div id="pdf_page_to_prev" class="pdf-page-btn" data-locale="prev_page" data-locale-attrs="title" title="${LANG_MESSAGES.prev_page}"><img src="<%= ASSETS_URL %>img/pre_page.svg" alt="" aria-hidden="true" width="12" height="12"></div>
+                <input id="pdf_page_to_number" type="text" value="1" class="pdf-page-number" name="pdfPageNumber" inputmode="numeric" autocomplete="off" data-locale="page_number" data-locale-attrs="aria-label" aria-label="${LANG_MESSAGES.page_number}">
+                <div id="pdf_page_to_next" class="pdf-page-btn" data-locale="next_page" data-locale-attrs="title" title="${LANG_MESSAGES.next_page}"><img src="<%= ASSETS_URL %>img/nextPage.svg" alt="" aria-hidden="true" width="12" height="12"></div>
+                <div id="pdf_page_to_last" class="pdf-page-btn" data-locale="last_page" data-locale-attrs="title" title="${LANG_MESSAGES.last_page}"><img src="<%= ASSETS_URL %>img/lastpage.svg" alt="" aria-hidden="true" width="12" height="12"></div>
             </div>
             <div id="pdf_status" class="pdf-footer-center"><!--All Change Saved--></div>
             <div class="pdf-footer-right">
@@ -595,11 +592,11 @@
                         <li class="lang_checked_item" data-lang="vn">Việt Nam</li>
                     </ul>
                 </div>
-                <div class="view-btn view_mode" data-mode="actual_size" data-locale="actual_size" data-locale-attrs="title" title="${LANG_MESSAGES.actual_size}"><img src="<%= ASSETS_URL %>img/1vs1.svg" /></div>
-                <div class="view-btn view_mode" data-mode="fit_width" data-locale="fit_width" data-locale-attrs="title" title="${LANG_MESSAGES.fit_width}"><img src="<%= ASSETS_URL %>img/fullScreen.svg" /></div>
-                <div class="view-btn view_mode" data-mode="fit_page" data-locale="fit_page" data-locale-attrs="title" title="${LANG_MESSAGES.fit_page}"><img src="<%= ASSETS_URL %>img/adaptivescreen.svg" /></div>
+                <div class="view-btn view_mode" data-mode="actual_size" data-locale="actual_size" data-locale-attrs="title" title="${LANG_MESSAGES.actual_size}"><img src="<%= ASSETS_URL %>img/1vs1.svg" alt="" aria-hidden="true" width="15" height="15" /></div>
+                <div class="view-btn view_mode" data-mode="fit_width" data-locale="fit_width" data-locale-attrs="title" title="${LANG_MESSAGES.fit_width}"><img src="<%= ASSETS_URL %>img/fullScreen.svg" alt="" aria-hidden="true" width="15" height="15" /></div>
+                <div class="view-btn view_mode" data-mode="fit_page" data-locale="fit_page" data-locale-attrs="title" title="${LANG_MESSAGES.fit_page}"><img src="<%= ASSETS_URL %>img/adaptivescreen.svg" alt="" aria-hidden="true" width="15" height="15" /></div>
                 <div class="view-zoom-select">
-                    <select id="pdf_page_select_zoom">
+                    <select id="pdf_page_select_zoom" name="pdfZoomLevel" aria-label="Zoom level">
                         <option value="0.25">25%</option>
                         <option value="0.5">50%</option>
                         <option value="0.75">75%</option>
@@ -612,9 +609,9 @@
                     </select>
                 </div>
                 <div class="view-zoom-slider">
-                    <div id="pdf_page_zoom_prev" class="view-btn"><img src="<%= ASSETS_URL %>img/zoomreduce.svg" /></div>
-                    <input id="pdf_page_zoom_range" type="range" value="25" max="300" min="25" step="1">
-                    <div id="pdf_page_zoom_next" class="view-btn"><img src="<%= ASSETS_URL %>img/zoomadd.svg" /></div>
+                    <div id="pdf_page_zoom_prev" class="view-btn" title="Zoom Out"><img src="<%= ASSETS_URL %>img/zoomreduce.svg" alt="" aria-hidden="true" width="15" height="15" /></div>
+                    <input id="pdf_page_zoom_range" type="range" value="25" max="300" min="25" step="1" aria-label="Zoom level">
+                    <div id="pdf_page_zoom_next" class="view-btn" title="Zoom In"><img src="<%= ASSETS_URL %>img/zoomadd.svg" alt="" aria-hidden="true" width="15" height="15" /></div>
                 </div>
             </div>
         </div>

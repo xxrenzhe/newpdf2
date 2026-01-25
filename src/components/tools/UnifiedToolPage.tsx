@@ -392,7 +392,7 @@ export default function UnifiedToolPage({
     <header className="sticky top-0 z-40 bg-white border-b border-[color:var(--brand-line)]">
       <div className="h-20 md:h-24 px-4 flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="QwerPDF" className="h-6 md:h-7 w-auto" />
+          <img src="/logo.png" alt="QwerPDF" width={982} height={167} className="h-6 md:h-7 w-auto" />
         </Link>
         <div className="flex-1 min-w-0">
           {showEditor && editorFile ? (
@@ -505,7 +505,7 @@ export default function UnifiedToolPage({
                     </h3>
                     <p className="text-sm text-[color:var(--brand-muted)] mt-1">
                       {resumeBusy
-                        ? t("checkingBrowserCache", "Checking your browser cache...")
+                        ? t("checkingBrowserCache", "Checking your browser cache…")
                         : t(
                           "resumeFromCache",
                           "Your PDF stays on your device. You can resume from the last file you opened or saved."
@@ -577,7 +577,7 @@ export default function UnifiedToolPage({
                 <Link
                   key={relatedTool.key}
                   href={relatedTool.href}
-                  className="flex flex-col items-center p-4 bg-white rounded-xl border border-[color:var(--brand-line)] hover:shadow-md hover:border-[color:var(--brand-line)] transition-all group"
+                  className="flex flex-col items-center p-4 bg-white rounded-xl border border-[color:var(--brand-line)] hover:shadow-md hover:border-[color:var(--brand-line)] transition-[border-color,box-shadow] group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <ToolIcon name={relatedTool.iconName} className="w-5 h-5 stroke-[2px]" />

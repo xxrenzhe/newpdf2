@@ -32,6 +32,8 @@ export default function Footer() {
                 <img
                   src="/logo.png"
                   alt="QwerPDF"
+                  width={982}
+                  height={167}
                   className="h-7 w-auto block"
                 />
               </Link>

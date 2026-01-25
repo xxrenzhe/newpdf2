@@ -145,7 +145,9 @@ body {
 
 /* Tool card hover effect */
 .tool-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tool-card:hover {
@@ -156,7 +158,7 @@ body {
 
 /* Button animations */
 .btn-primary {
-  @apply bg-primary text-primary-foreground font-semibold rounded-xl px-6 py-3 transition-all duration-200 shadow-lg;
+  @apply bg-primary text-primary-foreground font-semibold rounded-xl px-6 py-3 transition-colors transition-shadow transition-transform duration-200 shadow-lg;
 }
 
 /* Fallback for hover if not using standard tailwind opacity syntax above (though standard setup usually supports it)
@@ -170,7 +172,7 @@ body {
 
 
 .btn-outline {
-  @apply border border-input bg-background text-foreground font-medium rounded-xl px-6 py-3 transition-all duration-200;
+  @apply border border-input bg-background text-foreground font-medium rounded-xl px-6 py-3 transition-colors duration-200;
 }
 
 .btn-outline:hover {
@@ -200,7 +202,7 @@ body {
 
 /* FAQ item styling */
 .faq-item {
-  @apply border-l-4 border-transparent transition-all duration-200;
+  @apply border-l-4 border-transparent transition-colors duration-200;
 }
 
 .faq-item:hover {
@@ -210,7 +212,7 @@ body {
 
 /* Language switcher */
 .language-switcher {
-  @apply flex items-center gap-2 px-4 py-2 border border-input rounded-lg cursor-pointer transition-all duration-200;
+  @apply flex items-center gap-2 px-4 py-2 border border-input rounded-lg cursor-pointer transition-colors duration-200;
 }
 
 .language-switcher:hover {
@@ -251,7 +253,7 @@ body {
 
 /* Cloud button styles */
 .cloud-btn {
-  @apply flex items-center gap-3 px-6 py-4 bg-[color:var(--brand-cream)] hover:bg-[color:var(--brand-cream)] rounded-xl transition-all duration-200 border border-[color:var(--brand-line)];
+  @apply flex items-center gap-3 px-6 py-4 bg-[color:var(--brand-cream)] hover:bg-[color:var(--brand-cream)] rounded-xl transition-colors duration-200 border border-[color:var(--brand-line)];
 }
 
 /* Smooth page transitions */
@@ -272,10 +274,11 @@ body {
 }
 
 /* Enhanced focus states */
-input:focus,
-button:focus,
-select:focus {
-  outline: none;
+input:focus-visible,
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--brand-purple);
+  outline-offset: 2px;
 }
 
 /* Loading spinner */
@@ -317,7 +320,7 @@ select:focus {
 
 /* Tooltip styles */
 .tooltip {
-  @apply invisible opacity-0 absolute text-xs py-1 px-2 rounded transition-all duration-200 z-50;
+  @apply invisible opacity-0 absolute text-xs py-1 px-2 rounded transition-opacity duration-200 z-50;
   background-color: var(--brand-ink);
   color: var(--brand-cream);
 }
@@ -347,7 +350,7 @@ select:focus {
 
 /* PDF tool specific styles */
 .pdf-tool-card {
-  @apply bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm transition-all duration-300;
+  @apply bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm transition-[border-color,box-shadow] duration-300;
 }
 
 .pdf-tool-card:hover {

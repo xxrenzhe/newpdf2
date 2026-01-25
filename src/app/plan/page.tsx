@@ -30,14 +30,14 @@ const features = [
 ];
 
 const brands = [
-  "/assets/same-assets/3959512356.png",
-  "/assets/same-assets/2364094864.png",
-  "/assets/same-assets/2448600377.png",
-  "/assets/same-assets/2983692322.png",
-  "/assets/same-assets/2317977816.png",
-  "/assets/same-assets/3923762797.png",
-  "/assets/same-assets/3953556544.png",
-  "/assets/same-assets/2908841443.png",
+  { src: "/assets/same-assets/3959512356.png", width: 232, height: 66 },
+  { src: "/assets/same-assets/2364094864.png", width: 220, height: 56 },
+  { src: "/assets/same-assets/2448600377.png", width: 212, height: 62 },
+  { src: "/assets/same-assets/2983692322.png", width: 226, height: 48 },
+  { src: "/assets/same-assets/2317977816.png", width: 232, height: 30 },
+  { src: "/assets/same-assets/3923762797.png", width: 220, height: 60 },
+  { src: "/assets/same-assets/3953556544.png", width: 226, height: 60 },
+  { src: "/assets/same-assets/2908841443.png", width: 216, height: 46 },
 ];
 
 const faqItems = [
@@ -107,7 +107,7 @@ export default function PlanPage() {
               {/* Annual Plan */}
               <button
                 onClick={() => setIsAnnual(true)}
-                className={`relative p-6 rounded-2xl border-2 transition-all text-left ${
+                className={`relative p-6 rounded-2xl border-2 transition-[border-color,box-shadow] text-left ${
                   isAnnual
                     ? "border-primary bg-white shadow-lg"
                     : "border-[color:var(--brand-line)] bg-white hover:border-[color:var(--brand-line)]"
@@ -120,7 +120,7 @@ export default function PlanPage() {
                 )}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-peach)] flex items-center justify-center">
-                    <img src="/assets/same-assets/2242939468.svg" alt="" className="w-5 h-5" />
+                    <img src="/assets/same-assets/2242939468.svg" alt="" width={20} height={20} className="w-5 h-5" />
                   </div>
                   <span className="text-3xl font-bold text-[color:var(--brand-ink)]">$19.95<span className="text-lg font-normal text-[color:var(--brand-muted)]">/mo</span></span>
                 </div>
@@ -144,7 +144,7 @@ export default function PlanPage() {
               {/* Monthly Plan */}
               <button
                 onClick={() => setIsAnnual(false)}
-                className={`relative p-6 rounded-2xl border-2 transition-all text-left ${
+                className={`relative p-6 rounded-2xl border-2 transition-[border-color,box-shadow] text-left ${
                   !isAnnual
                     ? "border-primary bg-white shadow-lg"
                     : "border-[color:var(--brand-line)] bg-white hover:border-[color:var(--brand-line)]"
@@ -152,7 +152,7 @@ export default function PlanPage() {
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-lilac)] flex items-center justify-center">
-                    <img src="/assets/same-assets/2774339654.svg" alt="" className="w-5 h-5" />
+                    <img src="/assets/same-assets/2774339654.svg" alt="" width={20} height={20} className="w-5 h-5" />
                   </div>
                   <span className="text-3xl font-bold text-[color:var(--brand-ink)]">$49.95<span className="text-lg font-normal text-[color:var(--brand-muted)]">/mo</span></span>
                 </div>
@@ -180,7 +180,7 @@ export default function PlanPage() {
               className="w-full mt-6 bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium py-4 h-14 rounded-xl text-lg disabled:opacity-50"
             >
               {loading
-                ? t("processing", "Processing...")
+                ? t("processing", "Processing…")
                 : session
                 ? t("buyNow", "Buy Now")
                 : t("signInToSubscribe", "Sign in to Subscribe")}
@@ -198,7 +198,7 @@ export default function PlanPage() {
             {features.map((feature, index) => (
               <div key={index} className="flex items-start gap-3 p-4">
                 <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-cream)] flex items-center justify-center flex-shrink-0">
-                  <img src={feature.icon} alt="" className="w-5 h-5" />
+                  <img src={feature.icon} alt="" width={20} height={20} className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="font-medium text-[color:var(--brand-ink)] text-sm flex items-center gap-2">
@@ -225,8 +225,11 @@ export default function PlanPage() {
               {[...brands, ...brands].map((brand, index) => (
                 <img
                   key={index}
-                  src={brand}
+                  src={brand.src}
                   alt=""
+                  width={brand.width}
+                  height={brand.height}
+                  loading="lazy"
                   className="h-8 mx-8 opacity-60 grayscale"
                 />
               ))}

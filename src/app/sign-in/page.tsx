@@ -53,6 +53,8 @@ function SignInInner() {
             <img
               src="/logo.png"
               alt="QwerPDF"
+              width={982}
+              height={167}
               className="h-6 md:h-7 w-auto"
             />
           </Link>

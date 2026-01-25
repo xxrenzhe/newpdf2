@@ -44,7 +44,7 @@ function PaymentSuccessContent() {
 
           {sessionId && (
             <p className="text-xs text-[color:var(--brand-muted)] mb-6">
-              Order ID: {sessionId.slice(0, 20)}...
+              Order ID: {sessionId.slice(0, 20)}…
             </p>
           )}
 

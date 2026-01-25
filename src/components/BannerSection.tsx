@@ -16,6 +16,9 @@ export default function BannerSection() {
             <img
               src="/assets/same-assets/414827711.png"
               alt=""
+              width={901}
+              height={1797}
+              loading="lazy"
               className="w-full max-w-[240px] mx-auto"
             />
           </div>
@@ -29,7 +32,7 @@ export default function BannerSection() {
               {t("bannerSubtitle", "All the PDF tools you need, in a single platform")}
             </h2>
             <Link href="/app/sign-in">
-              <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-10 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-xl transition-all duration-300">
+              <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-10 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-xl transition-[background-color,box-shadow] duration-300">
                 {t("getStartedFree", "Get Started Free")}
               </Button>
             </Link>
@@ -40,6 +43,9 @@ export default function BannerSection() {
             <img
               src="/assets/same-assets/2898045088.png"
               alt=""
+              width={1054}
+              height={1067}
+              loading="lazy"
               className="w-full max-w-[240px] mx-auto"
             />
           </div>

@@ -229,7 +229,7 @@ export default function ContactUsPage() {
                   disabled={status === "sending"}
                   className="w-full bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium h-12 rounded-lg"
                 >
-                  {status === "sending" ? t("sending", "Sending...") : t("send", "Send")}
+                  {status === "sending" ? t("sending", "Sending…") : t("send", "Send")}
                 </Button>
               </form>
             </div>
@@ -253,7 +253,7 @@ export default function ContactUsPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`pb-3 px-2 font-medium transition-all ${
+                  className={`pb-3 px-2 font-medium transition-colors ${
                     activeTab === tab.key
                       ? "text-primary border-b-2 border-primary"
                       : "text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"

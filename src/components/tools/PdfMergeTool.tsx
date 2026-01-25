@@ -91,6 +91,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
             ref={inputRef}
             id={inputId}
             type="file"
+            name="mergeFiles"
             accept=".pdf,application/pdf"
             multiple
             onChange={(e) => {
@@ -139,6 +140,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
                 type="button"
                 onClick={() => moveFile(index, index - 1)}
                 disabled={index === 0}
+                aria-label={t("moveUp", "Move up")}
                 className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed"
                 title={t("moveUp", "Move up")}
               >
@@ -150,6 +152,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
                 type="button"
                 onClick={() => moveFile(index, index + 1)}
                 disabled={index === files.length - 1}
+                aria-label={t("moveDown", "Move down")}
                 className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed"
                 title={t("moveDown", "Move down")}
               >
@@ -160,6 +163,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
               <button
                 type="button"
                 onClick={() => removeFile(index)}
+                aria-label={t("remove", "Remove")}
                 className="p-1.5 rounded-lg hover:bg-red-50"
                 title={t("remove", "Remove")}
               >
@@ -177,14 +181,14 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
         type="button"
         disabled={!canMerge || busy}
         onClick={merge}
-        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
       >
         {busy ? (
           <>
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            {t("merging", "Merging...")}
+            {t("merging", "Merging…")}
           </>
         ) : (
           <>

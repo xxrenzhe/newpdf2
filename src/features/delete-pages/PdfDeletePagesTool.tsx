@@ -7,7 +7,12 @@ import { downloadBlob, extractPdfPages } from "@/lib/pdf/client";
 import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
 import { useLanguage } from "@/components/LanguageProvider";
 
-type ThumbState = Record<number, string>;
+type ThumbEntry = {
+  url: string;
+  width: number;
+  height: number;
+};
+type ThumbState = Record<number, ThumbEntry>;
 
 const THUMB_WIDTH = 220;
 const THUMB_QUALITY = 0.75;
@@ -122,8 +127,10 @@ export default function PdfDeletePagesTool({
           const viewport = page.getViewport({ scale });
 
           const canvas = document.createElement("canvas");
-          canvas.width = Math.ceil(viewport.width);
-          canvas.height = Math.ceil(viewport.height);
+          const thumbWidth = Math.ceil(viewport.width);
+          const thumbHeight = Math.ceil(viewport.height);
+          canvas.width = thumbWidth;
+          canvas.height = thumbHeight;
           const ctx = canvas.getContext("2d", { alpha: false });
           if (!ctx) return;
 
@@ -141,7 +148,7 @@ export default function PdfDeletePagesTool({
           }
 
           if (blob) createdObjectUrlsRef.current.push(url);
-          setThumbs((prev) => ({ ...prev, [pageIndex]: url }));
+          setThumbs((prev) => ({ ...prev, [pageIndex]: { url, width: thumbWidth, height: thumbHeight } }));
         } catch {
           // Ignore thumbnail errors; the grid can still function without them.
         } finally {
@@ -341,7 +348,7 @@ export default function PdfDeletePagesTool({
               <DeletePageCard
                 key={pageIndex}
                 pageIndex={pageIndex}
-                thumbUrl={thumbs[pageIndex]}
+                thumb={thumbs[pageIndex]}
                 marked={!!deleted[pageIndex]}
                 t={t}
                 onToggle={toggleDelete}
@@ -357,14 +364,14 @@ export default function PdfDeletePagesTool({
 
 const DeletePageCard = memo(function DeletePageCard({
   pageIndex,
-  thumbUrl,
+  thumb,
   marked,
   t,
   onToggle,
   onNeedThumb,
 }: {
   pageIndex: number;
-  thumbUrl?: string;
+  thumb?: ThumbEntry;
   marked: boolean;
   t: (key: string, fallback?: string) => string;
   onToggle: (pageIndex: number) => void;
@@ -374,7 +381,7 @@ const DeletePageCard = memo(function DeletePageCard({
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || thumbUrl) return;
+    if (!el || thumb) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -389,7 +396,7 @@ const DeletePageCard = memo(function DeletePageCard({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onNeedThumb, pageIndex, thumbUrl]);
+  }, [onNeedThumb, pageIndex, thumb]);
 
   return (
     <button
@@ -416,8 +423,15 @@ const DeletePageCard = memo(function DeletePageCard({
         )}
       </div>
       <div className="p-2">
-        {thumbUrl ? (
-          <img src={thumbUrl} alt="" className={`w-full rounded-lg border border-[color:var(--brand-line)] ${marked ? "opacity-60" : ""}`} />
+        {thumb ? (
+          <img
+            src={thumb.url}
+            alt=""
+            width={thumb.width}
+            height={thumb.height}
+            loading="lazy"
+            className={`w-full rounded-lg border border-[color:var(--brand-line)] ${marked ? "opacity-60" : ""}`}
+          />
         ) : (
           <div className="w-full aspect-[3/4] rounded-lg bg-[color:var(--brand-cream)]" />
         )}

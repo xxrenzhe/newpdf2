@@ -226,7 +226,7 @@ export default function FileDropzone({
     <div className="max-w-2xl mx-auto">
       {/* 错误提示 */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-fade-in">
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-fade-in" role="status" aria-live="polite">
           <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
             <path d="M15 9l-6 6M9 9l6 6" />
@@ -239,6 +239,7 @@ export default function FileDropzone({
             type="button"
             onClick={() => setError(null)}
             className="ml-auto text-red-400 hover:text-red-600"
+            aria-label={t("dismissError", "Dismiss error")}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -248,7 +249,7 @@ export default function FileDropzone({
       )}
 
       <div
-        className={`bg-white rounded-2xl border-2 border-dashed transition-all duration-300 ${
+        className={`bg-white rounded-2xl border-2 border-dashed transition-[border-color,background-color,transform,box-shadow] duration-300 ${
           isDragging
             ? "border-primary bg-[color:rgba(242,236,255,0.5)] scale-[1.02] shadow-lg"
             : "border-primary/30 hover:border-primary/50"
@@ -263,6 +264,8 @@ export default function FileDropzone({
             <img
               src="/assets/icons/upload.svg"
               alt="Upload"
+              width={80}
+              height={80}
               className="w-16 h-16 md:w-20 md:h-20"
             />
           </div>
@@ -276,7 +279,7 @@ export default function FileDropzone({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <span>{t("validatingFiles", "Validating files...")}</span>
+              <span>{t("validatingFiles", "Validating files…")}</span>
             </div>
           ) : (
             <label
@@ -288,7 +291,7 @@ export default function FileDropzone({
               e.preventDefault();
               inputRef.current?.click();
             }}
-            className="inline-flex items-center justify-center bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-10 py-3 rounded-lg transition-all duration-200 hover:shadow-lg btn-press"
+            className="inline-flex items-center justify-center bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-10 py-3 rounded-lg transition-[background-color,box-shadow,transform] duration-200 hover:shadow-lg btn-press"
           >
             Browse files
           </label>
@@ -297,6 +300,7 @@ export default function FileDropzone({
             ref={inputRef}
             id={inputId}
             type="file"
+            name="fileUpload"
             accept={accept}
             multiple={multiple}
             onChange={onChange}

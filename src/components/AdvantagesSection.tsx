@@ -187,7 +187,7 @@ const buildPreviewCards = (t: (key: string, fallback?: string) => string) => ({
       <div className="mb-6">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-[color:var(--brand-muted)] font-medium">
-            {t("converting", "Converting...")}
+            {t("converting", "Converting…")}
           </span>
           <span className="text-secondary font-bold">100%</span>
         </div>
@@ -292,14 +292,14 @@ export default function AdvantagesSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-7xl mx-auto">
           {/* Left side - Preview Image */}
           <div className="order-2 lg:order-1">
-            <div className={`relative bg-gradient-to-br ${advantages[activeIndex].gradient} rounded-3xl p-10 flex flex-col min-h-[450px] overflow-hidden shadow-xl transition-all duration-500`}>
+            <div className={`relative bg-gradient-to-br ${advantages[activeIndex].gradient} rounded-3xl p-10 flex flex-col min-h-[450px] overflow-hidden shadow-xl transition-[background-color,box-shadow] duration-500`}>
               {/* Decorative elements */}
               <div className="absolute top-6 left-6 w-24 h-24 bg-white/40 rounded-full blur-2xl" />
               <div className="absolute bottom-6 right-6 w-36 h-36 bg-white/40 rounded-full blur-2xl" />
 
               {/* Dynamic preview card based on active index */}
               <div className="relative z-10 flex-1 flex items-center justify-center">
-                <div className="transition-all duration-300">
+                <div className="transition-opacity duration-300">
                   {previewCards[activeIndex as keyof typeof previewCards]}
                 </div>
               </div>
@@ -322,7 +322,7 @@ export default function AdvantagesSection() {
               <button
                 key={advantage.id}
                 onClick={() => setActiveIndex(index)}
-                className={`w-full text-left p-6 md:p-7 rounded-2xl transition-all duration-300 ${
+                className={`w-full text-left p-6 md:p-7 rounded-2xl transition-[background-color,border-color,box-shadow] duration-300 ${
                   activeIndex === index
                     ? "bg-white shadow-xl border-2 border-[color:var(--brand-line)]"
                     : "bg-transparent hover:bg-white/80 border-2 border-transparent"
@@ -342,7 +342,7 @@ export default function AdvantagesSection() {
                     }`}>
                       {t(advantage.titleKey, advantage.title)}
                     </h3>
-                    <div className={`overflow-hidden transition-all duration-300 ${
+                    <div className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
                       activeIndex === index ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
                     }`}>
                       <p className="text-[color:var(--brand-muted)] text-base leading-relaxed">

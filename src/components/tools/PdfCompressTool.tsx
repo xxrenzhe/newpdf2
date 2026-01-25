@@ -130,7 +130,7 @@ export default function PdfCompressTool({ initialFile }: { initialFile?: File })
                 key={key}
                 type="button"
                 onClick={() => setPreset(key)}
-                className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                className={`p-4 rounded-xl border-2 text-left transition-colors duration-200 ${
                   isActive
                     ? "border-primary bg-[color:var(--brand-lilac)]"
                     : "border-[color:var(--brand-line)] hover:border-[color:var(--brand-line)] hover:bg-[color:var(--brand-cream)]"
@@ -155,14 +155,14 @@ export default function PdfCompressTool({ initialFile }: { initialFile?: File })
         type="button"
         disabled={!isPdf || busy}
         onClick={run}
-        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
       >
         {busy ? (
           <>
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            {t("compressing", "Compressing...")}
+            {t("compressing", "Compressing…")}
           </>
         ) : (
           <>

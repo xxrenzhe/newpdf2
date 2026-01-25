@@ -74,7 +74,7 @@ export default function StatsSection() {
           {stats.map((stat, index) => (
             <div
               key={index}
-              className={`flex items-center gap-5 transition-all duration-700 ${
+              className={`flex items-center gap-5 transition-[opacity,transform] duration-700 ${
                 isVisible
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-4"

@@ -52,7 +52,7 @@ test('home "Browse files" opens file chooser', async ({ page }) => {
     buffer: Buffer.from(pdfBytes),
   });
 
-  await expect(page).toHaveURL(/\/app\/guest\/document\?chosenTool=edit-pdf&documentId=/);
+  await expect(page).toHaveURL(/\/edit\/[^/?#]+/);
   await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
 });
 

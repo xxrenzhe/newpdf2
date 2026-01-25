@@ -7,7 +7,7 @@ import { Font } from '../../../font';
 class Text extends ToolbarItemBase {
     init() {
         this.name = 'text';
-        this.allowAdd = Boolean(Text.allowAdd);
+        this.allowAdd = Text.allowAdd !== false;
         const defaultFont = Font.getDefaultFont();
         let attrs = {
             size: 16,

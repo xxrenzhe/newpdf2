@@ -130,12 +130,15 @@ export default function PdfPasswordTool({ initialFile }: { initialFile?: File })
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={t("passwordPlaceholder", "Enter password...")}
-              className="w-full h-12 px-4 pr-12 rounded-xl border border-[color:var(--brand-line)] focus:border-primary focus:ring-2 focus:ring-[color:var(--brand-lilac)] transition-all"
+              name="pdfPassword"
+              autoComplete="off"
+              placeholder={t("passwordPlaceholder", "Enter password…")}
+              className="w-full h-12 px-4 pr-12 rounded-xl border border-[color:var(--brand-line)] focus:border-primary focus:ring-2 focus:ring-[color:var(--brand-lilac)] transition-colors"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? t("hidePassword", "Hide password") : t("showPassword", "Show password")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--brand-muted)] hover:text-[color:var(--brand-muted)]"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -179,8 +182,10 @@ export default function PdfPasswordTool({ initialFile }: { initialFile?: File })
               type={showPassword ? "text" : "password"}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              placeholder={t("confirmPasswordPlaceholder", "Confirm password...")}
-              className={`w-full h-12 px-4 pr-12 rounded-xl border transition-all focus:ring-2 ${
+              name="pdfPasswordConfirm"
+              autoComplete="off"
+              placeholder={t("confirmPasswordPlaceholder", "Confirm password…")}
+              className={`w-full h-12 px-4 pr-12 rounded-xl border transition-colors focus:ring-2 ${
                 confirm && !passwordMatch
                   ? "border-red-300 focus:border-red-400 focus:ring-red-100"
                   : confirm && passwordMatch
@@ -220,14 +225,14 @@ export default function PdfPasswordTool({ initialFile }: { initialFile?: File })
         type="button"
         disabled={!isPdf || busy || !password || !passwordMatch}
         onClick={run}
-        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
       >
         {busy ? (
           <>
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            {t("protecting", "Protecting...")}
+            {t("protecting", "Protecting…")}
           </>
         ) : (
           <>

@@ -69,6 +69,7 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
           <button
             onClick={goToPrevPage}
             disabled={pageNumber <= 1}
+            aria-label={t("prevPage", "Previous page")}
             className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -83,6 +84,7 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
           <button
             onClick={goToNextPage}
             disabled={pageNumber >= numPages}
+            aria-label={t("nextPage", "Next page")}
             className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -95,6 +97,7 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
           <button
             onClick={zoomOut}
             disabled={scale <= 0.5}
+            aria-label={t("zoomOut", "Zoom Out")}
             className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -109,6 +112,7 @@ export default function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
           <button
             onClick={zoomIn}
             disabled={scale >= 3}
+            aria-label={t("zoomIn", "Zoom In")}
             className="p-2 rounded-lg hover:bg-[color:var(--brand-cream)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

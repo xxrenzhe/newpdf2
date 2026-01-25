@@ -145,7 +145,7 @@ export default function FAQPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`pb-4 px-2 font-medium transition-all ${
+                className={`pb-4 px-2 font-medium transition-colors ${
                   activeTab === tab.key
                     ? "text-primary border-b-2 border-primary"
                     : "text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"

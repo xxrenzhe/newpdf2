@@ -121,9 +121,22 @@ export class PDFPage {
         elThumbs.querySelector('.__pdf_page_preview_wrapper').setAttribute('style', '');
         elThumbs.querySelector('.drawLayer').setAttribute('style', '');
 
+        if (!this.reader.thumbsBox && typeof this.reader.ensureThumbs === 'function') {
+            this.reader.ensureThumbs();
+        }
+        const thumbsBox = this.reader.thumbsBox;
         let targetElementThumb = prevPage.readerPage.elThumbs;
-        targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb.nextElementSibling);
-        this.reader.thumbsObserver?.observe(newReaderPage.elThumbs);
+        if (!targetElementThumb && thumbsBox) {
+            targetElementThumb = thumbsBox.querySelector('.__pdf_page_preview[data-page="'+ prevPage.pageNum +'"]');
+        }
+        if (targetElementThumb?.parentNode) {
+            targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb.nextElementSibling);
+        } else if (thumbsBox) {
+            thumbsBox.appendChild(newReaderPage.elThumbs);
+        }
+        if (thumbsBox) {
+            this.reader.thumbsObserver?.observe(newReaderPage.elThumbs);
+        }
     }
 
     addToFirst(oriFirstPage, newReaderPage) {
@@ -169,9 +182,22 @@ export class PDFPage {
         elThumbs.querySelector('.__pdf_page_preview_wrapper').setAttribute('style', '');
         elThumbs.querySelector('.drawLayer').setAttribute('style', '');
 
+        if (!this.reader.thumbsBox && typeof this.reader.ensureThumbs === 'function') {
+            this.reader.ensureThumbs();
+        }
+        const thumbsBox = this.reader.thumbsBox;
         let targetElementThumb = oriFirstPage.readerPage.elThumbs;
-        targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb);
-        this.reader.thumbsObserver?.observe(newReaderPage.elThumbs);
+        if (!targetElementThumb && thumbsBox) {
+            targetElementThumb = thumbsBox.querySelector('.__pdf_page_preview[data-page="'+ oriFirstPage.pageNum +'"]');
+        }
+        if (targetElementThumb?.parentNode) {
+            targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb);
+        } else if (thumbsBox) {
+            thumbsBox.prepend(newReaderPage.elThumbs);
+        }
+        if (thumbsBox) {
+            this.reader.thumbsObserver?.observe(newReaderPage.elThumbs);
+        }
     }
 
     insert() {

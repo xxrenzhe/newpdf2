@@ -50,7 +50,7 @@ export default function ToolsGrid() {
                 onClick={() => setActiveCategory(category.key)}
                 className={`
                   inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full text-base font-semibold
-                  transition-all duration-300 ease-in-out border
+                  transition-[background-color,color,box-shadow,transform,border-color] duration-300 ease-in-out border
                   ${activeCategory === category.key
                     ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-[rgba(91,75,183,0.25)] transform -translate-y-0.5"
                     : "bg-white/80 text-[color:var(--brand-muted)] border-[color:var(--brand-line)] hover:bg-white hover:border-[color:rgba(91,75,183,0.3)] hover:text-[color:var(--brand-ink)]"
@@ -88,13 +88,13 @@ export default function ToolsGrid() {
                   className={`
                     tool-card group relative bg-white border border-[color:var(--brand-line)] rounded-2xl p-6 
                     hover:shadow-xl hover:border-[color:rgba(91,75,183,0.2)]
-                    transition-all duration-300 animate-fade-in flex flex-col items-start
+                    transition-[border-color,box-shadow,transform] duration-300 animate-fade-in flex flex-col items-start
                   `}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className={`
                     w-12 h-12 rounded-xl flex items-center justify-center mb-5
-                    transition-all duration-300 group-hover:scale-110 group-hover:rotate-3
+                    transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3
                     border ${categoryStyle}
                   `}>
                     <ToolIcon name={tool.iconName} className="w-6 h-6 stroke-[2px]" />
@@ -105,7 +105,7 @@ export default function ToolsGrid() {
                     <h3 className="font-bold text-[color:var(--brand-ink)] text-lg group-hover:text-primary transition-colors">
                       {t(tool.nameKey, tool.name)}
                     </h3>
-                    <ChevronRight className="w-5 h-5 text-[color:var(--brand-line)] group-hover:text-primary transform -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+                    <ChevronRight className="w-5 h-5 text-[color:var(--brand-line)] group-hover:text-primary transform -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-[color,opacity,transform] duration-300" />
                   </div>
                   <p className="text-sm text-[color:var(--brand-muted)] leading-relaxed font-medium">
                     {t(tool.descriptionKey, tool.description)}

@@ -456,6 +456,10 @@ export class PDFReader {
         Locale.bind();
     }
 
+    ensureThumbs() {
+        this.#ensureThumbs();
+    }
+
     #ensureThumbs() {
         if (this.thumbsInitialized) return;
         if (!this.options.thumbs) return;

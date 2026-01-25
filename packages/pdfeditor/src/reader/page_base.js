@@ -92,9 +92,9 @@ export class PDFPageBase {
         this.elWrapper.classList.add(WRAPPER_CLASS);
         this.elWrapper.style.position = 'relative';
         this.elWrapper.addEventListener('mousedown', e => {
-            if (e.target.getAttribute('role') == 'presentation' 
-                || e.target.getAttribute('contenteditable')
-                || e.target.parentElement.getAttribute('contenteditable')) {
+            const target = e.target instanceof Element ? e.target : null;
+            if (target?.matches('span[role="presentation"]')
+                || target?.closest('[contenteditable]')) {
                 return;
             }
             PDFEvent.dispatch(Events.PAGE_DOWN, {

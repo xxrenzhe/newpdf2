@@ -239,6 +239,10 @@ function elSliderShow(el, className, showDisplayValue) {
         showDisplayValue = 'block';
     }
     const classList = el.classList;
+    if (el.__sliderHideTimer) {
+        clearTimeout(el.__sliderHideTimer);
+        el.__sliderHideTimer = null;
+    }
     el.style.display = showDisplayValue;
     el.offsetWidth;
     classList.add(className);
@@ -247,8 +251,12 @@ function elSliderShow(el, className, showDisplayValue) {
 function elSliderHide(el, className) {
     const classList = el.classList;
     classList.remove(className);
-    setTimeout(() => {
+    if (el.__sliderHideTimer) {
+        clearTimeout(el.__sliderHideTimer);
+    }
+    el.__sliderHideTimer = setTimeout(() => {
         el.style.display = 'none';
+        el.__sliderHideTimer = null;
     }, 300);
 }
 

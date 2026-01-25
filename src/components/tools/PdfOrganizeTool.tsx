@@ -14,7 +14,12 @@ type PageItem = {
   rotationDegrees: number; // 0/90/180/270
 };
 
-type ThumbState = Record<number, string>;
+type ThumbEntry = {
+  url: string;
+  width: number;
+  height: number;
+};
+type ThumbState = Record<number, ThumbEntry>;
 
 function clampRotation(deg: number) {
   const v = ((deg % 360) + 360) % 360;
@@ -134,9 +139,11 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
         const scale = targetWidth / Math.max(1, viewport0.width);
         const viewport = page.getViewport({ scale });
 
+        const thumbWidth = Math.ceil(viewport.width);
+        const thumbHeight = Math.ceil(viewport.height);
         const canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
+        canvas.width = thumbWidth;
+        canvas.height = thumbHeight;
         const ctx = canvas.getContext("2d", { alpha: false });
         if (!ctx) return;
 
@@ -153,7 +160,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
           return;
         }
 
-        setThumbs((prev) => ({ ...prev, [pageIndex]: url }));
+        setThumbs((prev) => ({ ...prev, [pageIndex]: { url, width: thumbWidth, height: thumbHeight } }));
         (page as { cleanup?: () => void }).cleanup?.();
       } catch {
         // ignore
@@ -270,7 +277,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
               className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
               onClick={() => void exportPdf(false)}
             >
-              {busy ? t("working", "Working...") : t("exportPdf", "Export PDF")}
+              {busy ? t("working", "Working…") : t("exportPdf", "Export PDF")}
             </button>
           </div>
         </div>
@@ -363,7 +370,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
                 idx={idx}
                 total={items.length}
                 item={item}
-                thumbUrl={thumb}
+                thumb={thumb}
                 selected={isSelected}
                 t={t}
                 onToggleSelect={() => toggleSelect(item.id)}
@@ -386,7 +393,7 @@ function OrganizePageCard({
   idx,
   total,
   item,
-  thumbUrl,
+  thumb,
   selected,
   t,
   onToggleSelect,
@@ -400,7 +407,7 @@ function OrganizePageCard({
   idx: number;
   total: number;
   item: PageItem;
-  thumbUrl?: string;
+  thumb?: ThumbEntry;
   selected: boolean;
   t: (key: string, fallback?: string) => string;
   onToggleSelect: () => void;
@@ -415,7 +422,7 @@ function OrganizePageCard({
 
   useEffect(() => {
     const el = buttonRef.current;
-    if (!el || thumbUrl) return;
+    if (!el || thumb) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -431,7 +438,7 @@ function OrganizePageCard({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onNeedThumb, thumbUrl]);
+  }, [onNeedThumb, thumb]);
 
   return (
     <div className={`rounded-xl border ${selected ? "border-primary" : "border-[color:var(--brand-line)]"} overflow-hidden`}>
@@ -452,8 +459,15 @@ function OrganizePageCard({
           </span>
         </div>
         <div className="bg-white p-2">
-          {thumbUrl ? (
-            <img src={thumbUrl} alt="" className="w-full rounded-lg border border-[color:var(--brand-line)]" />
+          {thumb ? (
+            <img
+              src={thumb.url}
+              alt=""
+              width={thumb.width}
+              height={thumb.height}
+              loading="lazy"
+              className="w-full rounded-lg border border-[color:var(--brand-line)]"
+            />
           ) : (
             <div className="w-full aspect-[3/4] rounded-lg bg-[color:var(--brand-cream)]" />
           )}
@@ -465,6 +479,7 @@ function OrganizePageCard({
           type="button"
           onClick={onMoveUp}
           disabled={disableMoveUp}
+          aria-label={t("moveUp", "Move up")}
           className="flex-1 h-9 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
           title={t("moveUp", "Move up")}
         >
@@ -474,6 +489,7 @@ function OrganizePageCard({
           type="button"
           onClick={onMoveDown}
           disabled={disableMoveDown}
+          aria-label={t("moveDown", "Move down")}
           className="flex-1 h-9 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
           title={t("moveDown", "Move down")}
         >
@@ -482,6 +498,7 @@ function OrganizePageCard({
         <button
           type="button"
           onClick={onRotate}
+          aria-label={t("rotate", "Rotate")}
           className="flex-1 h-9 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
           title={t("rotate", "Rotate")}
         >

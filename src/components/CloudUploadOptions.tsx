@@ -191,7 +191,7 @@ export default function CloudUploadOptions({
       : "grid grid-cols-1 md:grid-cols-3 gap-3 mt-4";
   const btnBase =
     variant === "hero"
-      ? "flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-all duration-300"
+      ? "flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-[border-color,box-shadow] duration-300"
       : "cloud-btn justify-center";
   const labelClass =
     variant === "hero"

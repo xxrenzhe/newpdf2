@@ -421,7 +421,6 @@ test("pdfeditor insert page increases output page count", async ({ page }) => {
   const frame = page.frameLocator('iframe[title="PDF Editor"]');
   await expect(page.getByRole("button", { name: "Save" })).toBeEnabled({ timeout: 120_000 });
 
-  await frame.locator(".tab-item", { hasText: "Insert" }).click();
   await frame.locator("#tool_insert_pages").click();
   await frame.getByRole("button", { name: "OK" }).click();
 

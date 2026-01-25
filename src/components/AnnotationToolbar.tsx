@@ -146,8 +146,9 @@ export default function AnnotationToolbar({
                 <button
                   key={tool.id}
                   onClick={() => onToolChange(tool.id)}
+                  aria-label={tool.label}
                   className={`${isGroupedRow ? "h-10 w-full" : "w-12 h-12"
-                    } rounded-xl flex items-center justify-center transition-all duration-200 ${activeTool === tool.id
+                    } rounded-xl flex items-center justify-center transition-colors transition-shadow duration-200 ${activeTool === tool.id
                       ? "bg-primary text-white shadow-md shadow-[rgba(91,75,183,0.25)]"
                       : "hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
                     }`}
@@ -167,6 +168,7 @@ export default function AnnotationToolbar({
       <div className="relative w-full flex justify-center mb-2">
         <button
           onClick={() => setShowColorPicker(!showColorPicker)}
+          aria-label={t("colorLabel", "Color")}
           className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] transition-colors border border-transparent hover:border-[color:var(--brand-line)]"
           title={t("colorLabel", "Color")}
         >
@@ -188,6 +190,7 @@ export default function AnnotationToolbar({
                     onColorChange(color);
                     setShowColorPicker(false);
                   }}
+                  aria-label={`${t("colorLabel", "Color")} ${color}`}
                   className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${activeColor === color ? "border-[color:var(--brand-ink)] ring-2 ring-[color:var(--brand-line)]" : "border-transparent"
                     }`}
                   style={{ backgroundColor: color }}
@@ -202,6 +205,7 @@ export default function AnnotationToolbar({
       <div className="relative w-full flex justify-center">
         <button
           onClick={() => setShowStrokeWidth(!showStrokeWidth)}
+          aria-label={t("strokeWidthLabel", "Stroke Width")}
           className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] transition-colors"
           title={t("strokeWidthLabel", "Stroke Width")}
         >
@@ -250,6 +254,7 @@ export default function AnnotationToolbar({
         {onUndo && (
           <button
             onClick={onUndo}
+            aria-label={t("undo", "Undo")}
             className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
             title={t("undo", "Undo")}
           >
@@ -259,6 +264,7 @@ export default function AnnotationToolbar({
         {onRedo && (
           <button
             onClick={onRedo}
+            aria-label={t("redo", "Redo")}
             className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
             title={t("redo", "Redo")}
           >
@@ -268,6 +274,7 @@ export default function AnnotationToolbar({
         {onClear && (
           <button
             onClick={onClear}
+            aria-label={t("clearAll", "Clear All")}
             className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors mt-2"
             title={t("clearAll", "Clear All")}
           >

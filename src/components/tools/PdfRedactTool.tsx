@@ -302,7 +302,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             onClick={exportRedacted}
             className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
           >
-            {busy ? t("exporting", "Exporting...") : t("exportRedacted", "Export redacted PDF")}
+            {busy ? t("exporting", "Exporting…") : t("exportRedacted", "Export redacted PDF")}
           </button>
         </div>
       </div>
@@ -322,7 +322,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
           <span>
             {t("pageOfShort", "Page {current} / {total}")
               .replace("{current}", `${pageNumber}`)
-              .replace("{total}", numPages ? `${numPages}` : "...")}
+              .replace("{total}", numPages ? `${numPages}` : "…")}
           </span>
           <button
             type="button"
@@ -334,11 +334,21 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}>
+          <button
+            type="button"
+            aria-label={t("zoomOut", "Zoom Out")}
+            className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white"
+            onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}
+          >
             -
           </button>
           <span className="min-w-[52px] text-center">{Math.round(scale * 100)}%</span>
-          <button type="button" className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white" onClick={() => setScale((s) => Math.min(3, s + 0.25))}>
+          <button
+            type="button"
+            aria-label={t("zoomIn", "Zoom In")}
+            className="px-2 py-1 rounded border border-[color:var(--brand-line)] bg-white"
+            onClick={() => setScale((s) => Math.min(3, s + 0.25))}
+          >
             +
           </button>
         </div>

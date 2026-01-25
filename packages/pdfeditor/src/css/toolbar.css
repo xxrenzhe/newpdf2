@@ -2449,3 +2449,13 @@ input[type=number]::-webkit-outer-spin-button{
 .__toolbar_item_pages {
     display: flex;
 } */
+
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[contenteditable="true"]:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+}

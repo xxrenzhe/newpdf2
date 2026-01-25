@@ -32,10 +32,10 @@ test("pdf editor page header actions: Upload New, Convert, Change file", async (
 
   // Convert should navigate to the Convert tool and carry the uploaded file via upload store.
   await Promise.all([
-    page.waitForURL(/\/tools\/convert\?uploadId=/),
+    page.waitForURL(/\/tools\/convert\/[^/?#]+/),
     page.getByRole("button", { name: "Convert" }).click(),
   ]);
-  await expect(page.getByRole("heading", { name: "Convert Document" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Convert" })).toBeVisible();
   await expect(page.getByText("b.pdf")).toBeVisible();
 
   // Navigate back to edit and verify Change file returns to dropzone.

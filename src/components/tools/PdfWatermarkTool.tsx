@@ -128,8 +128,10 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={t("watermarkTextPlaceholder", "Enter watermark text...")}
-          className="w-full h-12 px-4 rounded-xl border border-[color:var(--brand-line)] focus:border-primary focus:ring-2 focus:ring-[color:var(--brand-lilac)] transition-all text-lg"
+          name="watermarkText"
+          autoComplete="off"
+          placeholder={t("watermarkTextPlaceholder", "Enter watermark text…")}
+          className="w-full h-12 px-4 rounded-xl border border-[color:var(--brand-line)] focus:border-primary focus:ring-2 focus:ring-[color:var(--brand-lilac)] transition-colors text-lg"
         />
       </div>
 
@@ -149,6 +151,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
             step={0.01}
             value={opacity}
             onChange={(e) => setOpacity(Number(e.target.value))}
+            name="watermarkOpacity"
             className="mt-2 w-full h-2 bg-[color:var(--brand-line)] rounded-lg appearance-none cursor-pointer accent-primary"
           />
           <span className="text-xs text-[color:var(--brand-muted)] mt-1 block">{Math.round(opacity * 100)}%</span>
@@ -167,6 +170,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
             step={4}
             value={fontSize}
             onChange={(e) => setFontSize(Number(e.target.value))}
+            name="watermarkFontSize"
             className="mt-2 w-full h-2 bg-[color:var(--brand-line)] rounded-lg appearance-none cursor-pointer accent-primary"
           />
           <span className="text-xs text-[color:var(--brand-muted)] mt-1 block">{fontSize}pt</span>
@@ -185,6 +189,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
             step={5}
             value={rotation}
             onChange={(e) => setRotation(Number(e.target.value))}
+            name="watermarkRotation"
             className="mt-2 w-full h-2 bg-[color:var(--brand-line)] rounded-lg appearance-none cursor-pointer accent-primary"
           />
           <span className="text-xs text-[color:var(--brand-muted)] mt-1 block">{rotation}°</span>
@@ -205,14 +210,14 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
         type="button"
         disabled={!isPdf || busy}
         onClick={run}
-        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+        className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
       >
         {busy ? (
           <>
             <svg className="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4m0 12v4m-7-7H1m22 0h-4m-2.636-7.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m12.728 0l-2.828-2.828M6.464 6.464L3.636 3.636" />
             </svg>
-            {t("applyingWatermark", "Applying watermark...")}
+            {t("applyingWatermark", "Applying watermark…")}
           </>
         ) : (
           <>

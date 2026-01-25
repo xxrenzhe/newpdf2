@@ -112,6 +112,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
           className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
           value={mode}
           onChange={(e) => setMode(e.target.value as Mode)}
+          name="convertMode"
         >
           <option value="auto">{t("convertModeAuto", "Auto")}</option>
           <option value="pdf-to-images">{t("convertModePdfToImages", "PDF → Images (.zip)")}</option>
@@ -129,6 +130,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
               className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
               value={format}
               onChange={(e) => setFormat(e.target.value as "png" | "jpg")}
+              name="convertFormat"
             >
               <option value="png">{t("formatPng", "PNG")}</option>
               <option value="jpg">{t("formatJpg", "JPG")}</option>
@@ -143,6 +145,8 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
               className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
               value={dpi}
               onChange={(e) => setDpi(Number(e.target.value || 150))}
+              name="convertDpi"
+              autoComplete="off"
             />
           </label>
           <label className="text-sm text-[color:var(--brand-muted)]">
@@ -155,6 +159,8 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
               className="mt-1 w-full h-10 px-3 rounded-lg border border-[color:var(--brand-line)]"
               value={quality}
               onChange={(e) => setQuality(Number(e.target.value || 0.85))}
+              name="convertQuality"
+              autoComplete="off"
             />
           </label>
         </div>
@@ -172,7 +178,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
         onClick={run}
         className="w-full h-12 rounded-xl bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
       >
-        {busy ? t("working", "Working...") : t("convertDownload", "Convert & Download")}
+        {busy ? t("working", "Working…") : t("convertDownload", "Convert & Download")}
       </button>
     </div>
   );

@@ -42,7 +42,7 @@ function UploadProgressOverlay({
     >
       <div className="w-[min(840px,calc(100vw-2rem))] rounded-2xl bg-white shadow-2xl border border-[color:var(--brand-line)] p-8">
         <h2 className="text-3xl font-semibold text-[color:var(--brand-ink)]">
-          {t("loadingPleaseWait", "Loading, please wait...")}
+          {t("loadingPleaseWait", "Loading, please wait…")}
         </h2>
         <div className="mt-5 h-2 w-full rounded-full bg-[color:var(--brand-lilac)] overflow-hidden" role="progressbar" aria-valuenow={clamped}>
           <div
@@ -159,7 +159,7 @@ export default function PdfEditorTool({
   const { t } = useLanguage();
   const uploadTips = useMemo(
     () => [
-      t("uploadTipPreparing", "Uploading and preparing your document. Optimizing for editing..."),
+      t("uploadTipPreparing", "Uploading and preparing your document. Optimizing for editing…"),
       t("uploadTipEditor", "Preparing the editor. This usually takes only a moment."),
       t("uploadTipLarge", "Tip: Larger PDFs may take a bit longer to load - thanks for your patience."),
     ],
@@ -529,14 +529,14 @@ export default function PdfEditorTool({
       : "px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50";
 
   const statusText = busy
-    ? t("statusWorking", "Working...")
+    ? t("statusWorking", "Working…")
     : pdfLoaded
       ? t("statusReady", "Ready")
       : loadCancelled
         ? t("statusCanceled", "Canceled")
         : iframeReady
-          ? t("statusWaiting", "Waiting...")
-          : t("statusLoading", "Loading...");
+          ? t("statusWaiting", "Waiting…")
+          : t("statusLoading", "Loading…");
 
   return (
     <div className={shellClassName}>
@@ -550,7 +550,7 @@ export default function PdfEditorTool({
         <div className={titleClassName}>
           {showBrand ? (
             <Link href="/" className="flex items-center self-center leading-none">
-              <img src="/logo.png" alt="QwerPDF" className="h-6 md:h-7 w-auto block" />
+              <img src="/logo.png" alt="QwerPDF" width={982} height={167} className="h-6 md:h-7 w-auto block" />
             </Link>
           ) : (
             <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
@@ -568,6 +568,7 @@ export default function PdfEditorTool({
             ref={fileInputRef}
             id={fileInputId}
             type="file"
+            name="editorFile"
             accept=".pdf,application/pdf"
             className="sr-only"
             onChange={onFileChange}
@@ -606,7 +607,7 @@ export default function PdfEditorTool({
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
           >
-            {busy ? t("working", "Working...") : t("saveDownload", "Save & Download")}
+            {busy ? t("working", "Working…") : t("saveDownload", "Save & Download")}
           </button>
           {showChangeFile && (
             <button

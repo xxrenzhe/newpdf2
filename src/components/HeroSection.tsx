@@ -113,7 +113,7 @@ export default function HeroSection() {
               isDragging && !isBusy
                 ? "border-primary bg-[color:rgba(242,236,255,0.4)] scale-[1.02]"
                 : "border-[color:var(--brand-line)] hover:border-primary/50"
-            } ${isBusy ? "pointer-events-none opacity-80" : ""} p-10 md:p-14 transition-all duration-300`}
+            } ${isBusy ? "pointer-events-none opacity-80" : ""} p-10 md:p-14 transition-[border-color,background-color,box-shadow,transform] duration-300`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -143,6 +143,7 @@ export default function HeroSection() {
                 <input
                   id={fileInputId}
                   type="file"
+                  name="heroUpload"
                   className="sr-only"
                   aria-hidden="true"
                   tabIndex={-1}
@@ -157,12 +158,12 @@ export default function HeroSection() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    <span>{t("loadingPleaseWait", "Loading, please wait...")}</span>
+                    <span>{t("loadingPleaseWait", "Loading, please wait…")}</span>
                   </div>
                 ) : (
                   <Button
                     asChild
-                    className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-[rgba(91,75,183,0.35)] transition-all duration-300"
+                    className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-[rgba(91,75,183,0.35)] transition-[background-color,box-shadow] duration-300"
                   >
                     <label
                       htmlFor={fileInputId}
