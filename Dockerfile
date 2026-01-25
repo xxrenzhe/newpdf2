@@ -73,6 +73,7 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app/.next/standalone ./
 COPY --from=builder --chown=appuser:appuser /app/.next/static ./.next/static
 COPY --from=builder --chown=appuser:appuser /app/public ./public
+COPY --from=builder --chown=appuser:appuser /app/scripts/validate-prod-env.mjs ./scripts/validate-prod-env.mjs
 
 # Copy cron definitions for entrypoint bootstrap
 COPY deploy/crontab /app/deploy/crontab

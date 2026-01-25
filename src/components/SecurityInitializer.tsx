@@ -4,26 +4,21 @@ import { useEffect } from "react";
 import { preventIframeEmbedding, domainLock } from "@/lib/security/antiScraping";
 
 /**
- * 从环境变量解析允许的域名列表
- * 格式: "example.com,*.example.com,app.example.org"
+ * 从服务端运行时配置获取允许的域名列表
+ * 运行时来源: /api/security-config
  */
-function getAllowedDomains(): string[] {
-  const envValue = process.env.NEXT_PUBLIC_ALLOWED_DOMAINS;
-
-  if (!envValue) {
-    // 开发环境如果未配置，返回空数组（domainLock 会自动允许 localhost）
-    if (process.env.NODE_ENV !== "production") {
-      return [];
-    }
-    // 生产环境必须配置（在 next.config.js 中已验证）
-    console.error("NEXT_PUBLIC_ALLOWED_DOMAINS is not configured");
+async function getAllowedDomains(): Promise<string[]> {
+  try {
+    const response = await fetch("/api/security-config", { cache: "no-store" });
+    if (!response.ok) return [];
+    const data = (await response.json()) as unknown;
+    if (!data || typeof data !== "object") return [];
+    const allowedDomains = (data as { allowedDomains?: unknown }).allowedDomains;
+    if (!Array.isArray(allowedDomains)) return [];
+    return allowedDomains.filter((domain): domain is string => typeof domain === "string" && domain.trim().length > 0);
+  } catch {
     return [];
   }
-
-  return envValue
-    .split(",")
-    .map((domain) => domain.trim())
-    .filter((domain) => domain.length > 0);
 }
 
 /**
@@ -32,16 +27,26 @@ function getAllowedDomains(): string[] {
  */
 export function SecurityInitializer() {
   useEffect(() => {
-    const allowedDomains = getAllowedDomains();
-
-    // 1. 域名锁定 - 防止代码被复制到其他域名
-    // 开发环境自动允许 localhost
-    domainLock(allowedDomains, {
-      allowLocalhost: process.env.NODE_ENV !== "production",
-    });
-
-    // 2. iframe 嵌入防护
     preventIframeEmbedding();
+
+    let cancelled = false;
+
+    const run = async () => {
+      const allowedDomains = await getAllowedDomains();
+      if (cancelled) return;
+
+      // 1. 域名锁定 - 防止代码被复制到其他域名
+      // 开发环境自动允许 localhost
+      domainLock(allowedDomains, {
+        allowLocalhost: process.env.NODE_ENV !== "production",
+      });
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return null;

@@ -1,58 +1,5 @@
 /** @type {import('next').NextConfig} */
 
-// ============================================================================
-// 生产环境必需的环境变量验证
-// ============================================================================
-const isProd = process.env.NODE_ENV === "production";
-
-if (isProd) {
-  // 必需的环境变量（缺失则启动失败）
-  const requiredEnvVars = [
-    "NEXT_PUBLIC_ALLOWED_DOMAINS", // 域名锁定白名单
-    "NEXTAUTH_SECRET",             // NextAuth 加密密钥
-    "NEXTAUTH_URL",                // NextAuth 回调 URL
-  ];
-
-  // 推荐配置的环境变量（缺失则警告）
-  const recommendedEnvVars = [
-    { key: "NEXT_PUBLIC_APP_URL", desc: "应用公开 URL" },
-    { key: "STRIPE_SECRET_KEY", desc: "Stripe 支付密钥" },
-    { key: "STRIPE_WEBHOOK_SECRET", desc: "Stripe Webhook 密钥" },
-    { key: "GOOGLE_CLIENT_ID", desc: "Google OAuth 客户端 ID" },
-    { key: "GOOGLE_CLIENT_SECRET", desc: "Google OAuth 客户端密钥" },
-    { key: "NEXT_PUBLIC_GOOGLE_CLIENT_ID", desc: "Google Drive Picker 客户端 ID" },
-    { key: "NEXT_PUBLIC_GOOGLE_API_KEY", desc: "Google Drive Picker API Key" },
-    { key: "NEXT_PUBLIC_DROPBOX_APP_KEY", desc: "Dropbox Chooser App Key" },
-    { key: "NEXT_PUBLIC_ONEDRIVE_CLIENT_ID", desc: "OneDrive Picker Client ID" },
-    { key: "NEXT_PUBLIC_ONEDRIVE_REDIRECT_URI", desc: "OneDrive Picker Redirect URI" },
-  ];
-
-  const missing = requiredEnvVars.filter((key) => !process.env[key]);
-
-  if (missing.length > 0) {
-    console.error("\n" + "=".repeat(70));
-    console.error("❌ FATAL: Missing required environment variables in production:");
-    missing.forEach((key) => {
-      console.error(`   - ${key}`);
-    });
-    console.error("\nPlease configure these variables before starting the application.");
-    console.error("See .env.example for reference.");
-    console.error("=".repeat(70) + "\n");
-    process.exit(1);
-  }
-
-  // 检查推荐的环境变量
-  const missingRecommended = recommendedEnvVars.filter((v) => !process.env[v.key]);
-  if (missingRecommended.length > 0) {
-    console.warn("\n" + "-".repeat(70));
-    console.warn("⚠️  WARNING: Missing recommended environment variables:");
-    missingRecommended.forEach((v) => {
-      console.warn(`   - ${v.key} (${v.desc})`);
-    });
-    console.warn("-".repeat(70) + "\n");
-  }
-}
-
 const nextConfig = {
   // 启用 standalone 输出模式，用于 Docker 部署
   output: "standalone",

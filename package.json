@@ -9,7 +9,7 @@
     "dev:turbopack": "npm run clean:next && npm run build:pdfeditor && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0 --turbopack",
     "build:pdfeditor": "NODE_ENV=production BASE_URL=/pdfeditor/ webpack --config packages/pdfeditor/webpack.build.js",
     "build": "node scripts/build.mjs",
-    "start": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next start",
+    "start": "node scripts/validate-prod-env.mjs && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next start",
     "prelint": "node scripts/ensure-next-types.mjs",
     "lint": "tsc --noEmit && next lint",
     "test:e2e": "playwright test",

@@ -39,6 +39,13 @@ echo "Node.js version: $(node --version)"
 gotenberg_version="$(gotenberg --version 2>&1 | awk '/^Version:/{print $2; exit}' || true)"
 echo "Gotenberg version: ${gotenberg_version:-installed}"
 echo "LibreOffice version: $(libreoffice --version 2>/dev/null | head -1 || echo 'installed')"
+
+# Validate required env vars at runtime (not during build/CI)
+if [ "${NODE_ENV}" = "production" ] && [ "${SKIP_ENV_VALIDATION}" != "1" ]; then
+    echo "Validating required environment variables..."
+    node /app/scripts/validate-prod-env.mjs
+fi
+
 echo "=========================================="
 echo "Starting services via supervisord..."
 echo "=========================================="
