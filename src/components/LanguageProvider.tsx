@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { getTranslation, languages, type LanguageCode } from "@/lib/i18n";
+import { languages, loadTranslationMessages, type LanguageCode, type TranslationMessages } from "@/lib/i18n";
 
 const STORAGE_KEY = "qwerpdf-lang";
 
@@ -25,6 +25,7 @@ function normalizeLanguage(input?: string | null): LanguageCode {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<LanguageCode>("en");
+  const [messages, setMessages] = useState<TranslationMessages>({});
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -36,6 +37,29 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMessages({});
+
+    if (lang === "en") return () => {
+      cancelled = true;
+    };
+
+    void loadTranslationMessages(lang)
+      .then((loaded) => {
+        if (cancelled) return;
+        setMessages(loaded);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMessages({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
   const setLang = useCallback((next: LanguageCode) => {
@@ -50,11 +74,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const t = useCallback(
     (key: string, fallback?: string) => {
-      const value = getTranslation(lang, key);
-      if (value === key && fallback) return fallback;
-      return value;
+      const value = messages[key];
+      if (typeof value === "string") return value;
+      if (fallback) return fallback;
+      return key;
     },
-    [lang]
+    [messages]
   );
 
   const value = useMemo(
