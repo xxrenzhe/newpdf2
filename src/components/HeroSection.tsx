@@ -18,7 +18,7 @@ export default function HeroSection() {
   const { t } = useLanguage();
 
   useEffect(() => {
-    router.prefetch("/app/guest/document");
+    router.prefetch("/edit");
   }, [router]);
 
   const openWithFiles = useCallback(async (files: FileList | File[]) => {
@@ -36,7 +36,8 @@ export default function HeroSection() {
     try {
       setIsPreparing(true);
       const documentId = await createGuestDocument(toolKey, fileArray);
-      const target = `/app/guest/document?chosenTool=${encodeURIComponent(chosenTool)}&documentId=${encodeURIComponent(documentId)}`;
+      const base = `/edit/${encodeURIComponent(documentId)}`;
+      const target = chosenTool === "edit-pdf" ? base : `${base}/${encodeURIComponent(chosenTool)}`;
       startTransition(() => {
         router.push(target);
       });

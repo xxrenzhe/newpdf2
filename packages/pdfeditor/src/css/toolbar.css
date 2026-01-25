@@ -713,9 +713,11 @@
     filter: brightness(0) invert(1);
 }
 
-.more-dropdown-item img {
+.more-dropdown-item img,
+.more-dropdown-item svg {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
 }
 
 .more-dropdown-item span {

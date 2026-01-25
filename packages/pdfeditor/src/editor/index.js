@@ -509,14 +509,22 @@ export class PDFEditor {
                     const toolMore = this.btnMore.closest('.tool_more');
                     toolMore.classList.remove('open');
 
-                    // Trigger the corresponding tool
-                    if (tool === 'watermark' && this.options.tools.indexOf('watermark') >= 0) {
-                        this.toolbar.get('watermark').click();
-                    } else if (tool === 'page_number' && this.options.tools.indexOf('pageNumber') >= 0) {
-                        this.toolbar.get('pageNumber').click();
-                    } else if (tool === 'header_footer' && this.options.tools.indexOf('headerFooter') >= 0) {
-                        this.toolbar.get('headerFooter').click();
-                    } else if (tool === 'seal' && this.options.tools.indexOf('stamp') >= 0) {
+	                    // Trigger the corresponding tool
+	                    if (tool === 'convert') {
+	                        parent.postMessage({ type: 'open-tool', tool: 'convert' }, '*');
+	                    } else if (tool === 'compress') {
+	                        parent.postMessage({ type: 'open-tool', tool: 'compress' }, '*');
+	                    } else if (tool === 'merge') {
+	                        parent.postMessage({ type: 'open-tool', tool: 'merge' }, '*');
+	                    } else if (tool === 'redact') {
+	                        parent.postMessage({ type: 'open-tool', tool: 'redact' }, '*');
+	                    } else if (tool === 'watermark' && this.options.tools.indexOf('watermark') >= 0) {
+	                        this.toolbar.get('watermark').click();
+	                    } else if (tool === 'page_number' && this.options.tools.indexOf('pageNumber') >= 0) {
+	                        this.toolbar.get('pageNumber').click();
+	                    } else if (tool === 'header_footer' && this.options.tools.indexOf('headerFooter') >= 0) {
+	                        this.toolbar.get('headerFooter').click();
+	                    } else if (tool === 'seal' && this.options.tools.indexOf('stamp') >= 0) {
                         this.toolbar.get('stamp').click();
                     } else if (tool === 'textArt' && this.options.tools.indexOf('textArt') >= 0) {
                         this.toolbar.get('textArt').click();

@@ -1,11 +1,20 @@
-import { Suspense } from "react";
-import GuestDocumentClient from "./GuestDocumentClient";
+import { redirect } from "next/navigation";
 
-export default function GuestDocumentPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-white" />}>
-      <GuestDocumentClient />
-    </Suspense>
-  );
+export default async function GuestDocumentPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const qs = await searchParams;
+  const documentId = typeof qs.documentId === "string" ? qs.documentId : "";
+  const chosenTool = typeof qs.chosenTool === "string" ? qs.chosenTool : "";
+
+  if (documentId) {
+    if (chosenTool && chosenTool !== "edit-pdf") {
+      redirect(`/edit/${encodeURIComponent(documentId)}/${encodeURIComponent(chosenTool)}`);
+    }
+    redirect(`/edit/${encodeURIComponent(documentId)}`);
+  }
+
+  redirect("/edit");
 }
-

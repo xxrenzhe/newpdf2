@@ -136,10 +136,14 @@ export default function UnifiedToolPage({
   // Navigation helper for guest mode
   const goGuest = useCallback(
     (nextChosenTool: string, nextDocumentId?: string) => {
-      const qs = new URLSearchParams();
-      qs.set("chosenTool", nextChosenTool);
-      if (nextDocumentId) qs.set("documentId", nextDocumentId);
-      router.replace(`/app/guest/document?${qs.toString()}`);
+      if (!nextDocumentId) {
+        router.replace("/edit");
+        return;
+      }
+      const base = `/edit/${encodeURIComponent(nextDocumentId)}`;
+      const next =
+        nextChosenTool === "edit-pdf" ? base : `${base}/${encodeURIComponent(nextChosenTool)}`;
+      router.replace(next);
     },
     [router]
   );

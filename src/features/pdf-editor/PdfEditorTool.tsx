@@ -464,11 +464,11 @@ export default function PdfEditorTool({
       onConvert();
       return;
     }
-    setError("");
-    setBusy(true);
+      setError("");
+      setBusy(true);
     try {
       const uploadId = await saveUpload([file]);
-      router.push(`/tools/convert?uploadId=${encodeURIComponent(uploadId)}`);
+      router.push(`/tools/convert/${encodeURIComponent(uploadId)}`);
     } catch {
       setBusy(false);
       setError(t("convertOpenFailed", "Could not open the Convert tool. Please try again."));
