@@ -201,6 +201,11 @@
     align-items: center;
     justify-content: center;
     pointer-events: auto;
+    /* Keep tool panels (Shapes/Forms/etc) in a single row; allow horizontal scroll on narrow screens. */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .__pdf_el_actions .line,
@@ -212,7 +217,8 @@
 }
 
 .__pdf_el_actions {
-    height: 30px;
+    height: auto;
+    min-height: 36px;
     border-radius: var(--element-actions-border-radius);
     background-color: var(--element-actions-bg-color);
     display: flex;
@@ -240,6 +246,7 @@
     display: flex;
     align-items: center;
     /* cursor: pointer; */
+    flex: 0 0 auto;
 }
 
 .__act_item {
@@ -813,8 +820,8 @@
 
 /* 操作按钮优化 */
 .__act_item_btn {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -830,6 +837,11 @@
 .__act_item_btn img {
     width: 14px;
     height: 14px;
+}
+
+.__act_item_btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 /* 范围滑块优化 */
@@ -956,7 +968,7 @@
 .__act_font_colors {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 12px;
 }
 
 /* 形状选择器 */
