@@ -117,11 +117,15 @@ export class PDFPage extends PDFPageBase {
                 let elements = [];
                 let n = 0;
                 let prevTextItem = null;
+                let lineHasLeader = false;
                 // console.log(this.textContentItems);
                 
                 for (let i = 0; i < this.textContentItems.length; i++) {
                     let textItem = this.textContentItems[i];
                     text += textItem.str;
+                    if (this.#isLeaderText(textItem?.str)) {
+                        lineHasLeader = true;
+                    }
                     textWidth += this.textDivs[i].getBoundingClientRect().width;
 
                     let elDiv = this.textDivs[i];
@@ -178,8 +182,9 @@ export class PDFPage extends PDFPageBase {
                         prevTextItem = textItem;
                     }
 
-                    if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1))) {
+                    if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1, lineHasLeader))) {
                         prevTextItem = null;
+                        lineHasLeader = false;
                         this.textParts[n] = {
                             text: trimSpace(text),
                             elements: elements,
@@ -745,11 +750,20 @@ export class PDFPage extends PDFPageBase {
         return bounds;
     }
 
-    #isBreak(textItem, nextIdx) {
+    #isLeaderText(text) {
+        if (typeof text !== 'string') return false;
+        const value = trimSpace(text);
+        if (!value) return false;
+        return /^[.\u00b7\u2022\u2219\u2024]+$/.test(value);
+    }
+
+    #isBreak(textItem, nextIdx, lineHasLeader = false) {
         let nextTextItem = this.textContentItems[nextIdx];
+        if (!nextTextItem) return true;
+        const nextIsLeader = this.#isLeaderText(nextTextItem.str);
         if (nextTextItem.height == 0) {
             // return nextTextItem.width >= 2.5;
-            return nextTextItem.width > 8;
+            return nextIsLeader ? false : nextTextItem.width > 8;
         }
         const currentTransform = Array.isArray(textItem?.transform) ? textItem.transform : null;
         const nextTransform = Array.isArray(nextTextItem?.transform) ? nextTextItem.transform : null;
@@ -765,6 +779,9 @@ export class PDFPage extends PDFPageBase {
                     return true;
                 }
             }
+        }
+        if (nextIsLeader || lineHasLeader) {
+            return false;
         }
         return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
     }
