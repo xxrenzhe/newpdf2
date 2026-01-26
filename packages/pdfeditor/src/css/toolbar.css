@@ -696,13 +696,6 @@
     display: block;
 }
 
-.more-dropdown-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(96px, 1fr));
-    gap: 8px;
-    padding: 8px 12px 10px;
-}
-
 .more-dropdown-item {
     display: flex;
     align-items: center;
@@ -721,6 +714,8 @@
     padding: 8px 6px;
     border-radius: var(--tool-btn-radius);
     min-height: var(--tool-btn-height);
+    width: 100%;
+    box-sizing: border-box;
     font-size: var(--tool-btn-font-size);
     text-align: center;
 }
