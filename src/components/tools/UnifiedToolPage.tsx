@@ -403,9 +403,6 @@ export default function UnifiedToolPage({
             </p>
           )}
         </div>
-        <Link href="/app/sign-in" className="text-sm text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] hidden sm:inline">
-          {t("signIn", "Sign in")}
-        </Link>
         <Link href="/app/sign-in" className="text-sm px-3 py-2 rounded-lg bg-primary text-white hover:bg-[color:var(--brand-purple-dark)] hidden sm:inline">
           {t("continueWithGoogle", "Continue with Google")}
         </Link>
