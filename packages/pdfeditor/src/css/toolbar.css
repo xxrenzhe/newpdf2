@@ -701,6 +701,26 @@
     --more-icon-muted: #4E4A6B;
 }
 
+.more-dropdown-item.tool_convert {
+    --more-icon-accent: #7C5CFF;
+    --more-icon-muted: #4E4A6B;
+}
+
+.more-dropdown-item.tool_compress {
+    --more-icon-accent: #16A34A;
+    --more-icon-muted: #14532D;
+}
+
+.more-dropdown-item.tool_merge {
+    --more-icon-accent: #F59E0B;
+    --more-icon-muted: #7C2D12;
+}
+
+.more-dropdown-item.tool_redact {
+    --more-icon-accent: #EF4444;
+    --more-icon-muted: #7F1D1D;
+}
+
 .more-dropdown-item {
     display: flex;
     align-items: center;
