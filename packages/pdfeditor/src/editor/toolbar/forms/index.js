@@ -211,6 +211,9 @@ class Forms extends ToolbarItemBase {
     }
 
     createFloatElement(element) {
+        if (this.evtMousemove) {
+            window.removeEventListener('mousemove', this.evtMousemove);
+        }
         this.floatElement = element;
         this.floatElement.style.position = 'fixed';
         this.floatElement.style.zIndex = 1;
@@ -218,6 +221,9 @@ class Forms extends ToolbarItemBase {
         document.body.appendChild(this.floatElement);
 
         this.evtMousemove = e => {
+            if (!this.floatElement) {
+                return;
+            }
             this.floatElement.style.top = e.clientY + 5 + 'px';
             //不加1鼠标中间滚动不灵
             this.floatElement.style.left = e.clientX + 5 + 'px';
