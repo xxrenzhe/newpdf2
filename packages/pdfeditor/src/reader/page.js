@@ -278,9 +278,14 @@ export class PDFPage extends PDFPageBase {
         }
         let x = bounds.left;
         let y = bounds.top;
-        const textValue = typeof textPart.text === 'string' ? textPart.text : '';
+        const rawTextValue = typeof textPart.text === 'string' ? textPart.text : '';
+        let textValue = rawTextValue;
 
         let fontSize = parseFloat(baseElement.getAttribute('data-fontsize'));
+        if (!Number.isFinite(fontSize)) {
+            const computed = window.getComputedStyle(baseElement);
+            fontSize = parseFloat(computed?.fontSize) || 12;
+        }
         let color = this.#normalizeFontColor(baseElement.getAttribute('data-fontcolor'));
         if (!color) {
             const computed = window.getComputedStyle(baseElement);
@@ -323,6 +328,19 @@ export class PDFPage extends PDFPageBase {
             text: textValue
         });
         let fontFamily = resolvedFont.fontFamily;
+        let coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
+        const leaderGapWidth = this.#getLeaderGapWidth(coverRectsPx);
+        if (this.#shouldInsertLeaderDots(textValue, leaderGapWidth, fontSize)) {
+            const leaderDots = this.#buildLeaderDots(leaderGapWidth, baseElement, fontSize);
+            const nextTextValue = this.#insertLeaderDots(textValue, leaderDots);
+            if (nextTextValue !== textValue) {
+                textValue = nextTextValue;
+                textPart.text = nextTextValue;
+                coverRectsPx = null;
+                textPart.coverRects = null;
+                textPart.coverElements = null;
+            }
+        }
         if (!Array.isArray(textPart.coverRects) || textPart.coverRects.length === 0) {
             const refined = this.#refineLineBoundsByCanvas(bounds, bgColor, fontSize);
             if (refined) {
@@ -352,7 +370,6 @@ export class PDFPage extends PDFPageBase {
         const coverOffsetY = pxToPdfY ? -coverPaddingY * pxToPdfY : 0;
         const coverWidthPdf = pxToPdfX ? (coverWidth + coverPaddingX * 2 + extraCoverRightPx) * pxToPdfX : 0;
         const coverHeightPdf = pxToPdfY ? (coverHeight + coverPaddingY * 2) * pxToPdfY : 0;
-        const coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
         const hasCoverRects = Boolean(coverRectsPx && coverRectsPx.length > 1);
         const coverRectsPdf = hasCoverRects && pxToPdfX && pxToPdfY
             ? coverRectsPx.map((rect, idx) => {
@@ -748,6 +765,70 @@ export class PDFPage extends PDFPageBase {
             bounds.width = bounds.right - bounds.left;
         }
         return bounds;
+    }
+
+    #getLeaderGapWidth(rects) {
+        if (!Array.isArray(rects) || rects.length < 2) return null;
+        const sorted = rects.filter(rect => rect
+            && Number.isFinite(rect.left)
+            && Number.isFinite(rect.right))
+            .sort((a, b) => a.left - b.left);
+        if (sorted.length < 2) return null;
+        let maxGap = 0;
+        for (let i = 1; i < sorted.length; i++) {
+            const gap = sorted[i].left - sorted[i - 1].right;
+            if (Number.isFinite(gap)) {
+                maxGap = Math.max(maxGap, gap);
+            }
+        }
+        return maxGap > 0 ? maxGap : null;
+    }
+
+    #hasLeaderSequence(text) {
+        if (typeof text !== 'string') return false;
+        return /[.\u00b7\u2022\u2219\u2024]{3,}/.test(text);
+    }
+
+    #shouldInsertLeaderDots(text, gapWidth, fontSize) {
+        if (!text || !Number.isFinite(gapWidth) || gapWidth <= 0) return false;
+        const trimmed = trimSpace(text);
+        if (!trimmed || this.#hasLeaderSequence(trimmed)) return false;
+        if (!Number.isFinite(fontSize) || gapWidth < Math.max(fontSize * 2, 12)) {
+            return false;
+        }
+        return /(\d{1,6}|[ivxlcdm]{1,8})$/i.test(trimmed);
+    }
+
+    #buildLeaderDots(gapWidth, baseElement, fontSize) {
+        if (!Number.isFinite(gapWidth) || gapWidth <= 0) return '....';
+        let dotWidth = Number.isFinite(fontSize) ? fontSize * 0.25 : 3;
+        const ctx = this.content?.getContext?.('2d');
+        if (ctx && baseElement) {
+            const computed = window.getComputedStyle(baseElement);
+            const fontStyle = computed?.fontStyle || 'normal';
+            const fontWeight = computed?.fontWeight || 'normal';
+            const fontFamily = computed?.fontFamily || baseElement.style.fontFamily || 'Helvetica';
+            const fontSizePx = Number.isFinite(fontSize)
+                ? fontSize
+                : (parseFloat(computed?.fontSize) || 12);
+            ctx.font = `${fontStyle} ${fontWeight} ${fontSizePx}px ${fontFamily}`;
+            const measured = ctx.measureText('.').width;
+            if (Number.isFinite(measured) && measured > 0) {
+                dotWidth = measured;
+            }
+        }
+        const count = Math.max(3, Math.min(Math.floor((gapWidth / dotWidth) - 2), 200));
+        return '.'.repeat(count);
+    }
+
+    #insertLeaderDots(text, leaderDots) {
+        if (!leaderDots) return text;
+        const trimmed = trimSpace(text);
+        const match = trimmed.match(/^(.*?)(\s*)(\d{1,6}|[ivxlcdm]{1,8})$/i);
+        if (!match) return text;
+        const left = match[1].trimEnd();
+        const right = match[3];
+        return `${left} ${leaderDots} ${right}`.trim();
     }
 
     #isLeaderText(text) {
