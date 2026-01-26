@@ -16,6 +16,7 @@ const REMOVE_BTN = 'remove_page';
 
 export class PDFPage extends PDFPageBase {
     textParts = [];
+    textPartsReady = null;
     clearTexts = [];
     //要隐藏的元素
     hideOriginElements = [];
@@ -101,7 +102,7 @@ export class PDFPage extends PDFPageBase {
             //     Font.subset(id, this.pageProxy.commonObjs, fontName);
             // });
 
-            taskTextLayer.promise.then(() => {
+            const textLayerReady = taskTextLayer.promise.then(() => {
                 this.hideOriginElements.forEach(data => {
                     let textDiv = this.textDivs[data.idx];
                     textDiv.style.userSelect = data.userSelect;
@@ -192,6 +193,8 @@ export class PDFPage extends PDFPageBase {
                     }
                 }
             });
+            this.textPartsReady = textLayerReady;
+            textLayerReady.catch(() => {});
         });
 
         if (!this.elAnnotationLayer) {
@@ -219,6 +222,17 @@ export class PDFPage extends PDFPageBase {
         //     pdfjsLib.AnnotationLayer.update(params);
         // }
         return canvas;
+    }
+
+    async ensureTextParts() {
+        if (this.textPartsReady) {
+            try {
+                await this.textPartsReady;
+            } catch (err) {
+                // Ignore text layer failures; fallback to whatever is available.
+            }
+        }
+        return this.textParts || [];
     }
 
     async convertWidget(elDiv) {
