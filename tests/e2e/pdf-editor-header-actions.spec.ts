@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
 import { makePdfBytes } from "./utils";
 
-test("pdf editor page header actions: Upload New, Convert, Change file", async ({ page }) => {
+test("pdf editor page header actions: Upload New, Change file", async ({ page }) => {
   test.setTimeout(240_000);
   const pdfA = await makePdfBytes("header-actions-a", 1);
   const pdfB = await makePdfBytes("header-actions-b", 2);
@@ -29,14 +29,6 @@ test("pdf editor page header actions: Upload New, Convert, Change file", async (
 
   await expect(page.getByText("b.pdf")).toBeVisible({ timeout: 30_000 });
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
-
-  // Convert should navigate to the Convert tool and carry the uploaded file via upload store.
-  await Promise.all([
-    page.waitForURL(/\/tools\/convert\/[^/?#]+/),
-    page.getByRole("button", { name: "Convert" }).click(),
-  ]);
-  await expect(page.getByRole("heading", { name: "Convert" })).toBeVisible();
-  await expect(page.getByText("b.pdf")).toBeVisible();
 
   // Navigate back to edit and verify Change file returns to dropzone.
   await page.goto("/tools/edit");

@@ -338,7 +338,6 @@ export default function UnifiedToolPage({
           file={files[0]!}
           onBack={isGuest ? () => goGuest(chosenToolFromToolKey(toolKey)) : reset}
           onReplaceFile={(next) => isGuest ? void onFilesGuest([next]) : setFiles([next])}
-          onConvert={isGuest ? () => onSwitchToolGuest("convert") : undefined}
           variant={isGuest ? "shell" : undefined}
           showChangeFile={isGuest ? false : undefined}
           initialTool={isGuest ? pdfEditorInitialTool(chosenTool) : undefined}

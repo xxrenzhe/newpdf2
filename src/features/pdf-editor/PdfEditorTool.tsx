@@ -1,11 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "@/components/AppLink";
 import { downloadBlob } from "@/lib/pdf/client";
 import { savePdfEditorInput, savePdfEditorOutput } from "@/lib/pdfEditorCache";
-import { saveUpload } from "@/lib/uploadStore";
 import { useLanguage } from "@/components/LanguageProvider";
 
 type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
@@ -128,7 +126,6 @@ export default function PdfEditorTool({
   file,
   onBack,
   onReplaceFile,
-  onConvert,
   onOpenTool,
   variant = "card",
   showChangeFile = true,
@@ -140,7 +137,6 @@ export default function PdfEditorTool({
   file: File;
   onBack: () => void;
   onReplaceFile: (file: File) => void;
-  onConvert?: () => void;
   onOpenTool?: (toolKey: string) => void;
   variant?: "card" | "shell";
   showChangeFile?: boolean;
@@ -155,7 +151,6 @@ export default function PdfEditorTool({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeLoadTokenRef = useRef(0);
   const fileInputId = useId();
-  const router = useRouter();
   const { t } = useLanguage();
   const uploadTips = useMemo(
     () => [
@@ -459,22 +454,6 @@ export default function PdfEditorTool({
     postToEditor({ type: "download" });
   }, [pdfLoaded, postToEditor]);
 
-  const goToConvert = useCallback(async () => {
-    if (onConvert) {
-      onConvert();
-      return;
-    }
-      setError("");
-      setBusy(true);
-    try {
-      const uploadId = await saveUpload([file]);
-      router.push(`/tools/convert/${encodeURIComponent(uploadId)}`);
-    } catch {
-      setBusy(false);
-      setError(t("convertOpenFailed", "Could not open the Convert tool. Please try again."));
-    }
-  }, [file, onConvert, router, t]);
-
   const onFileChange = useCallback(
     (evt: React.ChangeEvent<HTMLInputElement>) => {
       const next = evt.target.files?.[0] ?? null;
@@ -593,14 +572,6 @@ export default function PdfEditorTool({
           >
             {t("uploadNew", "Upload New")}
           </label>
-          <button
-            type="button"
-            className={`${secondaryActionClassName} disabled:opacity-50`}
-            onClick={() => void goToConvert()}
-            disabled={busy}
-          >
-            {t("convert", "Convert")}
-          </button>
           <button
             type="button"
             className={primaryActionClassName}
