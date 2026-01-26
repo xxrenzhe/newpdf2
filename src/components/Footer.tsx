@@ -75,11 +75,6 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link href="/app/sign-in" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
-                  {t("signIn", "Sign in")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/app/sign-in" className="text-[color:var(--brand-muted)] hover:text-primary transition-colors text-base">
                   {t("continueWithGoogle", "Continue with Google")}
                 </Link>
               </li>
