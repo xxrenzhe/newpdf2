@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, unlockPdfWithPassword } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -11,6 +11,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const passwordId = useId();
   const { t } = useLanguage();
 
   const isPdf = useMemo(
@@ -84,7 +85,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
       )}
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
+        <label htmlFor={passwordId} className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
           {t("passwordLabel", "Password")}{" "}
           <span className="text-[color:var(--brand-muted)] font-normal">
             {t("passwordOptionalHint", "(leave empty if not required)")}
@@ -92,6 +93,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
         </label>
         <div className="relative">
           <input
+            id={passwordId}
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

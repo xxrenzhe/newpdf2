@@ -8,6 +8,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetDescription,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
@@ -98,6 +99,9 @@ export default function Header() {
               <SheetContent side="right" className="w-full sm:w-[400px] md:w-[500px] p-0 overflow-y-auto">
                 <SheetHeader className="px-6 py-4 border-b border-[color:var(--brand-line)]">
                   <SheetTitle className="text-left text-xl font-semibold">{t("allTools", "All Tools")}</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    {t("toolsMenuDescription", "Browse all PDF tools")}
+                  </SheetDescription>
                 </SheetHeader>
                 <div className="px-4 py-4">
                   <div className="grid grid-cols-1 gap-2">

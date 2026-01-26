@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import type { PageOpItem } from "@/lib/pdf/client";
 import { downloadBlob, rebuildPdfWithOps } from "@/lib/pdf/client";
-import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
+import { configurePdfJsWorkerV2, pdfjs } from "@/lib/pdf/pdfjsV2";
 import { safeRandomUUID } from "@/lib/safeRandomUUID";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -77,7 +77,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
 
   useEffect(() => {
     if (!file || !isPdf) return;
-    configurePdfJsWorker();
+    configurePdfJsWorkerV2();
     let cancelled = false;
 
     const run = async () => {

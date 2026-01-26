@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { addTextWatermark, downloadBlob } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -16,6 +16,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
   const [rotation, setRotation] = useState(-35);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const textId = useId();
 
   useEffect(() => {
     setText((prev) => (prev === defaultTextRef.current ? defaultText : prev));
@@ -122,10 +123,11 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
+        <label htmlFor={textId} className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
           {t("watermarkText", "Watermark Text")}
         </label>
         <input
+          id={textId}
           value={text}
           onChange={(e) => setText(e.target.value)}
           name="watermarkText"

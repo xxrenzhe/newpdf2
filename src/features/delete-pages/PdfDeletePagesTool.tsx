@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import FileDropzone from "@/components/tools/FileDropzone";
 import { downloadBlob, extractPdfPages } from "@/lib/pdf/client";
-import { configurePdfJsWorker, pdfjs } from "@/lib/pdf/pdfjs";
+import { configurePdfJsWorkerV2, pdfjs } from "@/lib/pdf/pdfjsV2";
 import { useLanguage } from "@/components/LanguageProvider";
 
 type ThumbEntry = {
@@ -180,7 +180,7 @@ export default function PdfDeletePagesTool({
 
   useEffect(() => {
     if (!isPdfFile(file)) return;
-    configurePdfJsWorker();
+    configurePdfJsWorkerV2();
     let cancelled = false;
 
     const run = async () => {

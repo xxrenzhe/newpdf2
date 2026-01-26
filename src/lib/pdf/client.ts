@@ -209,8 +209,8 @@ export async function pdfToImagesZip(
   file: File,
   opts: { format: "png" | "jpg"; quality?: number; dpi: number }
 ): Promise<Blob> {
-  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
-  configurePdfJsWorker();
+  const { configurePdfJsWorkerV2, pdfjs } = await import("./pdfjsV2");
+  configurePdfJsWorkerV2();
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjs.getDocument({ data }).promise;
   const zip = new JSZip();
@@ -240,8 +240,8 @@ export async function pdfToImagesZip(
 }
 
 export async function extractPdfText(file: File): Promise<string> {
-  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
-  configurePdfJsWorker();
+  const { configurePdfJsWorkerV2, pdfjs } = await import("./pdfjsV2");
+  configurePdfJsWorkerV2();
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjs.getDocument({ data }).promise;
   const parts: string[] = [];
@@ -267,8 +267,8 @@ export async function compressPdfRasterize(
   };
 
   const { dpi, quality } = presets[preset];
-  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
-  configurePdfJsWorker();
+  const { configurePdfJsWorkerV2, pdfjs } = await import("./pdfjsV2");
+  configurePdfJsWorkerV2();
 
   const data = new Uint8Array(await file.arrayBuffer());
   const input = await pdfjs.getDocument({ data }).promise;
@@ -345,8 +345,8 @@ export async function redactPdfRasterize(
   };
   const { dpi, quality } = presets[preset];
 
-  const { configurePdfJsWorker, pdfjs } = await import("./pdfjs");
-  configurePdfJsWorker();
+  const { configurePdfJsWorkerV2, pdfjs } = await import("./pdfjsV2");
+  configurePdfJsWorkerV2();
   const data = new Uint8Array(await file.arrayBuffer());
   const input = await pdfjs.getDocument({ data }).promise;
   const output = await PDFDocument.create();

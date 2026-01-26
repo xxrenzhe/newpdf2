@@ -1,10 +1,10 @@
 "use client";
 
-import { pdfjs } from "react-pdf";
+import * as pdfjs from "pdfjs-dist-v2/legacy/build/pdf";
 
 let configured = false;
 
-export function configurePdfJsWorker() {
+export function configurePdfJsWorkerV2() {
   if (configured) return;
   configured = true;
 

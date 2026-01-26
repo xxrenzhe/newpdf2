@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, extractPdfText, imagesToPdf, pdfToImagesZip } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -15,6 +15,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
   const [format, setFormat] = useState<"png" | "jpg">("png");
   const [dpi, setDpi] = useState(150);
   const [quality, setQuality] = useState(0.85);
+  const modeId = useId();
   const { t } = useLanguage();
 
   const inferred = useMemo<Mode>(() => {
@@ -107,8 +108,9 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <label className="text-sm text-[color:var(--brand-muted)]">{t("modeLabel", "Mode")}</label>
+        <label htmlFor={modeId} className="text-sm text-[color:var(--brand-muted)]">{t("modeLabel", "Mode")}</label>
         <select
+          id={modeId}
           className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
           value={mode}
           onChange={(e) => setMode(e.target.value as Mode)}

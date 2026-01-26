@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, protectPdfWithPassword } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -12,6 +12,8 @@ export default function PdfPasswordTool({ initialFile }: { initialFile?: File })
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const passwordId = useId();
+  const confirmId = useId();
   const { t } = useLanguage();
 
   const isPdf = useMemo(
@@ -122,11 +124,12 @@ export default function PdfPasswordTool({ initialFile }: { initialFile?: File })
 
       <div className="space-y-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
+          <label htmlFor={passwordId} className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
             {t("passwordLabel", "Password")}
           </label>
           <div className="relative">
             <input
+              id={passwordId}
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -174,11 +177,12 @@ export default function PdfPasswordTool({ initialFile }: { initialFile?: File })
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
+          <label htmlFor={confirmId} className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
             {t("confirmPasswordLabel", "Confirm Password")}
           </label>
           <div className="relative">
             <input
+              id={confirmId}
               type={showPassword ? "text" : "password"}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

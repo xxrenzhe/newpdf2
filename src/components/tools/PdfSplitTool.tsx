@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, extractPdfPages, splitPdfToZip } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -36,6 +36,7 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
   const [mode, setMode] = useState<Mode>("extract");
   const [maxPages, setMaxPages] = useState<number>(0);
   const [range, setRange] = useState("1-1");
+  const pageRangeId = useId();
   const { t } = useLanguage();
 
   const modeInfo: Record<Mode, { label: string; desc: string; icon: React.ReactNode }> = {
@@ -75,8 +76,8 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
     if (!f) return;
 
     try {
-      const { configurePdfJsWorker, pdfjs } = await import("@/lib/pdf/pdfjs");
-      configurePdfJsWorker();
+      const { configurePdfJsWorkerV2, pdfjs } = await import("@/lib/pdf/pdfjsV2");
+      configurePdfJsWorkerV2();
       const data = new Uint8Array(await f.arrayBuffer());
       const doc = await pdfjs.getDocument({ data }).promise;
       setMaxPages(doc.numPages);
@@ -202,10 +203,11 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
+        <label htmlFor={pageRangeId} className="block text-sm font-medium text-[color:var(--brand-ink)] mb-2">
           {t("pageRangeLabel", "Page Range")}
         </label>
         <input
+          id={pageRangeId}
           value={range}
           onChange={(e) => setRange(e.target.value)}
           name="pageRange"

@@ -82,9 +82,11 @@ const nextConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
-      "pdfjs-dist$": "pdfjs-dist/legacy/build/pdf.mjs",
-      "pdfjs-dist/build/pdf.mjs$": "pdfjs-dist/legacy/build/pdf.mjs",
-      "pdfjs-dist/build/pdf.worker.min.mjs$": "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+      "pdfjs-dist$": "pdfjs-dist-v2/legacy/build/pdf.js",
+      "pdfjs-dist/build/pdf.mjs$": "pdfjs-dist-v2/legacy/build/pdf.js",
+      "pdfjs-dist/build/pdf.worker.min.mjs$": "pdfjs-dist-v2/legacy/build/pdf.worker.min.js",
+      "pdfjs-dist/legacy/build/pdf.mjs$": "pdfjs-dist-v2/legacy/build/pdf.js",
+      "pdfjs-dist/legacy/build/pdf.worker.min.mjs$": "pdfjs-dist-v2/legacy/build/pdf.worker.min.js",
     };
 
     return config;
