@@ -308,9 +308,10 @@ class TextElement extends BaseElement {
             && Number.isFinite(this.attrs.coverHeight)
             && this.attrs.coverHeight > 0
         );
+        const coverColor = this.attrs.coverBackground || this.attrs.background;
 
-        if (this.attrs.background && hasCoverRects) {
-            const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
+        if (coverColor && hasCoverRects) {
+            const bgRgb = hexToRgb(coverColor) || [255, 255, 255];
             coverRects.forEach(rect => {
                 const coverTopY = rect.top;
                 const coverY = this.page.height - (coverTopY + rect.height);
@@ -323,8 +324,8 @@ class TextElement extends BaseElement {
                     opacity: this.attrs.opacity
                 });
             });
-        } else if (this.attrs.background && hasCoverBox) {
-            const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
+        } else if (coverColor && hasCoverBox) {
+            const bgRgb = hexToRgb(coverColor) || [255, 255, 255];
             const coverOffsetX = (typeof this.attrs.coverOffsetX === 'number' && Number.isFinite(this.attrs.coverOffsetX))
                 ? this.attrs.coverOffsetX
                 : 0;
@@ -347,8 +348,8 @@ class TextElement extends BaseElement {
 
         // Pure deletion: cover the original area, but don't embed fonts or draw text.
         if (!hasText) {
-            if (this.attrs.background && !hasCoverBox) {
-                const bgRgb = hexToRgb(this.attrs.background) || [255, 255, 255];
+            if (coverColor && !hasCoverBox) {
+                const bgRgb = hexToRgb(coverColor) || [255, 255, 255];
                 let maxWidth = 0;
 
                 if (typeof this.attrs.backgroundWidth === 'number' && Number.isFinite(this.attrs.backgroundWidth)) {

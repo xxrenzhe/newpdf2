@@ -348,7 +348,8 @@ export class PDFPage extends PDFPageBase {
         const coverWidthPdf = pxToPdfX ? (coverWidth + coverPaddingX * 2 + extraCoverRightPx) * pxToPdfX : 0;
         const coverHeightPdf = pxToPdfY ? (coverHeight + coverPaddingY * 2) * pxToPdfY : 0;
         const coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
-        const coverRectsPdf = coverRectsPx && coverRectsPx.length > 1 && pxToPdfX && pxToPdfY
+        const hasCoverRects = Boolean(coverRectsPx && coverRectsPx.length > 1);
+        const coverRectsPdf = hasCoverRects && pxToPdfX && pxToPdfY
             ? coverRectsPx.map((rect, idx) => {
                 if (!rect) return null;
                 const padLeft = coverPaddingX;
@@ -370,6 +371,8 @@ export class PDFPage extends PDFPageBase {
                 };
             }).filter(Boolean)
             : null;
+        const coverBackground = hasCoverRects ? bgColor : null;
+        const displayBackground = hasCoverRects ? null : bgColor;
 
         PDFEvent.dispatch(Events.CONVERT_TO_ELEMENT, {
             elDiv,
@@ -396,7 +399,8 @@ export class PDFPage extends PDFPageBase {
                 opacity: 1,
                 underline: null,
                 // Cover the original glyphs when exporting without relying on PDF.js worker patches.
-                background: bgColor,
+                background: displayBackground,
+                coverBackground: coverBackground,
                 backgroundWidth: coverWidth,
                 coverOriginal: true,
                 coverOffsetX: coverOffsetX,
@@ -633,7 +637,10 @@ export class PDFPage extends PDFPageBase {
         if (!gaps.length) return null;
         const sortedGaps = [...gaps].sort((a, b) => a - b);
         const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)] || 0;
-        const leaderGapThreshold = Math.max(baseFontSize * 1.4, spaceThreshold * 5, medianGap * 3);
+        const baseThreshold = Math.max(baseFontSize * 1.4, spaceThreshold * 5);
+        const leaderGapThreshold = gaps.length > 1
+            ? Math.max(baseThreshold, medianGap * 3)
+            : baseThreshold;
         let hasLargeGap = false;
 
         const rects = [];
