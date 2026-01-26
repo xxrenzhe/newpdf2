@@ -10,7 +10,7 @@ class TextBox extends Rect {
         this.name = 'textbox';
         const defaultFont = Font.getDefaultFont();
         let attrs = {
-            background: '#fff000',
+            background: null,
             opacity: 0.6,
             rotate: undefined,
             borderWidth: undefined,
@@ -37,7 +37,7 @@ class TextBox extends Rect {
         this.minHeight = 13;
         this.actions = TextBox.actions;
 
-        this.defBGColor = attrs.background;
+        this.defBGColor = attrs.background || '#fff000';
         this.defTextColor = attrs.color;
     }
 
