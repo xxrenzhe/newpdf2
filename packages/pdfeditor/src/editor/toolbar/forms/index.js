@@ -221,9 +221,7 @@ class Forms extends ToolbarItemBase {
         document.body.appendChild(this.floatElement);
 
         this.evtMousemove = e => {
-            if (!this.floatElement) {
-                return;
-            }
+            if (!this.floatElement) return;
             this.floatElement.style.top = e.clientY + 5 + 'px';
             //不加1鼠标中间滚动不灵
             this.floatElement.style.left = e.clientX + 5 + 'px';
