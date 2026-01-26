@@ -505,8 +505,8 @@ export default function PdfEditorTool({
 
   const headerClassName =
     actionsPosition === "top-right"
-      ? "flex items-center justify-between gap-3 px-5 py-2 bg-white/80 backdrop-blur"
-      : "flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur";
+      ? "flex items-center justify-between gap-4 px-6 py-3 min-h-[64px] bg-white/80 backdrop-blur"
+      : "flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-6 py-5 min-h-[72px] border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur";
 
   const titleClassName =
     actionsPosition === "top-right"
@@ -520,13 +520,13 @@ export default function PdfEditorTool({
 
   const secondaryActionClassName =
     actionsPosition === "top-right"
-      ? "px-3 py-1 text-sm rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
-      : "px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]";
+      ? "inline-flex items-center justify-center h-10 px-4 text-sm rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
+      : "inline-flex items-center justify-center h-11 px-5 text-sm rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]";
 
   const primaryActionClassName =
     actionsPosition === "top-right"
-      ? "px-4 py-1 text-sm rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
-      : "px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50";
+      ? "inline-flex items-center justify-center h-10 px-4 text-sm rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
+      : "inline-flex items-center justify-center h-11 px-5 text-sm rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50";
 
   const statusText = busy
     ? t("statusWorking", "Working…")
