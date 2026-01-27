@@ -396,8 +396,8 @@
 .__pdf_el_actions .__act_remove svg,
 .pdf-el-actions .__act_remove svg {
     fill: var(--element-actions-remove-color);
-    width: 26px !important;
-    height: 26px !important;
+    width: 22px !important;
+    height: 22px !important;
     display: block;
 }
 
