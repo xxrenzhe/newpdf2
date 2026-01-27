@@ -45,27 +45,33 @@ div[contenteditable] {
 }
 
 ._loadingv2 {
-    width: 200px;
-    height: 200px;
-    background-color: #fff;
-    border-radius: 12px;
+    width: min(420px, calc(100vw - 2rem));
+    height: auto;
+    padding: 26px 28px 24px;
+    border-radius: 20px;
+    border: 1px solid var(--brand-line);
+    background: linear-gradient(180deg, #ffffff 0%, var(--brand-cream) 100%);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
+    gap: 6px;
 }
 
-._loadingv2 img,
-._loadingv2 svg {
-    /* width: 100px;
-    height: 100px;
-    animation: turn 4s linear infinite; */
+._loadingv2::before {
+    content: "";
+    width: 72px;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(90, 88, 242, 0.18), rgba(242, 140, 40, 0.3));
 }
 
 ._loadingv2 .progress {
-    width: 80px;
-    height: 80px;
-    margin: 16px auto 0 !important;
+    width: 120px;
+    height: 120px;
+    margin: 6px auto 0 !important;
     position: relative;
     display: flex;
     justify-content: center;
@@ -73,26 +79,67 @@ div[contenteditable] {
 }
 
 ._loadingv2 .progress::before {
-    content: "";
-    width: 100px;
-    height: 100px;
-    background-image: url(../assets/img/up_loading.png);
-    background-size: 100%;
-    background-repeat: no-repeat;
-    background-position: top;
-    animation: turn 4s linear infinite;
-    position: absolute;
+    content: none;
+    display: none;
+}
+
+._loadingv2 .svg-loading {
+    width: 120px;
+    height: 120px;
+    filter: drop-shadow(0 10px 24px rgba(90, 88, 242, 0.2));
+}
+
+._loadingv2 circle {
+    stroke: var(--brand-line) !important;
+}
+
+._loadingv2 circle.progress {
+    stroke: url(#svg-gradient) !important;
+    stroke-linecap: round;
+}
+
+._loadingv2 #svg-gradient stop:first-child {
+    stop-color: var(--brand-purple) !important;
+}
+
+._loadingv2 #svg-gradient stop:last-child {
+    stop-color: var(--brand-orange) !important;
+}
+
+._loadingv2 .progress-text {
+    fill: var(--brand-purple) !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
 }
 
 ._loadingv2 h3 {
-    margin-top: 18px;
-    font-size: 18px;
+    margin-top: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--brand-ink);
 }
 
 ._loadingv2 span {
-    margin-top: 2px !important;
+    margin-top: 0 !important;
     font-size: 14px;
-    color: #aaa;
+    color: var(--brand-muted);
+}
+
+@media (max-width: 480px) {
+    ._loadingv2 {
+        padding: 22px 20px 20px;
+        border-radius: 16px;
+    }
+
+    ._loadingv2 .progress,
+    ._loadingv2 .svg-loading {
+        width: 104px;
+        height: 104px;
+    }
+
+    ._loadingv2 .progress-text {
+        font-size: 18px !important;
+    }
 }
 
 
