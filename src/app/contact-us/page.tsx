@@ -122,16 +122,16 @@ export default function ContactUsPage() {
     <main className="min-h-screen bg-gradient-pink">
       <Header />
 
-      <section className="py-12 md:py-16">
+      <section className="py-8 sm:py-12 md:py-16">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-bold text-center mb-10">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-8 sm:mb-10">
             {t("contactUsTitle", "Contact Us")}
           </h1>
 
           {/* Contact Form */}
           <div className="max-w-2xl mx-auto mb-16">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
               <p className="text-[color:var(--brand-muted)] mb-6">
                 {t(
                   "contactUsDesc",
@@ -227,7 +227,7 @@ export default function ContactUsPage() {
                 <Button
                   type="submit"
                   disabled={status === "sending"}
-                  className="w-full bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium h-12 rounded-lg"
+                  className="w-full bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium h-11 sm:h-12 rounded-lg text-sm sm:text-base"
                 >
                   {status === "sending" ? t("sending", "Sending…") : t("send", "Send")}
                 </Button>
@@ -237,11 +237,11 @@ export default function ContactUsPage() {
 
           {/* FAQ Section */}
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] text-center mb-6 sm:mb-8">
               {t("faqTitle", "Frequently Asked Questions")}
             </h2>
 
-            <div className="flex justify-center gap-4 md:gap-8 mb-8 border-b border-[color:var(--brand-line)]">
+            <div className="flex items-center justify-start md:justify-center gap-3 sm:gap-4 md:gap-8 mb-6 sm:mb-8 border-b border-[color:var(--brand-line)] overflow-x-auto md:overflow-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0">
               {(
                 [
                   { key: "general", labelKey: "general", label: "General" },
@@ -253,7 +253,7 @@ export default function ContactUsPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`pb-3 px-2 font-medium transition-colors ${
+                  className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${
                     activeTab === tab.key
                       ? "text-primary border-b-2 border-primary"
                       : "text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
@@ -269,12 +269,12 @@ export default function ContactUsPage() {
                 <AccordionItem
                   key={index}
                   value={`${activeTab}-${index}`}
-                  className="bg-white rounded-xl border-none px-6 shadow-sm"
+                  className="bg-white rounded-xl border-none px-4 sm:px-6 shadow-sm"
                 >
-                  <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
+                  <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-4 sm:py-5 hover:no-underline text-sm sm:text-base">
                     {t(item.questionKey, item.question)}
                   </AccordionTrigger>
-                  <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
+                  <AccordionContent className="text-[color:var(--brand-muted)] pb-4 sm:pb-5 text-sm sm:text-base">
                     {t(item.answerKey, item.answer)}
                   </AccordionContent>
                 </AccordionItem>

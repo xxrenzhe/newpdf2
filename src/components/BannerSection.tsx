@@ -8,9 +8,9 @@ export default function BannerSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="pt-10 md:pt-12 pb-10 md:pb-12 bg-gradient-to-r from-[color:var(--brand-peach)] via-white to-[color:var(--brand-lilac)] relative overflow-hidden">
+    <section className="pt-8 sm:pt-10 md:pt-12 pb-8 sm:pb-10 md:pb-12 bg-gradient-to-r from-[color:var(--brand-peach)] via-white to-[color:var(--brand-lilac)] relative overflow-hidden">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8 sm:gap-10">
           {/* Left Image */}
           <div className="hidden lg:block w-1/4">
             <img
@@ -25,14 +25,14 @@ export default function BannerSection() {
 
           {/* Center Content */}
           <div className="text-center flex-1 py-6">
-            <p className="text-secondary font-bold text-base md:text-lg mb-3 uppercase tracking-wider">
+            <p className="text-secondary font-bold text-sm sm:text-base md:text-lg mb-3 uppercase tracking-wider">
               {t("bannerTitle", "PDF EDITING MADE EASY")}
             </p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[color:var(--brand-ink)] mb-8 leading-tight">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[color:var(--brand-ink)] mb-6 sm:mb-8 leading-tight">
               {t("bannerSubtitle", "All the PDF tools you need, in a single platform")}
             </h2>
             <Link href="/app/sign-in">
-              <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-10 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-xl transition-[background-color,box-shadow] duration-300">
+              <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-6 sm:px-10 py-3 sm:py-4 h-12 sm:h-14 rounded-xl text-base sm:text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-xl transition-[background-color,box-shadow] duration-300 w-full sm:w-auto">
                 {t("getStartedFree", "Get Started Free")}
               </Button>
             </Link>

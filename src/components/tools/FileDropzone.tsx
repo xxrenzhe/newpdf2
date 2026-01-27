@@ -253,7 +253,7 @@ export default function FileDropzone({
           isDragging
             ? "border-primary bg-[color:rgba(242,236,255,0.5)] scale-[1.02] shadow-lg"
             : "border-primary/30 hover:border-primary/50"
-        } p-10 md:p-12`}
+        } p-6 sm:p-8 md:p-10`}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
@@ -266,12 +266,12 @@ export default function FileDropzone({
               alt="Upload"
               width={80}
               height={80}
-              className="w-16 h-16 md:w-20 md:h-20"
+              className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20"
             />
           </div>
 
-          <h3 className="text-xl md:text-2xl font-semibold text-[color:var(--brand-ink)] mb-2">{resolvedTitle}</h3>
-          <p className="text-sm text-[color:var(--brand-muted)] mb-6">{resolvedSubtitle}</p>
+          <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-[color:var(--brand-ink)] mb-2">{resolvedTitle}</h3>
+          <p className="text-sm sm:text-base text-[color:var(--brand-muted)] mb-6">{resolvedSubtitle}</p>
 
           {isValidating ? (
             <div className="inline-flex items-center justify-center gap-2 bg-gray-100 text-gray-600 font-medium px-10 py-3 rounded-lg">
@@ -291,7 +291,7 @@ export default function FileDropzone({
               e.preventDefault();
               inputRef.current?.click();
             }}
-            className="inline-flex items-center justify-center bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-10 py-3 rounded-lg transition-[background-color,box-shadow,transform] duration-200 hover:shadow-lg btn-press"
+            className="inline-flex items-center justify-center bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-6 sm:px-10 py-3 rounded-lg transition-[background-color,box-shadow,transform] duration-200 hover:shadow-lg btn-press w-full sm:w-auto text-sm sm:text-base"
           >
             Browse files
           </label>
@@ -310,7 +310,7 @@ export default function FileDropzone({
           />
 
           {/* File size info */}
-          <p className="text-xs text-[color:var(--brand-muted)] mt-6 max-w-sm">
+          <p className="text-xs sm:text-sm text-[color:var(--brand-muted)] mt-6 max-w-sm">
             Up to 100 MB for PDF and up to 20 MB for DOC, DOCX, PPT, PPTX, XLS, XLSX, BMP, JPG, JPEG, GIF, PNG, or TXT
           </p>
         </div>

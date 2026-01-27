@@ -28,7 +28,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full bg-[color:rgba(255,247,238,0.8)] backdrop-blur-md border-b border-[color:var(--brand-line)]">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-24 md:h-28">
+        <div className="flex items-center justify-between h-16 sm:h-20 md:h-24 lg:h-28">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <img
@@ -36,12 +36,12 @@ export default function Header() {
               alt="QwerPDF"
               width={982}
               height={167}
-              className="h-6 md:h-7 w-auto"
+              className="h-5 sm:h-6 md:h-7 w-auto"
             />
           </Link>
 
           {/* Right side buttons */}
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {status === "loading" ? (
               <div className="w-8 h-8 rounded-full bg-[color:var(--brand-cream)] animate-pulse" />
             ) : session ? (
@@ -58,7 +58,7 @@ export default function Header() {
                 <Button
                   variant="outline"
                   onClick={handleSignOut}
-                  className="border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-lilac)] font-medium px-4 py-2 h-10 rounded-lg"
+                  className="border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-lilac)] font-medium px-3 sm:px-4 py-2 h-9 sm:h-10 rounded-lg text-xs sm:text-sm"
                 >
                   {t("signOut", "Sign out")}
                 </Button>
@@ -66,8 +66,9 @@ export default function Header() {
             ) : (
               <>
                 <Link href="/app/sign-in">
-                  <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-4 py-2 h-10 rounded-lg">
-                    {t("continueWithGoogle", "Continue with Google")}
+                  <Button className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-3 sm:px-4 py-2 h-9 sm:h-10 rounded-lg text-xs sm:text-sm">
+                    <span className="sm:hidden">{t("signIn", "Sign in")}</span>
+                    <span className="hidden sm:inline">{t("continueWithGoogle", "Continue with Google")}</span>
                   </Button>
                 </Link>
               </>
@@ -79,7 +80,7 @@ export default function Header() {
                 <Button
                   variant="outline"
                   aria-label="Tools"
-                  className="flex items-center gap-2 border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-peach)] font-medium px-3 md:px-4 py-2 h-10 rounded-lg"
+                  className="flex items-center gap-2 border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-peach)] font-medium px-2.5 sm:px-3 md:px-4 py-2 h-9 sm:h-10 rounded-lg text-xs sm:text-sm"
                 >
                   <svg
                     width="16"

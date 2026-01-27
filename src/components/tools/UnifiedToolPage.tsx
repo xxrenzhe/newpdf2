@@ -389,9 +389,9 @@ export default function UnifiedToolPage({
   // Guest mode header
   const guestHeader = isGuest && (!showEditor || !isPdfEditor) ? (
     <header className="sticky top-0 z-40 bg-white border-b border-[color:var(--brand-line)]">
-      <div className="h-20 md:h-24 px-4 flex items-center gap-3">
+      <div className="h-16 sm:h-20 md:h-24 px-4 flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="QwerPDF" width={982} height={167} className="h-6 md:h-7 w-auto" />
+          <img src="/logo.png" alt="QwerPDF" width={982} height={167} className="h-5 sm:h-6 md:h-7 w-auto" />
         </Link>
         <div className="flex-1 min-w-0">
           {showEditor && editorFile ? (
@@ -410,24 +410,24 @@ export default function UnifiedToolPage({
   ) : null;
 
   return (
-    <main className={isGuest ? "min-h-screen bg-white" : (isPdfEditor && files.length > 0 ? "py-4 md:py-6" : "py-12 md:py-20")}>
+    <main className={isGuest ? "min-h-screen bg-white" : (isPdfEditor && files.length > 0 ? "py-4 sm:py-6" : "py-8 sm:py-12 md:py-20")}>
       {guestHeader}
 
       <div className={
         isGuest
-          ? (showEditor && isPdfEditor ? "p-0" : showEditor ? "py-4 px-2 md:px-4 lg:px-6" : "py-12 px-4")
+          ? (showEditor && isPdfEditor ? "p-0" : showEditor ? "py-3 sm:py-4 px-2 md:px-4 lg:px-6" : "py-8 sm:py-12 px-4")
           : (isPdfEditor && files.length > 0 ? "w-full px-2 md:px-4 lg:px-6" : "container mx-auto px-4 md:px-6 lg:px-8")
       }>
         {/* Tool Header - only when not showing editor */}
         {!showEditor && !isGuest && (
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="w-16 h-16 rounded-2xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mx-auto mb-6 shadow-sm">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-sm">
               <ToolIcon name={tool.iconName} className="w-8 h-8 stroke-[2px]" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3 sm:mb-4">
               {t(tool.nameKey, tool.name)}
             </h1>
-            <p className="text-[color:var(--brand-muted)] text-lg">
+            <p className="text-[color:var(--brand-muted)] text-base sm:text-lg">
               {t(tool.descriptionKey, tool.description)}
             </p>
             {tool.status === "comingSoon" && (
@@ -452,10 +452,10 @@ export default function UnifiedToolPage({
         {/* Tool Header - guest mode */}
         {!isGuest ? null : !documentId && (
           <div className="max-w-2xl mx-auto text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3">
               {t(tool.nameKey, tool.name)}
             </h1>
-            <p className="text-[color:var(--brand-muted)]">
+            <p className="text-[color:var(--brand-muted)] text-base sm:text-lg">
               {t(tool.descriptionKey, tool.description)}
             </p>
           </div>
@@ -493,7 +493,7 @@ export default function UnifiedToolPage({
           <>
             {/* Resume section - logged-in mode only */}
             {!isGuest && (toolKey === "annotate" || toolKey === "edit") && (resumeBusy || resumeInput || resumeOutput) && (
-              <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6 mb-6">
+              <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-5 sm:p-6 mb-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
@@ -568,14 +568,14 @@ export default function UnifiedToolPage({
             <h2 className="text-xl font-semibold text-[color:var(--brand-ink)] mb-6 text-center">
               {t("otherPdfTools", "Other PDF Tools")}
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {relatedTools.map((relatedTool) => (
                 <Link
                   key={relatedTool.key}
                   href={relatedTool.href}
-                  className="flex flex-col items-center p-4 bg-white rounded-xl border border-[color:var(--brand-line)] hover:shadow-md hover:border-[color:var(--brand-line)] transition-[border-color,box-shadow] group"
+                  className="flex flex-col items-center p-3 sm:p-4 bg-white rounded-xl border border-[color:var(--brand-line)] hover:shadow-md hover:border-[color:var(--brand-line)] transition-[border-color,box-shadow] group"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <ToolIcon name={relatedTool.iconName} className="w-5 h-5 stroke-[2px]" />
                   </div>
                   <span className="text-xs font-medium text-[color:var(--brand-ink)] text-center group-hover:text-primary transition-colors">

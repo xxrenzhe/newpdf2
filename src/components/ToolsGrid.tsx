@@ -22,18 +22,18 @@ export default function ToolsGrid() {
   const { t } = useLanguage();
 
   return (
-    <section className="pt-10 md:pt-12 pb-12 md:pb-16 bg-gradient-to-b from-[color:var(--brand-cream)] to-white" id="tools">
+    <section className="pt-8 sm:pt-10 md:pt-12 pb-10 sm:pb-12 md:pb-16 bg-gradient-to-b from-[color:var(--brand-cream)] to-white" id="tools">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         {/* Section Title */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 md:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[color:var(--brand-lilac)] text-primary text-sm font-semibold mb-4 border border-[color:var(--brand-line)]">
             <Monitor className="w-4 h-4" />
             <span>{t("coreFeatures", "Core Features")}</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-[color:var(--brand-ink)] mb-6 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[color:var(--brand-ink)] mb-5 sm:mb-6 tracking-tight">
             {t("allPdfToolsTitle", "All PDF Tools You Need")}
           </h2>
-          <p className="text-[color:var(--brand-muted)] text-lg md:text-xl leading-relaxed">
+          <p className="text-[color:var(--brand-muted)] text-base sm:text-lg md:text-xl leading-relaxed">
             {t(
               "allPdfToolsSubtitle",
               "Choose from our comprehensive suite of {count}+ powerful tools designed to make your PDF workflows seamless."
@@ -42,14 +42,14 @@ export default function ToolsGrid() {
         </div>
 
         {/* Category Tabs */}
-        <div className="flex flex-wrap justify-center gap-3 mb-16">
+        <div className="flex md:flex-wrap items-center justify-start md:justify-center gap-2 sm:gap-3 mb-10 sm:mb-12 md:mb-16 overflow-x-auto md:overflow-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
           {TOOL_CATEGORIES.map((category) => {
             return (
               <button
                 key={category.key}
                 onClick={() => setActiveCategory(category.key)}
                 className={`
-                  inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full text-base font-semibold
+                  inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold whitespace-nowrap
                   transition-[background-color,color,box-shadow,transform,border-color] duration-300 ease-in-out border
                   ${activeCategory === category.key
                     ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-[rgba(91,75,183,0.25)] transform -translate-y-0.5"
@@ -77,7 +77,7 @@ export default function ToolsGrid() {
 
         {/* Tools Grid */}
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredTools.map((tool, index) => {
               const categoryStyle = categoryStyles[tool.category];
 
@@ -86,28 +86,28 @@ export default function ToolsGrid() {
                   key={tool.key}
                   href={tool.href}
                   className={`
-                    tool-card group relative bg-white border border-[color:var(--brand-line)] rounded-2xl p-6 
+                    tool-card group relative bg-white border border-[color:var(--brand-line)] rounded-2xl p-5 sm:p-6 
                     hover:shadow-xl hover:border-[color:rgba(91,75,183,0.2)]
                     transition-[border-color,box-shadow,transform] duration-300 animate-fade-in flex flex-col items-start
                   `}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className={`
-                    w-12 h-12 rounded-xl flex items-center justify-center mb-5
+                    w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-4 sm:mb-5
                     transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3
                     border ${categoryStyle}
                   `}>
-                    <ToolIcon name={tool.iconName} className="w-6 h-6 stroke-[2px]" />
+                    <ToolIcon name={tool.iconName} className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2px]" />
                   </div>
 
                   <div className="flex-1 w-full">
                   <div className="flex items-center justify-between w-full mb-2">
-                    <h3 className="font-bold text-[color:var(--brand-ink)] text-lg group-hover:text-primary transition-colors">
+                    <h3 className="font-bold text-[color:var(--brand-ink)] text-base sm:text-lg group-hover:text-primary transition-colors">
                       {t(tool.nameKey, tool.name)}
                     </h3>
                     <ChevronRight className="w-5 h-5 text-[color:var(--brand-line)] group-hover:text-primary transform -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-[color,opacity,transform] duration-300" />
                   </div>
-                  <p className="text-sm text-[color:var(--brand-muted)] leading-relaxed font-medium">
+                  <p className="text-xs sm:text-sm text-[color:var(--brand-muted)] leading-relaxed font-medium">
                     {t(tool.descriptionKey, tool.description)}
                   </p>
                 </div>
@@ -128,7 +128,7 @@ export default function ToolsGrid() {
           <div className="text-center mt-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <button
               onClick={() => setActiveCategory("all")}
-              className="inline-flex items-center gap-2 text-primary hover:text-[color:var(--brand-purple-dark)] font-semibold text-lg transition-colors group"
+              className="inline-flex items-center gap-2 text-primary hover:text-[color:var(--brand-purple-dark)] font-semibold text-base sm:text-lg transition-colors group"
             >
               <span>
                 {t("viewAllTools", "View all {count} tools").replace("{count}", `${TOOLS.length}`)}

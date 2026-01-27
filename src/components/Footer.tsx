@@ -22,9 +22,9 @@ export default function Footer() {
   const { lang, setLang, languages, t } = useLanguage();
 
   return (
-    <footer className="bg-gradient-to-b from-[color:var(--brand-cream)] to-white pt-20 pb-10">
+    <footer className="bg-gradient-to-b from-[color:var(--brand-cream)] to-white pt-12 sm:pt-16 md:pt-20 pb-8 sm:pb-10">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-14 pb-10 border-b border-[color:var(--brand-line)]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 lg:gap-14 pb-8 sm:pb-10 border-b border-[color:var(--brand-line)]">
           {/* Logo and tagline */}
           <div className="lg:col-span-2">
             <div className="flex flex-col items-start gap-1">
@@ -107,7 +107,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom section */}
-        <div className="pt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+        <div className="pt-8 sm:pt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 sm:gap-8">
           <div>
             <p className="text-[color:var(--brand-ink)] text-base mb-1">
               © {t("allRightsReserved", "QwerPDF | All rights reserved")}
@@ -115,20 +115,20 @@ export default function Footer() {
             <p className="text-[color:var(--brand-muted)] text-sm">Apollo Technology LLC - Fargo, ND, USA</p>
           </div>
 
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6 sm:gap-8">
             {/* Security & Compliance */}
             <div>
               <p className="text-base text-[color:var(--brand-muted)] mb-3 font-medium">
                 {t("securityCompliance", "Security & Compliance")}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {complianceBadges.map((badge, index) => (
                   <div
                     key={index}
-                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: badge.color }}
                   >
-                    <span className="text-white text-[9px] font-bold">{badge.label}</span>
+                    <span className="text-white text-[8px] sm:text-[9px] font-bold">{badge.label}</span>
                   </div>
                 ))}
               </div>
@@ -136,7 +136,7 @@ export default function Footer() {
 
             {/* Language Selector */}
             <Select value={lang} onValueChange={(value) => setLang(value as typeof lang)}>
-              <SelectTrigger className="w-[180px] bg-white border-[color:var(--brand-line)] h-11">
+              <SelectTrigger className="w-full sm:w-[180px] bg-white border-[color:var(--brand-line)] h-11">
                 <div className="flex items-center gap-2">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[color:var(--brand-muted)]">
                     <circle cx="12" cy="12" r="10" />

@@ -68,9 +68,9 @@ export default function StatsSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-12 md:py-16 bg-white">
+    <section ref={sectionRef} className="py-10 sm:py-12 md:py-16 bg-white">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="flex flex-wrap justify-center gap-10 md:gap-16 lg:gap-28">
+        <div className="flex flex-wrap justify-center gap-6 sm:gap-10 md:gap-16 lg:gap-28">
           {stats.map((stat, index) => (
             <div
               key={index}
@@ -81,17 +81,17 @@ export default function StatsSection() {
               }`}
               style={{ transitionDelay: `${index * 150}ms` }}
             >
-              <div className="w-16 h-16 rounded-2xl bg-[color:var(--brand-lilac)] flex items-center justify-center shadow-sm">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[color:var(--brand-lilac)] flex items-center justify-center shadow-sm">
                 {stat.icon}
               </div>
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] flex items-baseline gap-1">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] flex items-baseline gap-1">
                   <span className={isVisible ? "stat-number" : ""}>{stat.value}</span>
                   {stat.suffix && (
                     <span className="text-secondary text-2xl font-bold">{stat.suffix}</span>
                   )}
                 </div>
-                <div className="text-base text-[color:var(--brand-muted)] font-medium">
+                <div className="text-sm sm:text-base text-[color:var(--brand-muted)] font-medium">
                   {t(stat.labelKey, stat.label)}
                 </div>
               </div>

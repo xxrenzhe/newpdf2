@@ -90,17 +90,17 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-gradient-pink -z-10" />
 
       {/* Blur effects */}
-      <div className="blur-blue top-10 left-10 opacity-60" />
-      <div className="blur-pink bottom-20 right-20 opacity-50" />
-      <div className="absolute -top-24 right-10 h-48 w-48 rounded-full bg-[color:var(--brand-peach)] opacity-70 blur-3xl" />
+      <div className="blur-blue top-10 left-10 opacity-60 hidden md:block" />
+      <div className="blur-pink bottom-20 right-20 opacity-50 hidden md:block" />
+      <div className="absolute -top-24 right-10 h-48 w-48 rounded-full bg-[color:var(--brand-peach)] opacity-70 blur-3xl hidden md:block" />
 
-      <div className="container mx-auto px-4 md:px-6 lg:px-8 pt-6 md:pt-8 lg:pt-10 pb-12 md:pb-16 lg:pb-20">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 pt-5 sm:pt-6 md:pt-8 lg:pt-10 pb-10 sm:pb-12 md:pb-16 lg:pb-20">
         {/* Title */}
-        <div className="text-center max-w-4xl mx-auto mb-12 md:mb-16">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-[color:var(--brand-ink)] mb-6 leading-tight tracking-tight">
+        <div className="text-center max-w-4xl mx-auto mb-10 sm:mb-12 md:mb-16">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-[color:var(--brand-ink)] mb-5 sm:mb-6 leading-tight tracking-tight">
             {t("heroTitle", "All-in-One Online PDF Editor")}
           </h1>
-          <p className="text-xl md:text-2xl text-[color:var(--brand-muted)] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl md:text-2xl text-[color:var(--brand-muted)] max-w-2xl mx-auto leading-relaxed">
             {t("heroSubtitle", "Easily edit, convert and sign PDFs. Fast, simple and secure.")}
           </p>
         </div>
@@ -113,7 +113,7 @@ export default function HeroSection() {
               isDragging && !isBusy
                 ? "border-primary bg-[color:rgba(242,236,255,0.4)] scale-[1.02]"
                 : "border-[color:var(--brand-line)] hover:border-primary/50"
-            } ${isBusy ? "pointer-events-none opacity-80" : ""} p-10 md:p-14 transition-[border-color,background-color,box-shadow,transform] duration-300`}
+            } ${isBusy ? "pointer-events-none opacity-80" : ""} p-6 sm:p-8 md:p-10 lg:p-14 transition-[border-color,background-color,box-shadow,transform] duration-300`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -121,8 +121,8 @@ export default function HeroSection() {
             <div className="flex flex-col items-center text-center">
               {/* Upload Icon */}
               <div className={`mb-8 transition-transform duration-300 ${isDragging ? "scale-110" : ""}`}>
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-[color:var(--brand-lilac)] flex items-center justify-center">
-                  <svg className="w-12 h-12 md:w-14 md:h-14 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-[color:var(--brand-lilac)] flex items-center justify-center">
+                  <svg className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
@@ -131,10 +131,10 @@ export default function HeroSection() {
               </div>
 
               {/* Drop text */}
-              <h3 className="text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] mb-3">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-[color:var(--brand-ink)] mb-3">
                 {t("dropFileHere", "Drop your file here")}
               </h3>
-              <p className="text-lg text-[color:var(--brand-muted)] mb-8">
+              <p className="text-base sm:text-lg text-[color:var(--brand-muted)] mb-6 sm:mb-8">
                 {t("browseFilesHint", "or click to browse from your computer")}
               </p>
 
@@ -153,7 +153,7 @@ export default function HeroSection() {
                   disabled={isBusy}
                 />
                 {isBusy ? (
-                  <div className="inline-flex items-center justify-center gap-3 bg-[color:var(--brand-cream)] text-[color:var(--brand-ink)] font-semibold px-12 py-4 h-14 rounded-xl text-lg">
+                  <div className="flex items-center justify-center gap-3 bg-[color:var(--brand-cream)] text-[color:var(--brand-ink)] font-semibold px-8 sm:px-10 md:px-12 py-3 sm:py-4 h-12 sm:h-14 rounded-xl text-base sm:text-lg w-full sm:w-auto">
                     <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -163,7 +163,7 @@ export default function HeroSection() {
                 ) : (
                   <Button
                     asChild
-                    className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-12 py-4 h-14 rounded-xl text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-[rgba(91,75,183,0.35)] transition-[background-color,box-shadow] duration-300"
+                    className="bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-semibold px-8 sm:px-10 md:px-12 py-3 sm:py-4 h-12 sm:h-14 rounded-xl text-base sm:text-lg shadow-lg shadow-[rgba(91,75,183,0.25)] hover:shadow-[rgba(91,75,183,0.35)] transition-[background-color,box-shadow] duration-300 w-full sm:w-auto"
                   >
                     <label
                       htmlFor={fileInputId}
@@ -182,7 +182,7 @@ export default function HeroSection() {
               </div>
 
               {/* File size info */}
-              <p className="text-base text-[color:var(--brand-muted)] max-w-lg">
+              <p className="text-sm sm:text-base text-[color:var(--brand-muted)] max-w-lg">
                 {t(
                   "uploadLimit",
                   "Up to 100 MB for PDF and up to 20 MB for DOC, DOCX, PPT, PPTX, XLS, XLSX, BMP, JPG, JPEG, GIF, PNG, or TXT"

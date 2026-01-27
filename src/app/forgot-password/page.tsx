@@ -17,8 +17,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="min-h-screen auth-gradient flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        <h1 className="text-2xl font-bold text-[color:var(--brand-ink)] mb-2">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-[color:var(--brand-ink)] mb-2">
           {t("passwordReset", "Password reset")}
         </h1>
         <p className="text-[color:var(--brand-muted)] text-sm mb-6">
@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
 
         <Button
           variant="outline"
-          className="w-full h-12 rounded-xl border-2 border-[color:var(--brand-line)] text-[color:var(--brand-ink)] font-semibold text-base hover:bg-[color:var(--brand-cream)]"
+          className="w-full h-11 sm:h-12 rounded-xl border-2 border-[color:var(--brand-line)] text-[color:var(--brand-ink)] font-semibold text-sm sm:text-base hover:bg-[color:var(--brand-cream)]"
           disabled={!googleConfigured}
           onClick={() => void signIn("google", { callbackUrl: "/" })}
         >

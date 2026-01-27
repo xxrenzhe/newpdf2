@@ -19,7 +19,7 @@ export default function BrandsMarquee() {
   const marqueeBrands = useMemo(() => [...brands, ...brands, ...brands], []);
 
   return (
-    <section className="py-8 md:py-12 bg-white overflow-hidden">
+    <section className="py-6 sm:py-8 md:py-12 bg-white overflow-hidden">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 mb-6">
         <p className="text-center text-sm text-[color:var(--brand-muted)]">
           {t("trustedBy", "Trusted by professionals from leading companies worldwide")}
@@ -27,8 +27,8 @@ export default function BrandsMarquee() {
       </div>
       <div className="marquee-container relative">
         {/* Gradient masks for smooth edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10" />
+        <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-r from-white to-transparent z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-l from-white to-transparent z-10" />
 
         <div className="marquee-content">
           {marqueeBrands.map((brand, index) => (
@@ -39,7 +39,7 @@ export default function BrandsMarquee() {
               width={brand.width}
               height={brand.height}
               loading="lazy"
-              className="h-6 md:h-8 mx-6 md:mx-10 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-[opacity,filter] duration-300"
+              className="h-5 sm:h-6 md:h-8 mx-4 sm:mx-6 md:mx-10 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-[opacity,filter] duration-300"
             />
           ))}
         </div>

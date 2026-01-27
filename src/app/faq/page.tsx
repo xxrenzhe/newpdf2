@@ -132,20 +132,20 @@ export default function FAQPage() {
     <main className="min-h-screen bg-[color:var(--brand-cream)]">
       <Header />
 
-      <section className="py-12 md:py-16">
+      <section className="py-8 sm:py-12 md:py-16">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-bold text-center mb-10">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-8 sm:mb-10">
             {t("faqTitle", "Frequently Asked Questions")}
           </h1>
 
           {/* Tabs */}
-          <div className="flex justify-center gap-4 md:gap-8 mb-12 border-b border-[color:var(--brand-line)]">
+          <div className="flex items-center justify-start md:justify-center gap-3 sm:gap-4 md:gap-8 mb-8 sm:mb-12 border-b border-[color:var(--brand-line)] overflow-x-auto md:overflow-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`pb-4 px-2 font-medium transition-colors ${
+                className={`pb-4 px-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === tab.key
                     ? "text-primary border-b-2 border-primary"
                     : "text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)]"
@@ -160,8 +160,8 @@ export default function FAQPage() {
           <div className="max-w-3xl mx-auto">
             {/* General Section */}
             {activeTab === "general" && (
-              <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-[color:var(--brand-ink)]">
+              <div className="space-y-6 sm:space-y-8">
+                <h2 className="text-xl sm:text-2xl font-bold text-[color:var(--brand-ink)]">
                   {t("general", "General")}
                 </h2>
                 <Accordion type="single" collapsible className="space-y-3">
@@ -169,12 +169,12 @@ export default function FAQPage() {
                     <AccordionItem
                       key={index}
                       value={`general-${index}`}
-                      className="bg-white rounded-xl border-none px-6 shadow-sm"
+                      className="bg-white rounded-xl border-none px-4 sm:px-6 shadow-sm"
                     >
-                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
+                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-4 sm:py-5 hover:no-underline text-sm sm:text-base">
                         {t(item.questionKey, item.question)}
                       </AccordionTrigger>
-                      <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
+                      <AccordionContent className="text-[color:var(--brand-muted)] pb-4 sm:pb-5 text-sm sm:text-base">
                         {t(item.answerKey, item.answer)}
                       </AccordionContent>
                     </AccordionItem>
@@ -185,8 +185,8 @@ export default function FAQPage() {
 
             {/* Security Section */}
             {activeTab === "security" && (
-              <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-[color:var(--brand-ink)]">
+              <div className="space-y-6 sm:space-y-8">
+                <h2 className="text-xl sm:text-2xl font-bold text-[color:var(--brand-ink)]">
                   {t("security", "Security")}
                 </h2>
                 <Accordion type="single" collapsible className="space-y-3">
@@ -194,12 +194,12 @@ export default function FAQPage() {
                     <AccordionItem
                       key={index}
                       value={`security-${index}`}
-                      className="bg-white rounded-xl border-none px-6 shadow-sm"
+                      className="bg-white rounded-xl border-none px-4 sm:px-6 shadow-sm"
                     >
-                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
+                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-4 sm:py-5 hover:no-underline text-sm sm:text-base">
                         {t(item.questionKey, item.question)}
                       </AccordionTrigger>
-                      <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
+                      <AccordionContent className="text-[color:var(--brand-muted)] pb-4 sm:pb-5 text-sm sm:text-base">
                         {t(item.answerKey, item.answer)}
                       </AccordionContent>
                     </AccordionItem>
@@ -210,8 +210,8 @@ export default function FAQPage() {
 
             {/* Billing Section */}
             {activeTab === "billing" && (
-              <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-[color:var(--brand-ink)]">
+              <div className="space-y-6 sm:space-y-8">
+                <h2 className="text-xl sm:text-2xl font-bold text-[color:var(--brand-ink)]">
                   {t("accountBilling", "Account & Billing")}
                 </h2>
                 <Accordion type="single" collapsible className="space-y-3">
@@ -219,12 +219,12 @@ export default function FAQPage() {
                     <AccordionItem
                       key={index}
                       value={`billing-${index}`}
-                      className="bg-white rounded-xl border-none px-6 shadow-sm"
+                      className="bg-white rounded-xl border-none px-4 sm:px-6 shadow-sm"
                     >
-                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-5 hover:no-underline">
+                      <AccordionTrigger className="text-left font-medium text-[color:var(--brand-ink)] py-4 sm:py-5 hover:no-underline text-sm sm:text-base">
                         {t(item.questionKey, item.question)}
                       </AccordionTrigger>
-                      <AccordionContent className="text-[color:var(--brand-muted)] pb-5">
+                      <AccordionContent className="text-[color:var(--brand-muted)] pb-4 sm:pb-5 text-sm sm:text-base">
                         {t(item.answerKey, item.answer)}
                       </AccordionContent>
                     </AccordionItem>

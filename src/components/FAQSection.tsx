@@ -57,13 +57,13 @@ export default function FAQSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="pt-10 md:pt-12 pb-12 md:pb-16 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">
+    <section className="pt-8 sm:pt-10 md:pt-12 pb-10 sm:pb-12 md:pb-16 bg-gradient-to-b from-white to-[color:var(--brand-cream)]">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-14 md:mb-16">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[color:var(--brand-ink)] mb-4">
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14 md:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[color:var(--brand-ink)] mb-4">
             {t("faqTitle", "Frequently Asked Questions")}
           </h2>
-          <p className="text-lg text-[color:var(--brand-muted)]">
+          <p className="text-base sm:text-lg text-[color:var(--brand-muted)]">
             {t("faqSubtitle", "Find answers to common questions about our PDF tools")}
           </p>
         </div>
@@ -74,12 +74,12 @@ export default function FAQSection() {
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="bg-white rounded-2xl border-2 border-[color:var(--brand-line)] px-7 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl border-2 border-[color:var(--brand-line)] px-5 sm:px-7 shadow-sm hover:shadow-md transition-shadow"
               >
-                <AccordionTrigger className="text-left font-semibold text-[color:var(--brand-ink)] py-6 hover:no-underline text-lg">
+                <AccordionTrigger className="text-left font-semibold text-[color:var(--brand-ink)] py-5 sm:py-6 hover:no-underline text-base sm:text-lg">
                   {t(item.questionKey, item.question)}
                 </AccordionTrigger>
-                <AccordionContent className="text-[color:var(--brand-muted)] pb-6 text-base leading-relaxed">
+                <AccordionContent className="text-[color:var(--brand-muted)] pb-5 sm:pb-6 text-sm sm:text-base leading-relaxed">
                   {t(item.answerKey, item.answer)}
                 </AccordionContent>
               </AccordionItem>

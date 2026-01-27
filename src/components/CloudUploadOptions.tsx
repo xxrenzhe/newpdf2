@@ -187,15 +187,15 @@ export default function CloudUploadOptions({
 
   const gridClass =
     variant === "hero"
-      ? "grid grid-cols-1 md:grid-cols-3 gap-4 mt-6"
-      : "grid grid-cols-1 md:grid-cols-3 gap-3 mt-4";
+      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-5 sm:mt-6"
+      : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4";
   const btnBase =
     variant === "hero"
-      ? "flex items-center justify-center gap-3 bg-white/80 rounded-xl px-6 py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-[border-color,box-shadow] duration-300"
-      : "cloud-btn justify-center";
+      ? "flex items-center justify-center gap-3 bg-white/80 rounded-xl px-4 sm:px-6 py-3 sm:py-4 border-2 border-[color:var(--brand-line)] hover:border-[color:rgba(91,75,183,0.4)] hover:shadow-md transition-[border-color,box-shadow] duration-300"
+      : "cloud-btn justify-center px-4 sm:px-6 py-3 sm:py-4";
   const labelClass =
     variant === "hero"
-      ? "text-[color:var(--brand-muted)] font-medium"
+      ? "text-[color:var(--brand-muted)] font-medium text-sm sm:text-base"
       : "text-[color:var(--brand-muted)] font-medium text-sm";
 
   return (
