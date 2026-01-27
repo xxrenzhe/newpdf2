@@ -12,8 +12,8 @@ const ANNOTATION_LAYER_CLASS= 'annotationLayer';
 const TEXT_MARKUP_LAYER_CLASS = 'textMarkupLayer';
 
 const textContentOptions = {
-    // Keep items separate so text highlights don't span large whitespace gaps.
-    disableCombineTextItems: true,
+    // Match old editor behavior so PDF.js marks line endings correctly.
+    disableCombineTextItems: false,
     includeMarkedContent: false
 };
 

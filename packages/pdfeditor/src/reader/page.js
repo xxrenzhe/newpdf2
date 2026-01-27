@@ -6,8 +6,8 @@ import { getPixelColor, trimSpace } from '../misc';
 import { Locale } from '../locale';
 
 const textContentOptions = {
-    // Keep items separate so text highlights don't span large whitespace gaps.
-    disableCombineTextItems: true,
+    // Match old editor behavior so PDF.js marks line endings correctly.
+    disableCombineTextItems: false,
     includeMarkedContent: false
 };
 const INSERT_PAGE_CLASS= 'insert_page_box';
@@ -169,10 +169,15 @@ export class PDFPage extends PDFPageBase {
                     });
 
                     if ((i+1) == this.textContentItems.length) {
+                        const itemIndices = Array.from(new Set(elements.map(el => {
+                            const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
+                            return Number.isFinite(idx) ? idx : null;
+                        }).filter(idx => idx !== null)));
                         this.textParts[n] = {
                             text: text,
                             elements: elements,
-                            width: textWidth
+                            width: textWidth,
+                            itemIndices: itemIndices
                         };
                         this.#filterDiv(n);
                         break;
@@ -185,10 +190,15 @@ export class PDFPage extends PDFPageBase {
                     if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1, lineHasLeader))) {
                         prevTextItem = null;
                         lineHasLeader = false;
+                        const itemIndices = Array.from(new Set(elements.map(el => {
+                            const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
+                            return Number.isFinite(idx) ? idx : null;
+                        }).filter(idx => idx !== null)));
                         this.textParts[n] = {
                             text: trimSpace(text),
                             elements: elements,
-                            width: textWidth
+                            width: textWidth,
+                            itemIndices: itemIndices
                         };
                         this.#filterDiv(n);
                         text = '';
@@ -610,7 +620,7 @@ export class PDFPage extends PDFPageBase {
                 width: maxRight - minLeft,
                 height: maxBottom - minTop
             };
-            bounds = this.#applyPdfLineWidth(bounds, sorted) || bounds;
+            bounds = this.#applyPdfLineWidth(bounds, sorted, textParts.itemIndices) || bounds;
             const lineWidth = Math.max(0, bounds.right - bounds.left);
             const lineHeight = Math.max(0, bounds.bottom - bounds.top);
             firstElement.style.left = bounds.left + 'px';
@@ -714,19 +724,30 @@ export class PDFPage extends PDFPageBase {
         return { rects, elements };
     }
 
-    #getPdfLineWidth(elements) {
-        if (!elements || !elements.length) return null;
+    #getPdfLineWidth(elements, itemIndices) {
         if (!this.pageProxy || !this.textContentItems) return null;
         const util = this.reader?.pdfjsLib?.Util;
         if (!util || typeof util.transform !== 'function') return null;
         const viewport = this.pageProxy.getViewport({ scale: this.scale });
 
+        let indices = Array.isArray(itemIndices) ? itemIndices : null;
+        if (!indices || !indices.length) {
+            if (!elements || !elements.length) return null;
+            indices = [];
+            elements.forEach(element => {
+                if (!element) return;
+                const idx = Number.parseInt(element.getAttribute('data-idx'), 10);
+                if (Number.isFinite(idx)) {
+                    indices.push(idx);
+                }
+            });
+        }
+        if (!indices.length) return null;
+        indices = Array.from(new Set(indices));
+
         let minLeft = Infinity;
         let maxRight = -Infinity;
-        for (const element of elements) {
-            if (!element) continue;
-            const idx = Number.parseInt(element.getAttribute('data-idx'), 10);
-            if (!Number.isFinite(idx)) continue;
+        for (const idx of indices) {
             const item = this.textContentItems[idx];
             if (!item || !Array.isArray(item.transform)) continue;
 
@@ -748,9 +769,9 @@ export class PDFPage extends PDFPageBase {
         return { left: minLeft, right: maxRight, width };
     }
 
-    #applyPdfLineWidth(bounds, elements) {
-        if (!bounds || !elements || !elements.length) return bounds;
-        const pdfLine = this.#getPdfLineWidth(elements);
+    #applyPdfLineWidth(bounds, elements, itemIndices) {
+        if (!bounds) return bounds;
+        const pdfLine = this.#getPdfLineWidth(elements, itemIndices);
         if (!pdfLine) return bounds;
         const left = Number.isFinite(bounds.left) ? bounds.left : pdfLine.left;
         if (!Number.isFinite(left) || !Number.isFinite(pdfLine.width)) return bounds;
@@ -846,6 +867,10 @@ export class PDFPage extends PDFPageBase {
             // return nextTextItem.width >= 2.5;
             return nextIsLeader ? false : nextTextItem.width > 8;
         }
+        const currentIdx = nextIdx - 1;
+        if (!nextIsLeader && !lineHasLeader && this.#isVisualLineBreak(currentIdx, nextIdx)) {
+            return true;
+        }
         const currentTransform = Array.isArray(textItem?.transform) ? textItem.transform : null;
         const nextTransform = Array.isArray(nextTextItem?.transform) ? nextTextItem.transform : null;
         if (currentTransform && nextTransform) {
@@ -867,9 +892,49 @@ export class PDFPage extends PDFPageBase {
         return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
     }
 
+    #isVisualLineBreak(currentIdx, nextIdx) {
+        if (!Array.isArray(this.textDivs)) return false;
+        const currentEl = this.textDivs[currentIdx];
+        const nextEl = this.textDivs[nextIdx];
+        if (!currentEl || !nextEl) return false;
+
+        const currentBox = this.#getElementBox(currentEl);
+        const nextBox = this.#getElementBox(nextEl);
+        if (!currentBox || !nextBox) return false;
+
+        const sizeCandidates = [
+            this.#parsePx(currentEl.getAttribute('data-fontsize')),
+            this.#parsePx(nextEl.getAttribute('data-fontsize')),
+            currentBox.height,
+            nextBox.height
+        ].filter(value => Number.isFinite(value) && value > 0);
+        const minSize = sizeCandidates.length ? Math.min(...sizeCandidates) : 1;
+        const maxSize = sizeCandidates.length ? Math.max(...sizeCandidates) : minSize;
+
+        const topDiff = Math.abs(nextBox.top - currentBox.top);
+        const leftReset = nextBox.left < currentBox.left - Math.max(maxSize * 0.5, 6);
+        const strongThreshold = Math.max(minSize * 0.6, 2);
+        const weakThreshold = Math.max(minSize * 0.25, 2);
+
+        if (topDiff > strongThreshold) {
+            return true;
+        }
+        if (leftReset && topDiff > weakThreshold) {
+            return true;
+        }
+        return false;
+    }
+
     #getTextPartBounds(textPart, baseElement, forceRefresh = false) {
         if (!textPart) return null;
-        if (textPart.bounds && !forceRefresh) return textPart.bounds;
+        if (textPart.bounds && !forceRefresh) {
+            const adjusted = this.#applyPdfLineWidth({ ...textPart.bounds }, null, textPart.itemIndices);
+            if (adjusted) {
+                textPart.bounds = adjusted;
+                textPart.width = adjusted.width;
+            }
+            return textPart.bounds;
+        }
         const elements = this.#getConnectedElements(textPart);
         if (!elements.length && baseElement) {
             elements.push(baseElement);
@@ -899,7 +964,7 @@ export class PDFPage extends PDFPageBase {
             width: right - left,
             height: bottom - top
         };
-        bounds = this.#applyPdfLineWidth(bounds, elements) || bounds;
+        bounds = this.#applyPdfLineWidth(bounds, elements, textPart.itemIndices) || bounds;
         bounds.width = bounds.right - bounds.left;
         bounds.height = bounds.bottom - bounds.top;
         if (textPart) {
