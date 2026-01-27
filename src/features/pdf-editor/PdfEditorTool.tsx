@@ -188,6 +188,25 @@ export default function PdfEditorTool({
     }
   }, []);
 
+  const injectMobileOverrides = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    try {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      doc.documentElement.classList.add("embed");
+      if (!doc.getElementById("pdfeditor-mobile-overrides")) {
+        const link = doc.createElement("link");
+        link.id = "pdfeditor-mobile-overrides";
+        link.rel = "stylesheet";
+        link.href = "/pdfeditor-mobile.css";
+        doc.head?.appendChild(link);
+      }
+    } catch {
+      // Ignore cross-origin access errors.
+    }
+  }, []);
+
   useEffect(() => {
     const useTransfer = file.size <= TRANSFER_PDF_BYTES_LIMIT;
 
@@ -484,28 +503,22 @@ export default function PdfEditorTool({
 
   const headerClassName =
     actionsPosition === "top-right"
-      ? "flex items-center justify-between gap-4 px-6 py-3 min-h-[64px] bg-white/80 backdrop-blur"
-      : "flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-6 py-5 min-h-[72px] border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur";
+      ? "flex flex-col gap-3 px-4 py-3 min-h-[64px] bg-white/80 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6"
+      : "flex flex-col gap-4 px-4 py-4 min-h-[72px] border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5";
 
-  const titleClassName =
-    actionsPosition === "top-right"
-      ? "min-w-0 flex items-center gap-3"
-      : "min-w-0 flex items-center gap-3";
+  const titleClassName = "min-w-0 flex items-center gap-3 w-full sm:w-auto";
 
-  const actionsClassName =
-    actionsPosition === "top-right"
-      ? "flex items-center gap-2"
-      : "flex items-center gap-2";
+  const actionsClassName = "flex flex-wrap items-center gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end";
 
   const secondaryActionClassName =
     actionsPosition === "top-right"
-      ? "inline-flex items-center justify-center h-10 px-4 text-sm rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
-      : "inline-flex items-center justify-center h-11 px-5 text-sm rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]";
+      ? "inline-flex items-center justify-center h-9 px-3 text-xs rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] whitespace-nowrap sm:h-10 sm:px-4 sm:text-sm"
+      : "inline-flex items-center justify-center h-10 px-4 text-xs rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] whitespace-nowrap sm:h-11 sm:px-5 sm:text-sm";
 
   const primaryActionClassName =
     actionsPosition === "top-right"
-      ? "inline-flex items-center justify-center h-10 px-4 text-sm rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
-      : "inline-flex items-center justify-center h-11 px-5 text-sm rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50";
+      ? "inline-flex items-center justify-center h-9 px-3 text-xs rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 whitespace-nowrap sm:h-10 sm:px-4 sm:text-sm"
+      : "inline-flex items-center justify-center h-10 px-4 text-xs rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 whitespace-nowrap sm:h-11 sm:px-5 sm:text-sm";
 
   const statusText = busy
     ? t("statusWorking", "Working…")
@@ -516,6 +529,11 @@ export default function PdfEditorTool({
         : iframeReady
           ? t("statusWaiting", "Waiting…")
           : t("statusLoading", "Loading…");
+
+  const handleIframeLoad = useCallback(() => {
+    injectMobileOverrides();
+    setIframeReady(true);
+  }, [injectMobileOverrides]);
 
   return (
     <div className={shellClassName}>
@@ -610,8 +628,8 @@ export default function PdfEditorTool({
           ref={iframeRef}
           title={t("pdfEditorTitle", "PDF Editor")}
           className="w-full h-full"
-          src="/pdfeditor/index.html"
-          onLoad={() => setIframeReady(true)}
+          src="/pdfeditor/index.html#embed"
+          onLoad={handleIframeLoad}
         />
       </div>
     </div>
