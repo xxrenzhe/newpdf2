@@ -133,9 +133,15 @@ export class PDFPage extends PDFPageBase {
                         elDiv.classList.add('text-border');
                     }
                     let offsetX = 2;
-                    let styleLeft  = (parseInt(elDiv.style.left) * this.outputScale) + offsetX + 'px';
-                    let styleTop = (parseInt(elDiv.style.top) * this.outputScale) + 'px';
-                    let styleFontSize = (parseInt(elDiv.style.fontSize) * this.outputScale) + 'px';
+                    const rawLeft = parseFloat(elDiv.style.left);
+                    const rawTop = parseFloat(elDiv.style.top);
+                    const rawFontSize = parseFloat(elDiv.style.fontSize);
+                    const leftPx = Number.isFinite(rawLeft) ? rawLeft : 0;
+                    const topPx = Number.isFinite(rawTop) ? rawTop : 0;
+                    const fontSizePx = Number.isFinite(rawFontSize) ? rawFontSize : 0;
+                    let styleLeft  = (leftPx * this.outputScale) + offsetX + 'px';
+                    let styleTop = (topPx * this.outputScale) + 'px';
+                    let styleFontSize = (fontSizePx * this.outputScale) + 'px';
                     elDiv.style.left = styleLeft;
                     elDiv.style.top = styleTop;
                     elDiv.style.fontSize = styleFontSize;
@@ -374,8 +380,8 @@ export class PDFPage extends PDFPageBase {
         const fallbackPdfScale = this.scale ? 1 / this.scale : 0;
         const pxToPdfX = contentRect.width ? pdfWidth / contentRect.width : fallbackPdfScale;
         const pxToPdfY = contentRect.height ? pdfHeight / contentRect.height : fallbackPdfScale;
-        const coverPaddingX = 2;
-        const coverPaddingY = 2;
+        const coverPaddingX = Math.max(2, Math.ceil(fontSize * 0.2));
+        const coverPaddingY = Math.max(2, Math.ceil(fontSize * 0.2));
         const coverOffsetX = pxToPdfX ? -coverPaddingX * pxToPdfX : 0;
         const coverOffsetY = pxToPdfY ? -coverPaddingY * pxToPdfY : 0;
         const coverWidthPdf = pxToPdfX ? (coverWidth + coverPaddingX * 2 + extraCoverRightPx) * pxToPdfX : 0;
@@ -470,9 +476,9 @@ export class PDFPage extends PDFPageBase {
                 element.style.backgroundColor = bgColor;
                 element.style.userSelect = 'none';
                 if (rect) {
-                    const padLeft = 2;
-                    const padRight = 2 + extraRightPad;
-                    const padY = 2;
+                    const padLeft = coverPaddingX;
+                    const padRight = coverPaddingX + extraRightPad;
+                    const padY = coverPaddingY;
                     element.style.boxSizing = 'border-box';
                     element.style.padding = '0';
                     element.style.left = (rect.left - padLeft) + 'px';
@@ -480,9 +486,9 @@ export class PDFPage extends PDFPageBase {
                     element.style.width = (rect.width + padLeft + padRight) + 'px';
                     element.style.height = (rect.height + padY * 2) + 'px';
                 } else if (coverBounds) {
-                    const coverPadLeft = 2;
-                    const coverPadRight = 2 + extraCoverRightPx;
-                    const coverPadY = 2;
+                    const coverPadLeft = coverPaddingX;
+                    const coverPadRight = coverPaddingX + extraCoverRightPx;
+                    const coverPadY = coverPaddingY;
                     element.style.boxSizing = 'border-box';
                     element.style.padding = '0';
                     element.style.left = (coverBounds.left - coverPadLeft) + 'px';
@@ -490,11 +496,11 @@ export class PDFPage extends PDFPageBase {
                     element.style.width = (coverBounds.width + coverPadLeft + coverPadRight) + 'px';
                     element.style.height = (coverBounds.height + coverPadY * 2) + 'px';
                 } else {
-                    element.style.padding = '3px 0 3px 0';
+                    element.style.padding = `${coverPaddingY}px 0 ${coverPaddingY}px 0`;
                     const elementTop = this.#parsePx(element.style.top);
                     const elementLeft = this.#parsePx(element.style.left);
-                    element.style.top = (elementTop - 2) + 'px';
-                    element.style.left = (elementLeft - 2) + 'px';
+                    element.style.top = (elementTop - coverPaddingY) + 'px';
+                    element.style.left = (elementLeft - coverPaddingX) + 'px';
                 }
 
                 let textItemIdx = element.getAttribute('data-idx');
