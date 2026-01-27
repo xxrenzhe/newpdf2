@@ -183,6 +183,7 @@ export class PDFPage extends PDFPageBase {
                             text: text,
                             elements: elements,
                             width: textWidth,
+                            rawWidth: textWidth,
                             itemIndices: itemIndices
                         };
                         this.#filterDiv(n);
@@ -204,6 +205,7 @@ export class PDFPage extends PDFPageBase {
                             text: trimSpace(text),
                             elements: elements,
                             width: textWidth,
+                            rawWidth: textWidth,
                             itemIndices: itemIndices
                         };
                         this.#filterDiv(n);
@@ -533,6 +535,9 @@ export class PDFPage extends PDFPageBase {
     #filterDiv(n) {
         const textParts = this.textParts[n];
         if (!textParts || !Array.isArray(textParts.elements)) return;
+        if (!Number.isFinite(textParts.rawWidth) && Number.isFinite(textParts.width)) {
+            textParts.rawWidth = textParts.width;
+        }
         const elements = textParts.elements.filter(el => el && el.isConnected);
         if (!elements.length) return;
 
@@ -627,7 +632,16 @@ export class PDFPage extends PDFPageBase {
                 height: maxBottom - minTop
             };
             bounds = this.#applyPdfLineWidth(bounds, sorted, textParts.itemIndices) || bounds;
-            const lineWidth = Math.max(0, bounds.right - bounds.left);
+            let lineWidth = Math.max(0, bounds.right - bounds.left);
+            // Use the original span width as a safety net when bounds are too tight.
+            if (!coverData && Number.isFinite(textParts.rawWidth)) {
+                const scaledRawWidth = textParts.rawWidth * this.outputScale;
+                if (Number.isFinite(scaledRawWidth) && scaledRawWidth > lineWidth) {
+                    bounds.right = bounds.left + scaledRawWidth;
+                    lineWidth = scaledRawWidth;
+                }
+            }
+            bounds.width = lineWidth;
             const lineHeight = Math.max(0, bounds.bottom - bounds.top);
             firstElement.style.left = bounds.left + 'px';
             firstElement.style.top = bounds.top + 'px';
