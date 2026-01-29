@@ -294,6 +294,7 @@ export class PDFPage extends PDFPageBase {
         if (!bounds) {
             return;
         }
+        const coverBoundsBase = bounds ? { ...bounds } : null;
         let x = bounds.left;
         let y = bounds.top;
         const rawTextValue = typeof textPart.text === 'string' ? textPart.text : '';
@@ -367,9 +368,10 @@ export class PDFPage extends PDFPageBase {
                 textPart.width = refined.width;
             }
         }
-        const coverWidth = bounds.width;
-        const coverHeight = bounds.height;
-        const extraCoverRightPx = Math.max(2, Math.ceil(fontSize * 0.35));
+        const coverBounds = coverBoundsBase || bounds;
+        const coverWidth = coverBounds.width;
+        const coverHeight = coverBounds.height;
+        const extraCoverRightPx = isItalicFont ? Math.max(2, Math.ceil(fontSize * 0.35)) : 0;
         const boxWidth = Number.isFinite(bounds.width) && this.scale ? bounds.width / this.scale : null;
         const boxHeight = Number.isFinite(bounds.height) && this.scale ? bounds.height / this.scale : null;
 
@@ -384,17 +386,21 @@ export class PDFPage extends PDFPageBase {
         const pxToPdfY = contentRect.height ? pdfHeight / contentRect.height : fallbackPdfScale;
         const coverPaddingX = Math.max(2, Math.ceil(fontSize * 0.2));
         const coverPaddingY = Math.max(2, Math.ceil(fontSize * 0.2));
-        const coverOffsetX = pxToPdfX ? -coverPaddingX * pxToPdfX : 0;
-        const coverOffsetY = pxToPdfY ? -coverPaddingY * pxToPdfY : 0;
-        const coverWidthPdf = pxToPdfX ? (coverWidth + coverPaddingX * 2 + extraCoverRightPx) * pxToPdfX : 0;
-        const coverHeightPdf = pxToPdfY ? (coverHeight + coverPaddingY * 2) * pxToPdfY : 0;
+        // Use tighter padding for export-time cover boxes to avoid masking table borders.
+        const exportPaddingX = Math.min(1, coverPaddingX);
+        const exportPaddingY = Math.min(1, coverPaddingY);
+        const exportExtraRightPx = isItalicFont ? Math.min(3, extraCoverRightPx) : 0;
+        const coverOffsetX = pxToPdfX ? -exportPaddingX * pxToPdfX : 0;
+        const coverOffsetY = pxToPdfY ? -exportPaddingY * pxToPdfY : 0;
+        const coverWidthPdf = pxToPdfX ? (coverWidth + exportPaddingX * 2 + exportExtraRightPx) * pxToPdfX : 0;
+        const coverHeightPdf = pxToPdfY ? (coverHeight + exportPaddingY * 2) * pxToPdfY : 0;
         const hasCoverRects = Boolean(coverRectsPx && coverRectsPx.length > 1);
         const coverRectsPdf = hasCoverRects && pxToPdfX && pxToPdfY
             ? coverRectsPx.map((rect, idx) => {
                 if (!rect) return null;
-                const padLeft = coverPaddingX;
-                const padRight = coverPaddingX + (idx === coverRectsPx.length - 1 ? extraCoverRightPx : 0);
-                const padY = coverPaddingY;
+                const padLeft = exportPaddingX;
+                const padRight = exportPaddingX + (idx === coverRectsPx.length - 1 ? exportExtraRightPx : 0);
+                const padY = exportPaddingY;
                 const leftPx = rect.left - padLeft;
                 const topPx = rect.top - padY;
                 const widthPx = rect.width + padLeft + padRight;
@@ -461,7 +467,7 @@ export class PDFPage extends PDFPageBase {
         }, () => {
             this.isConvertWidget.push(convertKey);
             baseElement.style.cursor = 'default';
-            const coverBounds = textPart.bounds ? textPart.bounds : null;
+            const coverBounds = coverBoundsBase || textPart.bounds;
             const coverRects = Array.isArray(textPart.coverRects)
                 ? textPart.coverRects
                 : null;
