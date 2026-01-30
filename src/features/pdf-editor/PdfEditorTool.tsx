@@ -27,7 +27,7 @@ function UploadProgressOverlay({
   tip: string;
   onCancel?: () => void;
 }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   if (!open) return null;
   const clamped = Math.max(0, Math.min(100, progress));
 
@@ -151,7 +151,7 @@ export default function PdfEditorTool({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeLoadTokenRef = useRef(0);
   const fileInputId = useId();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const uploadTips = useMemo(
     () => [
       t("uploadTipPreparing", "Uploading and preparing your document. Optimizing for editing…"),
@@ -171,6 +171,12 @@ export default function PdfEditorTool({
   const uploadProgressTimerRef = useRef<number | null>(null);
   const uploadProgressStartTimeoutRef = useRef<number | null>(null);
   const hasRealProgressRef = useRef(false);
+  const iframeSrc = useMemo(() => {
+    const params = new URLSearchParams();
+    if (lang) params.set("lang", lang);
+    const qs = params.toString();
+    return qs ? `/pdfeditor/index.html?${qs}#embed` : "/pdfeditor/index.html#embed";
+  }, [lang]);
 
   const outName = useMemo(() => file.name.replace(/\.[^.]+$/, "") + "-edited.pdf", [file.name]);
 
@@ -628,7 +634,7 @@ export default function PdfEditorTool({
           ref={iframeRef}
           title={t("pdfEditorTitle", "PDF Editor")}
           className="w-full h-full"
-          src="/pdfeditor/index.html#embed"
+          src={iframeSrc}
           onLoad={handleIframeLoad}
         />
       </div>

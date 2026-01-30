@@ -69,8 +69,8 @@ export class PDFReader {
     disableViewer = false;
     pdfjsLib = null;
     usePageBase = true;
-    outputScale = 1;
-    maxOutputScale = 1;
+    outputScale = 2;
+    maxOutputScale = 2;
     locale = null;
     loadingTask = null;
     loadId = 0;
@@ -87,17 +87,16 @@ export class PDFReader {
 	        this.scale = this.options.scale;
 	        this.viewMode = this.options.viewMode;
 
-	        const deviceScale = Math.min(window.devicePixelRatio || 1, 2);
-	        const maxOutputScale =
-	            typeof this.options.maxOutputScale === 'number' && Number.isFinite(this.options.maxOutputScale)
-	                ? this.options.maxOutputScale
-	                : deviceScale;
-	        const initialOutputScale =
-	            typeof this.options.initialOutputScale === 'number' && Number.isFinite(this.options.initialOutputScale)
-	                ? this.options.initialOutputScale
-	                : maxOutputScale;
-	        this.maxOutputScale = Math.max(1, Math.min(2, maxOutputScale));
-	        this.outputScale = Math.max(1, Math.min(this.maxOutputScale, initialOutputScale));
+        const maxOutputScale =
+            typeof this.options.maxOutputScale === 'number' && Number.isFinite(this.options.maxOutputScale)
+                ? this.options.maxOutputScale
+                : 2;
+        const initialOutputScale =
+            typeof this.options.initialOutputScale === 'number' && Number.isFinite(this.options.initialOutputScale)
+                ? this.options.initialOutputScale
+                : maxOutputScale;
+        this.maxOutputScale = Math.max(1, Math.min(2, maxOutputScale));
+        this.outputScale = Math.max(1, Math.min(this.maxOutputScale, initialOutputScale));
 
 	        this.usePageBase = this.options.usePageBase;
 	        this.password = password;
@@ -233,17 +232,7 @@ export class PDFReader {
 	                return false;
 	            }
 
-	            const hasExplicitOutputScale =
-	                typeof this.options.initialOutputScale === 'number' && Number.isFinite(this.options.initialOutputScale);
-	            if (!hasExplicitOutputScale) {
-	                const largeByPages = documentProxy.numPages >= 30;
-	                const largeByBytes = this.sourceTotalBytes >= 12 * 1024 * 1024;
-	                if ((largeByPages || largeByBytes) && this.outputScale > 1) {
-	                    this.outputScale = 1;
-	                }
-	            }
-	
-	            this.loadingTask = null;
+            this.loadingTask = null;
 	            PDFEvent.dispatch(Events.LOAD_PROGRESS, { loaded: 1, total: 1 });
 
             this.pdfDocument = new PDFDocument(this, documentProxy);

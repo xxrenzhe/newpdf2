@@ -10,13 +10,6 @@
   white-space: nowrap;
 }
 
-html.embed .pdf-header {
-  display: none;
-  height: 0;
-  padding: 0;
-  border: 0;
-}
-
 @media (max-width: 900px) {
   :root {
     --toolbar-height: 56px;

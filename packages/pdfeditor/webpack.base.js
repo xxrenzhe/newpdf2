@@ -51,7 +51,6 @@ let plugins = [
                 noErrorOnMissing: true,
                 globOptions: {
                     ignore: [
-                        '**/art_font/**',
                         '**/temp.otf',
                         '**/fonts/Allura-Regular.ttf'
                     ]
