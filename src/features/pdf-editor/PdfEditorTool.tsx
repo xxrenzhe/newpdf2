@@ -27,7 +27,7 @@ function UploadProgressOverlay({
   tip: string;
   onCancel?: () => void;
 }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   if (!open) return null;
   const clamped = Math.max(0, Math.min(100, progress));
 
@@ -308,27 +308,32 @@ export default function PdfEditorTool({
         const buffer = await promise.catch(() => null);
         if (cancelled || activeLoadTokenRef.current !== token) return;
         if (!buffer) {
-          postToEditor({ type: "load-pdf", blob: file, loadToken: token });
-          return;
-        }
-        postToEditor({ type: "load-pdf", data: buffer, loadToken: token }, [buffer]);
+        postToEditor({ type: "load-pdf", blob: file, loadToken: token, fileName: file.name });
+        return;
+      }
+        postToEditor({ type: "load-pdf", data: buffer, loadToken: token, fileName: file.name }, [buffer]);
         return;
       }
 
       const url = fileObjectUrlRef.current;
       if (url) {
         if (cancelled || activeLoadTokenRef.current !== token) return;
-        postToEditor({ type: "load-pdf", url, loadToken: token });
+        postToEditor({ type: "load-pdf", url, loadToken: token, fileName: file.name });
         return;
       }
       if (cancelled || activeLoadTokenRef.current !== token) return;
-      postToEditor({ type: "load-pdf", blob: file, loadToken: token });
+      postToEditor({ type: "load-pdf", blob: file, loadToken: token, fileName: file.name });
     })();
 
     return () => {
       cancelled = true;
     };
   }, [file, iframeReady, postToEditor]);
+
+  useEffect(() => {
+    if (!iframeReady) return;
+    postToEditor({ type: "set-file-name", fileName: file.name });
+  }, [file.name, iframeReady, postToEditor]);
 
   const uploadOverlayOpen = !error && !pdfLoaded && (busy || !iframeReady);
 

@@ -12,6 +12,12 @@ const fontList = [
         fontFile: 'fonts/Lato-Regular.ttf'
     },
     {
+        fontFamily: 'Allura',
+        showName: 'Allura',
+        fontFile: 'fonts/Allura-Regular.ttf',
+        hidden: true
+    },
+    {
         fontFamily: 'NotoSerif',
         showName: 'Noto Serif',
         fontFile: 'fonts/NotoSerif-Regular.ttf',

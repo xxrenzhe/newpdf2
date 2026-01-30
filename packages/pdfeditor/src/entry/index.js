@@ -117,9 +117,48 @@ langChecked.addEventListener('click',(e)=>{
 // let fileUrl = getUrlParam('fileUrl') || 'http://localhost/files/hr-technology.pdf';
 let fileUrl = getUrlParam('fileUrl') || null;
 
+const fileNameEl = document.getElementById('file-name');
+const setFileName = (name) => {
+    if (!fileNameEl) return;
+    const value = name ? String(name) : '';
+    fileNameEl.textContent = value;
+};
+
+const extractFileName = (value) => {
+    if (!value) return '';
+    try {
+        const parsed = new URL(value, window.location.origin);
+        const last = parsed.pathname.split('/').pop();
+        return last || '';
+    } catch {
+        const cleaned = String(value).split('?')[0].split('#')[0];
+        const parts = cleaned.split('/');
+        return parts[parts.length - 1] || '';
+    }
+};
+
+const fileNameParam = getUrlParam('fileName') || getUrlParam('filename');
+if (fileNameParam) {
+    setFileName(fileNameParam);
+} else {
+    const derivedName = extractFileName(fileUrl);
+    if (derivedName) {
+        setFileName(derivedName);
+    }
+}
+
 // Embedded mode (inside iframe): tweak styling for host app integration.
-if (window.parent && window.parent !== window) {
+const isEmbedded = window.parent && window.parent !== window;
+if (isEmbedded) {
     document.documentElement.classList.add('embed');
+} else {
+    document
+        .querySelectorAll(
+            '.more-dropdown-item.tool_convert, .more-dropdown-item.tool_compress, .more-dropdown-item.tool_merge, .more-dropdown-item.tool_redact'
+        )
+        .forEach(el => {
+            el.style.display = 'none';
+        });
 }
 
 let hostLoadToken = 0;
@@ -200,7 +239,7 @@ const reader = new PDFReader({
     cMapUrl: cMapUrl,
     standardFontDataUrl: standardFontDataUrl,
     enableXfa: true,
-    fontExtraProperties: false,
+    fontExtraProperties: true,
     usePageBase: false,
     expandThumbs: false,
     lazyThumbs: true,
@@ -367,6 +406,10 @@ window.addEventListener('message', e => {
     if (e.data.type == 'load-pdf') {
         const payload = e.data || {};
         hostLoadToken = typeof payload.loadToken === 'number' ? payload.loadToken : 0;
+        const payloadName = payload.fileName || payload.name;
+        if (payloadName) {
+            setFileName(payloadName);
+        }
         if (payload.data instanceof ArrayBuffer) {
             reader.load(payload.data);
         } else if (typeof payload.url === 'string' && payload.url) {
@@ -374,6 +417,10 @@ window.addEventListener('message', e => {
         } else if (payload.blob instanceof Blob) {
             reader.load(URL.createObjectURL(payload.blob));
         }
+    }
+    if (e.data.type === 'set-file-name') {
+        const payloadName = e.data?.fileName || e.data?.name;
+        setFileName(payloadName);
     }
     if (e.data.type === 'cancel-load') {
         const token = typeof e.data.loadToken === 'number' ? e.data.loadToken : null;
