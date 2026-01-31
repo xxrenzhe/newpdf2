@@ -277,11 +277,7 @@ export class PDFPage extends PDFPageBase {
         if (!baseElement) {
             return;
         }
-        // PDF.js already selects the correct font face (regular/bold/italic) for the text layer.
-        // Applying CSS bold/italic on top of that causes "synthetic" styling and can make text
-        // appear thicker than the original PDF.
-        const bold = false;
-        const italic = false;
+        const inferredStyle = this.#inferPdfFontStyle(baseElement);
 
         // Keep the historical width tweak for italic PDF fonts so the cover box doesn't clip.
         const rawFontName = baseElement.getAttribute('data-fontname');
@@ -346,6 +342,11 @@ export class PDFPage extends PDFPageBase {
             fontName: originalFontName,
             text: textValue
         });
+        const useInferredStyle = Boolean(resolvedFont.replaced);
+        // Apply bold/italic only when we fall back to a safe font to avoid synthetic styling
+        // on the PDF.js text layer, while still preserving emphasis from the source PDF.
+        const bold = useInferredStyle ? inferredStyle.bold : false;
+        const italic = useInferredStyle ? inferredStyle.italic : false;
         let fontFamily = resolvedFont.fontFamily;
         let coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
         const leaderGapWidth = this.#getLeaderGapWidth(coverRectsPx);
@@ -662,6 +663,46 @@ export class PDFPage extends PDFPageBase {
                 width: lineWidth,
                 height: lineHeight
             };
+        } else {
+            const fallbackLeft = this.#parsePx(firstElement.style.left);
+            const fallbackTop = this.#parsePx(firstElement.style.top);
+            const rect = firstElement.getBoundingClientRect();
+            const rectWidth = rect?.width;
+            const rectHeight = rect?.height;
+            let fallbackWidth = Number.isFinite(textParts.rawWidth)
+                ? textParts.rawWidth
+                : this.#parsePx(firstElement.style.width);
+            if (Number.isFinite(rectWidth)) {
+                if (!Number.isFinite(fallbackWidth) || rectWidth > fallbackWidth) {
+                    fallbackWidth = rectWidth;
+                }
+            }
+            let fallbackHeight = Number.isFinite(rectHeight)
+                ? rectHeight
+                : this.#parsePx(firstElement.style.height);
+            if (!Number.isFinite(fallbackHeight) && Number.isFinite(baseFontSize)) {
+                fallbackHeight = baseFontSize;
+            }
+            if (Number.isFinite(fallbackLeft)
+                && Number.isFinite(fallbackTop)
+                && Number.isFinite(fallbackWidth)
+                && fallbackWidth > 0) {
+                firstElement.style.left = fallbackLeft + 'px';
+                firstElement.style.top = fallbackTop + 'px';
+                firstElement.style.width = fallbackWidth + 'px';
+                if (Number.isFinite(fallbackHeight) && fallbackHeight > 0) {
+                    firstElement.style.height = fallbackHeight + 'px';
+                }
+                textParts.width = fallbackWidth;
+                textParts.bounds = {
+                    left: fallbackLeft,
+                    top: fallbackTop,
+                    right: fallbackLeft + fallbackWidth,
+                    bottom: fallbackTop + (Number.isFinite(fallbackHeight) ? fallbackHeight : 0),
+                    width: fallbackWidth,
+                    height: Number.isFinite(fallbackHeight) ? fallbackHeight : 0
+                };
+            }
         }
 
         const keepElements = new Set([firstElement]);
@@ -1035,6 +1076,7 @@ export class PDFPage extends PDFPageBase {
         if (!Number.isFinite(x) || !Number.isFinite(y)) return;
         const hitPart = this.#findTextPartByPoint(x, y);
         if (!hitPart) return;
+        if (!this.#shouldAutoConvertByBounds(hitPart, rect)) return;
         const baseElement = this.#getTextPartElement(hitPart, null);
         if (!baseElement) return;
         this.convertWidget(baseElement);
@@ -1058,6 +1100,33 @@ export class PDFPage extends PDFPageBase {
         return null;
     }
 
+    #shouldAutoConvertByBounds(textPart, layerRect) {
+        if (!textPart || !layerRect) return true;
+        let bounds = textPart.bounds;
+        if (!bounds) {
+            bounds = this.#getTextPartBounds(textPart, this.#getTextPartElement(textPart, null));
+        }
+        if (!bounds) return true;
+        const width = bounds.width;
+        const height = bounds.height;
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return true;
+        const layerArea = layerRect.width * layerRect.height;
+        if (layerArea > 0) {
+            const areaRatio = (width * height) / layerArea;
+            if (areaRatio > 0.55) {
+                return false;
+            }
+        }
+        const baseElement = this.#getTextPartElement(textPart, null);
+        const fontSize = baseElement
+            ? (this.#parsePx(baseElement.getAttribute('data-fontsize')) || this.#parsePx(baseElement.style.fontSize))
+            : null;
+        if (Number.isFinite(fontSize) && height > fontSize * 3) {
+            return false;
+        }
+        return true;
+    }
+
     #pointInBounds(x, y, bounds, padding = 0) {
         const left = bounds.left - padding;
         const right = bounds.right + padding;
@@ -1076,6 +1145,18 @@ export class PDFPage extends PDFPageBase {
             elements.push(el);
         });
         return elements;
+    }
+
+    #inferPdfFontStyle(element) {
+        if (!element) {
+            return { bold: false, italic: false };
+        }
+        const rawName = element.getAttribute('data-fontname') || '';
+        const name = typeof rawName === 'string' ? rawName.toLowerCase() : '';
+        return {
+            bold: name.includes('bold'),
+            italic: name.includes('italic') || name.includes('oblique')
+        };
     }
 
     #applyItalicWidthPadding(textPart) {
