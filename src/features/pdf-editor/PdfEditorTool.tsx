@@ -411,6 +411,8 @@ export default function PdfEditorTool({
     void sendLoadToEditor(pendingFile, token);
   }, [editorReady, iframeReady, sendLoadToEditor]);
 
+  const uploadOverlayOpen = !error && !pdfLoaded && (busy || !iframeReady);
+
   useEffect(() => {
     if (iframeReady || error || !uploadOverlayOpen) return;
     const timeoutId = window.setTimeout(() => {
@@ -446,8 +448,6 @@ export default function PdfEditorTool({
     }, PDF_LOAD_TIMEOUT_MS);
     return () => window.clearTimeout(timeoutId);
   }, [busy, error, pdfLoaded, t]);
-
-  const uploadOverlayOpen = !error && !pdfLoaded && (busy || !iframeReady);
 
   const cancelLoading = useCallback(() => {
     const tokenToCancel = activeLoadTokenRef.current;
