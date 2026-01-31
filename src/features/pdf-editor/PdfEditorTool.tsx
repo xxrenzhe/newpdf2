@@ -175,6 +175,10 @@ export default function PdfEditorTool({
   const uploadProgressTimerRef = useRef<number | null>(null);
   const uploadProgressStartTimeoutRef = useRef<number | null>(null);
   const hasRealProgressRef = useRef(false);
+  const pendingLoadTokenRef = useRef<number | null>(null);
+  const pendingLoadFileRef = useRef<File | null>(null);
+  const editorPingTimerRef = useRef<number | null>(null);
+  const editorPingAttemptsRef = useRef(0);
   const iframeSrc = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
@@ -197,6 +201,35 @@ export default function PdfEditorTool({
       win.postMessage(message, "*");
     }
   }, []);
+
+  const sendLoadToEditor = useCallback(
+    async (targetFile: File, token: number) => {
+      const useTransfer = targetFile.size <= TRANSFER_PDF_BYTES_LIMIT;
+      if (useTransfer) {
+        const promise = fileBytesPromiseRef.current ?? targetFile.arrayBuffer();
+        const buffer = await promise.catch(() => null);
+        if (activeLoadTokenRef.current !== token) return;
+        if (!buffer) {
+          postToEditor({ type: "load-pdf", blob: targetFile, loadToken: token, fileName: targetFile.name });
+          return;
+        }
+        postToEditor(
+          { type: "load-pdf", data: buffer, loadToken: token, fileName: targetFile.name },
+          [buffer]
+        );
+        return;
+      }
+
+      const url = fileObjectUrlRef.current;
+      if (activeLoadTokenRef.current !== token) return;
+      if (url) {
+        postToEditor({ type: "load-pdf", url, loadToken: token, fileName: targetFile.name });
+        return;
+      }
+      postToEditor({ type: "load-pdf", blob: targetFile, loadToken: token, fileName: targetFile.name });
+    },
+    [postToEditor]
+  );
 
   const injectMobileOverrides = useCallback(() => {
     const iframe = iframeRef.current;
@@ -296,48 +329,66 @@ export default function PdfEditorTool({
 
   useEffect(() => {
     if (!iframeReady) return;
-    const useTransfer = file.size <= TRANSFER_PDF_BYTES_LIMIT;
     const token = activeLoadTokenRef.current + 1;
     activeLoadTokenRef.current = token;
-    let cancelled = false;
+    pendingLoadTokenRef.current = token;
+    pendingLoadFileRef.current = file;
     setError("");
     setPdfLoaded(false);
     setLoadCancelled(false);
     setBusy(true);
     appliedToolRef.current = null;
     hasRealProgressRef.current = false;
-    void (async () => {
-      if (useTransfer) {
-        const promise = fileBytesPromiseRef.current ?? file.arrayBuffer();
-        const buffer = await promise.catch(() => null);
-        if (cancelled || activeLoadTokenRef.current !== token) return;
-        if (!buffer) {
-          postToEditor({ type: "load-pdf", blob: file, loadToken: token, fileName: file.name });
-          return;
-        }
-        postToEditor({ type: "load-pdf", data: buffer, loadToken: token, fileName: file.name }, [buffer]);
-        return;
-      }
 
-      const url = fileObjectUrlRef.current;
-      if (url) {
-        if (cancelled || activeLoadTokenRef.current !== token) return;
-        postToEditor({ type: "load-pdf", url, loadToken: token, fileName: file.name });
-        return;
-      }
-      if (cancelled || activeLoadTokenRef.current !== token) return;
-      postToEditor({ type: "load-pdf", blob: file, loadToken: token, fileName: file.name });
-    })();
+    if (!editorReady) {
+      postToEditor({ type: "ping" });
+      return;
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [file, iframeReady, postToEditor]);
+    pendingLoadTokenRef.current = null;
+    pendingLoadFileRef.current = null;
+    void sendLoadToEditor(file, token);
+  }, [editorReady, file, iframeReady, postToEditor, sendLoadToEditor]);
 
   useEffect(() => {
     if (!iframeReady) return;
     postToEditor({ type: "set-file-name", fileName: file.name });
   }, [file.name, iframeReady, postToEditor]);
+
+  useEffect(() => {
+    if (!iframeReady || editorReady) return;
+    if (editorPingTimerRef.current) {
+      window.clearInterval(editorPingTimerRef.current);
+      editorPingTimerRef.current = null;
+    }
+    editorPingAttemptsRef.current = 0;
+    const ping = () => {
+      editorPingAttemptsRef.current += 1;
+      postToEditor({ type: "ping" });
+      if (editorPingAttemptsRef.current >= 10 && editorPingTimerRef.current) {
+        window.clearInterval(editorPingTimerRef.current);
+        editorPingTimerRef.current = null;
+      }
+    };
+    ping();
+    editorPingTimerRef.current = window.setInterval(ping, 1000);
+    return () => {
+      if (editorPingTimerRef.current) {
+        window.clearInterval(editorPingTimerRef.current);
+        editorPingTimerRef.current = null;
+      }
+    };
+  }, [editorReady, iframeReady, postToEditor]);
+
+  useEffect(() => {
+    if (!iframeReady || !editorReady) return;
+    const token = pendingLoadTokenRef.current;
+    const pendingFile = pendingLoadFileRef.current;
+    if (!token || !pendingFile) return;
+    pendingLoadTokenRef.current = null;
+    pendingLoadFileRef.current = null;
+    void sendLoadToEditor(pendingFile, token);
+  }, [editorReady, iframeReady, sendLoadToEditor]);
 
   useEffect(() => {
     if (!iframeReady || editorReady || pdfLoaded || error || !busy) return;
@@ -368,6 +419,8 @@ export default function PdfEditorTool({
   const cancelLoading = useCallback(() => {
     const tokenToCancel = activeLoadTokenRef.current;
     activeLoadTokenRef.current = tokenToCancel + 1;
+    pendingLoadTokenRef.current = null;
+    pendingLoadFileRef.current = null;
     hasRealProgressRef.current = false;
     setUploadProgress(0);
     setError("");
@@ -436,6 +489,10 @@ export default function PdfEditorTool({
       if (hasMessageType<PdfEditorReadyMessage["type"]>(evt.data, "pdf-editor-ready")) {
         setIframeReady(true);
         setEditorReady(true);
+        if (editorPingTimerRef.current) {
+          window.clearInterval(editorPingTimerRef.current);
+          editorPingTimerRef.current = null;
+        }
         return;
       }
       if (hasMessageType<PdfLoadedMessage["type"]>(evt.data, "pdf-loaded")) {
@@ -579,6 +636,10 @@ export default function PdfEditorTool({
     injectMobileOverrides();
     setIframeReady(true);
     setEditorReady(false);
+    if (editorPingTimerRef.current) {
+      window.clearInterval(editorPingTimerRef.current);
+      editorPingTimerRef.current = null;
+    }
   }, [injectMobileOverrides]);
 
   return (

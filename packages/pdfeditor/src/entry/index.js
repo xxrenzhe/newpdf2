@@ -487,6 +487,7 @@ PDFEvent.on(Events.PASSWORD_ERROR, () => {
 
 window.addEventListener('message', e => {
     if (e.data.type == 'load-pdf') {
+        postEditorReady();
         const payload = e.data || {};
         hostLoadToken = typeof payload.loadToken === 'number' ? payload.loadToken : 0;
         const payloadName = payload.fileName || payload.name;
@@ -504,6 +505,9 @@ window.addEventListener('message', e => {
     if (e.data.type === 'set-file-name') {
         const payloadName = e.data?.fileName || e.data?.name;
         setFileName(payloadName);
+    }
+    if (e.data.type === 'ping') {
+        postEditorReady();
     }
     if (e.data.type === 'cancel-load') {
         const token = typeof e.data.loadToken === 'number' ? e.data.loadToken : null;
