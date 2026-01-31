@@ -166,6 +166,7 @@ export default function PdfEditorTool({
   );
   const [iframeReady, setIframeReady] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
+  const [editorBooted, setEditorBooted] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -182,6 +183,8 @@ export default function PdfEditorTool({
   const editorPingAttemptsRef = useRef(0);
   const editorFallbackTimerRef = useRef<number | null>(null);
   const editorFallbackUsedRef = useRef(false);
+  const compatPollTimerRef = useRef<number | null>(null);
+  const compatPollTokenRef = useRef<number | null>(null);
   const iframeSrc = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
@@ -198,6 +201,7 @@ export default function PdfEditorTool({
   useEffect(() => {
     setIframeReady(false);
     setEditorReady(false);
+    setEditorBooted(false);
     setPdfLoaded(false);
     setLoadCancelled(false);
     setBusy(false);
@@ -213,6 +217,11 @@ export default function PdfEditorTool({
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
     }
+    if (compatPollTimerRef.current) {
+      window.clearInterval(compatPollTimerRef.current);
+      compatPollTimerRef.current = null;
+    }
+    compatPollTokenRef.current = null;
   }, [iframeSrc]);
 
   const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
@@ -241,7 +250,7 @@ export default function PdfEditorTool({
           return;
         }
         postToEditor(
-          { type: "load-pdf", data: buffer, loadToken: token, fileName: targetFile.name },
+          { type: "load-pdf", data: buffer, blob: targetFile, loadToken: token, fileName: targetFile.name },
           [buffer]
         );
         fileBytesPromiseRef.current = null;
@@ -251,13 +260,42 @@ export default function PdfEditorTool({
       const url = fileObjectUrlRef.current;
       if (activeLoadTokenRef.current !== token) return;
       if (url) {
-        postToEditor({ type: "load-pdf", url, loadToken: token, fileName: targetFile.name });
+        postToEditor({ type: "load-pdf", url, blob: targetFile, loadToken: token, fileName: targetFile.name });
         return;
       }
       postToEditor({ type: "load-pdf", blob: targetFile, loadToken: token, fileName: targetFile.name });
     },
     [postToEditor]
   );
+
+  const detectEditorBooted = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return false;
+    try {
+      const doc = iframe.contentDocument;
+      return Boolean(doc?.getElementById("pdf-main"));
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const detectPdfLoadedFromIframe = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return false;
+    try {
+      const win = iframe.contentWindow as (Window & {
+        reader?: { pdfDocument?: { pageCount?: number; numPages?: number }; pageCount?: number };
+      }) | null;
+      const reader = win?.reader;
+      const pageCount = reader?.pdfDocument?.pageCount ?? reader?.pdfDocument?.numPages ?? reader?.pageCount;
+      if (typeof pageCount === "number" && pageCount > 0) return true;
+      const doc = iframe.contentDocument;
+      if (doc?.querySelector("#pdf-main .__pdf_page_preview")) return true;
+    } catch {
+      // ignore
+    }
+    return false;
+  }, []);
 
   const injectMobileOverrides = useCallback(() => {
     const iframe = iframeRef.current;
@@ -469,6 +507,7 @@ export default function PdfEditorTool({
   useEffect(() => {
     if (!iframeReady || editorReady || pdfLoaded || error || !busy) return;
     const timeoutId = window.setTimeout(() => {
+      if (editorBooted) return;
       setBusy(false);
       setLoadCancelled(false);
       setError(
@@ -476,7 +515,7 @@ export default function PdfEditorTool({
       );
     }, EDITOR_READY_TIMEOUT_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [busy, editorReady, error, iframeReady, pdfLoaded, t]);
+  }, [busy, editorBooted, editorReady, error, iframeReady, pdfLoaded, t]);
 
   useEffect(() => {
     if (!busy || pdfLoaded || error) return;
@@ -489,6 +528,61 @@ export default function PdfEditorTool({
     }, PDF_LOAD_TIMEOUT_MS);
     return () => window.clearTimeout(timeoutId);
   }, [busy, error, pdfLoaded, t]);
+
+  useEffect(() => {
+    if (!iframeReady || !busy || pdfLoaded || error) {
+      if (compatPollTimerRef.current) {
+        window.clearInterval(compatPollTimerRef.current);
+        compatPollTimerRef.current = null;
+      }
+      compatPollTokenRef.current = null;
+      return;
+    }
+
+    const token = activeLoadTokenRef.current;
+    compatPollTokenRef.current = token;
+    if (compatPollTimerRef.current) {
+      window.clearInterval(compatPollTimerRef.current);
+      compatPollTimerRef.current = null;
+    }
+
+    const startedAt = Date.now();
+    compatPollTimerRef.current = window.setInterval(() => {
+      if (compatPollTokenRef.current !== token) {
+        if (compatPollTimerRef.current) {
+          window.clearInterval(compatPollTimerRef.current);
+          compatPollTimerRef.current = null;
+        }
+        return;
+      }
+      if (detectPdfLoadedFromIframe()) {
+        setEditorReady(true);
+        setEditorBooted(true);
+        setPdfLoaded(true);
+        setBusy(false);
+        setLoadCancelled(false);
+        setError("");
+        if (compatPollTimerRef.current) {
+          window.clearInterval(compatPollTimerRef.current);
+          compatPollTimerRef.current = null;
+        }
+        compatPollTokenRef.current = null;
+        return;
+      }
+      if (Date.now() - startedAt > 20000 && compatPollTimerRef.current) {
+        window.clearInterval(compatPollTimerRef.current);
+        compatPollTimerRef.current = null;
+      }
+    }, 500);
+
+    return () => {
+      if (compatPollTimerRef.current) {
+        window.clearInterval(compatPollTimerRef.current);
+        compatPollTimerRef.current = null;
+      }
+      compatPollTokenRef.current = null;
+    };
+  }, [busy, detectPdfLoadedFromIframe, error, iframeReady, pdfLoaded]);
 
   const cancelLoading = useCallback(() => {
     const tokenToCancel = activeLoadTokenRef.current;
@@ -563,6 +657,7 @@ export default function PdfEditorTool({
       if (hasMessageType<PdfEditorReadyMessage["type"]>(evt.data, "pdf-editor-ready")) {
         setIframeReady(true);
         setEditorReady(true);
+        setEditorBooted(true);
         if (editorPingTimerRef.current) {
           window.clearInterval(editorPingTimerRef.current);
           editorPingTimerRef.current = null;
@@ -574,6 +669,7 @@ export default function PdfEditorTool({
         hasRealProgressRef.current = false;
         setPdfLoaded(true);
         setEditorReady(true);
+        setEditorBooted(true);
         setBusy(false);
         setLoadCancelled(false);
         setError("");
@@ -588,6 +684,7 @@ export default function PdfEditorTool({
         const pct = Math.min(95, Math.round(ratio * 95));
         hasRealProgressRef.current = true;
         if (!editorReady) setEditorReady(true);
+        if (!editorBooted) setEditorBooted(true);
         if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
         uploadProgressStartTimeoutRef.current = null;
         if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
@@ -712,11 +809,14 @@ export default function PdfEditorTool({
     injectMobileOverrides();
     setIframeReady(true);
     setEditorReady(false);
+    if (detectEditorBooted()) {
+      setEditorBooted(true);
+    }
     if (editorPingTimerRef.current) {
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
     }
-  }, [injectMobileOverrides]);
+  }, [detectEditorBooted, injectMobileOverrides]);
 
   return (
     <div className={shellClassName}>
