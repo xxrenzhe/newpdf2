@@ -130,6 +130,43 @@ const FALLBACK_FONTS = Object.freeze({
     symbols: 'fonts/NotoSansSymbols2.woff',
     cjk: CJK_FONT_FILES.kr,
 });
+const FONT_FETCH_TIMEOUT_MS = 20000;
+
+const fetchArrayBufferWithTimeout = (url, timeoutMs = FONT_FETCH_TIMEOUT_MS, onSuccess) => {
+    const resolvedTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : FONT_FETCH_TIMEOUT_MS;
+    if (typeof AbortController === 'function') {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            try {
+                controller.abort();
+            } catch {
+                // ignore
+            }
+        }, resolvedTimeout);
+        return fetch(url, { signal: controller.signal })
+            .then(res => (res.ok ? res.arrayBuffer() : false))
+            .then(buffer => {
+                if (buffer && typeof onSuccess === 'function') {
+                    onSuccess(buffer);
+                }
+                return buffer;
+            })
+            .catch(() => false)
+            .finally(() => clearTimeout(timeoutId));
+    }
+
+    const fetchPromise = fetch(url)
+        .then(res => (res.ok ? res.arrayBuffer() : false))
+        .then(buffer => {
+            if (buffer && typeof onSuccess === 'function') {
+                onSuccess(buffer);
+            }
+            return buffer;
+        })
+        .catch(() => false);
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), resolvedTimeout));
+    return Promise.race([fetchPromise, timeoutPromise]);
+};
 
 export class Font {
     static #cache = {};
@@ -160,7 +197,18 @@ export class Font {
         }
         const fallbackFile = Font.getFallbackSubsetFontFile();
         let url = ASSETS_URL + fallbackFile;
-        Font.#fallbackFont = fetch(url).then(res => res.arrayBuffer());
+        Font.#fallbackFont = fetchArrayBufferWithTimeout(url)
+            .then(buffer => {
+                if (!buffer) {
+                    Font.#fallbackFont = null;
+                    return false;
+                }
+                return buffer;
+            })
+            .catch(() => {
+                Font.#fallbackFont = null;
+                return false;
+            });
         return Font.#fallbackFont;
     }
 
@@ -465,14 +513,13 @@ export class Font {
         const url = baseUrl.endsWith('/') ? baseUrl + fontFile : baseUrl + '/' + fontFile;
 
         if (!Font.#assetFetch[fontFile]) {
-            Font.#assetFetch[fontFile] = fetch(url)
-                .then(res => (res.ok ? res.arrayBuffer() : false))
-                .then(buffer => {
-                    if (buffer) {
-                        Font.#assetCache[fontFile] = buffer;
-                    }
-                    return buffer;
-                })
+            Font.#assetFetch[fontFile] = fetchArrayBufferWithTimeout(
+                url,
+                FONT_FETCH_TIMEOUT_MS,
+                buffer => {
+                    Font.#assetCache[fontFile] = buffer;
+                }
+            )
                 .catch(() => false)
                 .finally(() => {
                     delete Font.#assetFetch[fontFile];

@@ -13,8 +13,11 @@ type PdfPasswordErrorMessage = { type: "pdf-password-error"; loadToken?: number 
 type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number };
 type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
 type PdfOpenToolMessage = { type: "open-tool"; tool?: string };
+type PdfEditorReadyMessage = { type: "pdf-editor-ready" };
 
 const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
+const EDITOR_READY_TIMEOUT_MS = 12000;
+const PDF_LOAD_TIMEOUT_MS = 60000;
 
 function UploadProgressOverlay({
   open,
@@ -161,6 +164,7 @@ export default function PdfEditorTool({
     [t]
   );
   const [iframeReady, setIframeReady] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -308,9 +312,9 @@ export default function PdfEditorTool({
         const buffer = await promise.catch(() => null);
         if (cancelled || activeLoadTokenRef.current !== token) return;
         if (!buffer) {
-        postToEditor({ type: "load-pdf", blob: file, loadToken: token, fileName: file.name });
-        return;
-      }
+          postToEditor({ type: "load-pdf", blob: file, loadToken: token, fileName: file.name });
+          return;
+        }
         postToEditor({ type: "load-pdf", data: buffer, loadToken: token, fileName: file.name }, [buffer]);
         return;
       }
@@ -334,6 +338,30 @@ export default function PdfEditorTool({
     if (!iframeReady) return;
     postToEditor({ type: "set-file-name", fileName: file.name });
   }, [file.name, iframeReady, postToEditor]);
+
+  useEffect(() => {
+    if (!iframeReady || editorReady || pdfLoaded || error || !busy) return;
+    const timeoutId = window.setTimeout(() => {
+      setBusy(false);
+      setLoadCancelled(false);
+      setError(
+        t("pdfEditorLoadFailed", "The editor failed to load. Please refresh and try again.")
+      );
+    }, EDITOR_READY_TIMEOUT_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [busy, editorReady, error, iframeReady, pdfLoaded, t]);
+
+  useEffect(() => {
+    if (!busy || pdfLoaded || error) return;
+    const timeoutId = window.setTimeout(() => {
+      setBusy(false);
+      setLoadCancelled(false);
+      setError(
+        t("pdfLoadTimeout", "This PDF is taking too long to load. Please try again.")
+      );
+    }, PDF_LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [busy, error, pdfLoaded, t]);
 
   const uploadOverlayOpen = !error && !pdfLoaded && (busy || !iframeReady);
 
@@ -405,10 +433,16 @@ export default function PdfEditorTool({
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
       if (evt.source !== iframeRef.current?.contentWindow) return;
+      if (hasMessageType<PdfEditorReadyMessage["type"]>(evt.data, "pdf-editor-ready")) {
+        setIframeReady(true);
+        setEditorReady(true);
+        return;
+      }
       if (hasMessageType<PdfLoadedMessage["type"]>(evt.data, "pdf-loaded")) {
         if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
         hasRealProgressRef.current = false;
         setPdfLoaded(true);
+        setEditorReady(true);
         setBusy(false);
         setLoadCancelled(false);
       }
@@ -446,7 +480,7 @@ export default function PdfEditorTool({
         const message =
           typeof rawMessage === "string" && rawMessage.trim().length > 0
             ? rawMessage.trim()
-          : t("pdfExportFailed", "Something went wrong while exporting your PDF. Please try again.");
+          : t("pdfEditorFailed", "Something went wrong in the PDF editor. Please try again.");
         setBusy(false);
         setLoadCancelled(false);
         setError(message);
@@ -544,6 +578,7 @@ export default function PdfEditorTool({
   const handleIframeLoad = useCallback(() => {
     injectMobileOverrides();
     setIframeReady(true);
+    setEditorReady(false);
   }, [injectMobileOverrides]);
 
   return (

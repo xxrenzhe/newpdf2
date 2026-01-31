@@ -51,6 +51,8 @@ const TOOLS = [
 // Offline font assets base (same-origin). `Font.fetchFont()` loads from this base.
 // Example: "/pdfeditor/assets/".
 Font.fontUrl = ASSETS_URL;
+const EDITOR_READY_MESSAGE = 'pdf-editor-ready';
+const DOWNLOAD_TIMEOUT_MS = 45000;
 // let fileUrl = 'http://localhost/files/150kb.pdf';
 // let fileUrl = 'http://localhost/files/TEST/d/EMRPUB_2012_EN_1362.pdf';
 // let fileUrl = 'http://localhost/files/E0300IUC22_Invoice.pdf';
@@ -92,27 +94,29 @@ if (lang && lang != 'en') {
 var langItem = document.querySelector(".lang_item");
 var langChecked = document.querySelector(".lang_checked");
 var langText = document.querySelector('.langText');
-langItem.addEventListener('click',()=>{
-    if(langChecked.classList.contains('hide')){
-        langChecked.classList.remove('hide');
-    }else{
-        langChecked.classList.add('hide');
-    }
-})
-langChecked.addEventListener('click',(e)=>{
-    if(e.target.className == 'lang_checked_item'){
-        langChecked.classList.add('hide');
-        langText.innerHTML = e.target.innerHTML;
-        var langCode = e.target.dataset.lang;
-        if (LANG_LIST.indexOf(langCode) >= 0) {
-            Locale.langCode = langCode;
-            Locale.load(langCode).then(() => {
-                Locale.bind();
-                setupButtonA11y();
-            });
+if (langItem && langChecked && langText) {
+    langItem.addEventListener('click',() => {
+        if(langChecked.classList.contains('hide')){
+            langChecked.classList.remove('hide');
+        }else{
+            langChecked.classList.add('hide');
         }
-    }
-})
+    });
+    langChecked.addEventListener('click',(e) => {
+        if(e.target.className == 'lang_checked_item'){
+            langChecked.classList.add('hide');
+            langText.innerHTML = e.target.innerHTML;
+            var langCode = e.target.dataset.lang;
+            if (LANG_LIST.indexOf(langCode) >= 0) {
+                Locale.langCode = langCode;
+                Locale.load(langCode).then(() => {
+                    Locale.bind();
+                    setupButtonA11y();
+                });
+            }
+        }
+    });
+}
 
 // let fileUrl = getUrlParam('fileUrl') || 'http://localhost/files/hr-technology.pdf';
 let fileUrl = getUrlParam('fileUrl') || null;
@@ -220,6 +224,64 @@ function postToParent(message) {
     }
 }
 
+let editorReadyPosted = false;
+const postEditorReady = () => {
+    if (editorReadyPosted) return;
+    editorReadyPosted = true;
+    postToParent({ type: EDITOR_READY_MESSAGE });
+};
+
+const normalizeErrorMessage = (value) => {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (value && typeof value.message === 'string' && value.message.trim()) return value.message.trim();
+    if (value && typeof value.reason === 'string' && value.reason.trim()) return value.reason.trim();
+    try {
+        return String(value);
+    } catch {
+        return 'Unknown error';
+    }
+};
+
+let lastErrorMessage = '';
+let lastErrorAt = 0;
+const reportError = (value, context) => {
+    const message = normalizeErrorMessage(value);
+    const now = Date.now();
+    if (message === lastErrorMessage && now - lastErrorAt < 1500) {
+        return;
+    }
+    lastErrorMessage = message;
+    lastErrorAt = now;
+    const prefix = context ? `${context}: ` : '';
+    const payload = { type: 'pdf-error', message: `${prefix}${message}` };
+    if (hostLoadToken) {
+        payload.loadToken = hostLoadToken;
+    }
+    postToParent(payload);
+};
+
+try {
+    if (typeof queueMicrotask === 'function') {
+        queueMicrotask(postEditorReady);
+    } else {
+        setTimeout(postEditorReady, 0);
+    }
+} catch {
+    setTimeout(postEditorReady, 0);
+}
+
+window.addEventListener('error', (event) => {
+    reportError(event?.error || event?.message || 'Script error', 'Editor');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    reportError(event?.reason || 'Unhandled promise rejection', 'Editor');
+});
+
+PDFEvent.on(Events.ERROR, (evt) => {
+    reportError(evt?.data?.message || evt?.data || 'Unknown error', 'Editor');
+});
+
 PDFEvent.on(Events.LOAD_PROGRESS, (evt) => {
     const loaded = evt?.data?.loaded;
     const total = evt?.data?.total;
@@ -267,40 +329,48 @@ editor.init();
 
 let loading = new Loading(null, 96, 96, '#fff');
 let elDownload = document.querySelector('.btn-download');
-elDownload.addEventListener('click', () => {
-    
+const handleDownloadClick = () => {
     let elDiv = document.querySelector('._loadingv2');
-    if (!elDiv) {
-        editor.download();
-        return;
+    const elDivParent = elDiv ? elDiv.parentElement : null;
+    let intervalItem = null;
+    let downloadTimeout = null;
+
+    if (elDiv) {
+        loading.setIcon(elDiv);
+        var loadItme = 0;
+        intervalItem = setInterval(() => {
+            loadItme ++;
+            if(loadItme<99){
+                downloadLoad(loadItme);
+            }else{
+                downloadLoad(99);
+                clearInterval(intervalItem);
+            }
+        },100);
+        elDiv.classList.remove('_loading');
+        loading.start();
     }
-    const elDivParent = elDiv.parentElement;
-    loading.setIcon(elDiv);
-    var loadItme = 0
-    var intervalItem = setInterval(()=>{
-        loadItme ++;
-        if(loadItme<99){
-            downloadLoad(loadItme)
-        }else{
-            downloadLoad(99);
-            clearInterval(intervalItem)
-        }
-    },100)
-    elDiv.classList.remove('_loading');
-    loading.start();
 
     let cleaned = false;
     const cleanup = () => {
         if (cleaned) return;
         cleaned = true;
-        clearInterval(intervalItem);
-        downloadLoad(100);
-        loading.end(() => {
-            downloadLoad(0);
-            if (elDivParent && !elDivParent.contains(elDiv)) {
-                elDivParent.appendChild(elDiv);
-            }
-        });
+        if (intervalItem) {
+            clearInterval(intervalItem);
+        }
+        if (downloadTimeout) {
+            clearTimeout(downloadTimeout);
+            downloadTimeout = null;
+        }
+        if (elDiv) {
+            downloadLoad(100);
+            loading.end(() => {
+                downloadLoad(0);
+                if (elDivParent && !elDivParent.contains(elDiv)) {
+                    elDivParent.appendChild(elDiv);
+                }
+            });
+        }
         PDFEvent.unbind(Events.DOWNLOAD_AFTER, cleanup);
         PDFEvent.unbind(Events.ERROR, onError);
     };
@@ -317,8 +387,19 @@ elDownload.addEventListener('click', () => {
 
     PDFEvent.on(Events.DOWNLOAD_AFTER, cleanup);
     PDFEvent.on(Events.ERROR, onError);
+    if (DOWNLOAD_TIMEOUT_MS > 0) {
+        downloadTimeout = setTimeout(() => {
+            PDFEvent.dispatch(Events.ERROR, { message: 'Download timed out. Please try again.' });
+        }, DOWNLOAD_TIMEOUT_MS);
+    }
     editor.download();
-});
+};
+
+if (elDownload) {
+    elDownload.addEventListener('click', handleDownloadClick);
+} else {
+    reportError('Download button missing', 'Editor');
+}
 
 // PDFEvent.on(Events.TOOLBAR_INIT, () => {
 //     editor.toolbar.get('forms').click();
@@ -329,7 +410,9 @@ let sentLoadedForLoadId = 0;
 let readyFallbackTimer = null;
 
 PDFEvent.on(Events.READER_INIT, () => {
-    elDownload.style.display = 'block';
+    if (elDownload) {
+        elDownload.style.display = 'block';
+    }
     readyLoadId = reader.loadId;
     if (readyFallbackTimer) {
         clearTimeout(readyFallbackTimer);
@@ -439,7 +522,11 @@ window.addEventListener('message', e => {
         postToParent({ type: 'pdf-load-cancelled', loadToken: cancelledToken });
     }
     if (e.data.type == 'download') {
-        elDownload.click();
+        if (elDownload) {
+            elDownload.click();
+        } else {
+            reportError('Download button missing', 'Editor');
+        }
     }
     if (e.data.type === 'set-tool' && typeof e.data.tool === 'string') {
         try {

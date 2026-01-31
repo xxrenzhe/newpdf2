@@ -143,6 +143,10 @@ export class PDFReader {
         if (!this.options.url && !this.options.data) {
             return false;
         }
+        if (!this.pdfjsLib || typeof this.pdfjsLib.getDocument !== 'function') {
+            PDFEvent.dispatch(Events.ERROR, { message: 'PDF.js failed to load. Please refresh and try again.' });
+            return false;
+        }
 
         const loadId = typeof loadIdOverride === 'number' ? loadIdOverride : ++this.loadId;
         this.thumbsInitialized = false;
@@ -245,8 +249,10 @@ export class PDFReader {
             if (e.name == 'PasswordException') {
                 // alert('Password protected file');
                 PDFEvent.dispatch(Events.PASSWORD_ERROR);
+                return false;
             }
             console.log(e);
+            PDFEvent.dispatch(Events.ERROR, { message: e?.message || 'Failed to load PDF.' });
             return false;
         }
     }
