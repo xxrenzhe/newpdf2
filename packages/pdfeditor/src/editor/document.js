@@ -214,6 +214,18 @@ export class PDFDocument {
         });
     }
 
+    ensureFallbackFonts() {
+        for (const [pageId, fonts] of Object.entries(this.embedFonts)) {
+            if (!fonts) continue;
+            for (const [fontFile, font] of Object.entries(fonts)) {
+                if (font == null) {
+                    // Kick off a Unicode-safe fallback embed so downloads don't hang.
+                    this.setFont(pageId, fontFile, null);
+                }
+            }
+        }
+    }
+
     addPage(pageNum) {
         const page = new PDFPage();
         const prevPage = this.getPage(pageNum - 1);

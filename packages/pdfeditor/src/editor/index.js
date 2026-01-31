@@ -56,6 +56,8 @@ const btnForms = 'tool_forms';
 const btnTextArt = 'tool_textArt';
 const btnSeal = 'tool_seal';
 
+const DOWNLOAD_RETRY_DELAY_MS = 500;
+const DOWNLOAD_FONT_WAIT_MS = 10000;
 
 
 export class PDFEditor {
@@ -77,6 +79,10 @@ export class PDFEditor {
     fontWarningBanner = null;
     actionsBarReady = false;
     actionsBarInitAttempts = 0;
+    downloadActive = false;
+    downloadInProgress = false;
+    downloadWaitTimer = null;
+    downloadWaitStartedAt = 0;
 
     constructor(options, pdfData, reader) {
         if (typeof(options) == 'object') {
@@ -166,8 +172,26 @@ export class PDFEditor {
         });
 
         PDFEvent.on(Events.DOWNLOAD, () => {
+            if (!this.downloadActive || this.downloadInProgress) return;
+
             //检查字体是否加载完成
-            if (!this.pdfDocument.checkFonts()) return;
+            let fontsReady = this.pdfDocument.checkFonts();
+            if (!fontsReady) {
+                if (!this.downloadWaitStartedAt) {
+                    this.downloadWaitStartedAt = Date.now();
+                }
+                const elapsed = Date.now() - this.downloadWaitStartedAt;
+                if (elapsed >= DOWNLOAD_FONT_WAIT_MS) {
+                    this.pdfDocument.ensureFallbackFonts();
+                    fontsReady = this.pdfDocument.checkFonts();
+                }
+                if (!fontsReady) {
+                    this.#scheduleDownloadRetry();
+                    return;
+                }
+            }
+
+            this.downloadInProgress = true;
             this.pdfDocument
                 .save(true)
                 .then(async blob => {
@@ -186,6 +210,8 @@ export class PDFEditor {
                     PDFEvent.dispatch(Events.ERROR, err);
                 })
                 .finally(() => {
+                    this.downloadInProgress = false;
+                    this.#resetDownloadState();
                     PDFEvent.dispatch(Events.DOWNLOAD_AFTER);
                 });
         });
@@ -201,6 +227,10 @@ export class PDFEditor {
                 this.pdfDocument.setFont(data.pageId, data.fontFile, null);
                 PDFEvent.dispatch(Events.DOWNLOAD);
             }
+        });
+
+        PDFEvent.on(Events.ERROR, () => {
+            this.#resetDownloadState();
         });
 
         window.addEventListener('mousedown', e => {
@@ -297,6 +327,13 @@ export class PDFEditor {
 
     async download(fileName) {
         try {
+            if (this.downloadActive) return;
+            this.downloadActive = true;
+            this.downloadWaitStartedAt = Date.now();
+            if (this.downloadWaitTimer) {
+                clearTimeout(this.downloadWaitTimer);
+                this.downloadWaitTimer = null;
+            }
             await this.flushData();
             PDFEvent.dispatch(Events.SAVE);
             // this.pdfDocument.save(true).then(async blob => {
@@ -309,7 +346,26 @@ export class PDFEditor {
             // });
         } catch (e) {
             console.log(e);
+            this.#resetDownloadState();
             PDFEvent.dispatch(Events.ERROR, e);
+        }
+    }
+
+    #scheduleDownloadRetry() {
+        if (this.downloadWaitTimer) return;
+        this.downloadWaitTimer = setTimeout(() => {
+            this.downloadWaitTimer = null;
+            PDFEvent.dispatch(Events.DOWNLOAD);
+        }, DOWNLOAD_RETRY_DELAY_MS);
+    }
+
+    #resetDownloadState() {
+        this.downloadActive = false;
+        this.downloadInProgress = false;
+        this.downloadWaitStartedAt = 0;
+        if (this.downloadWaitTimer) {
+            clearTimeout(this.downloadWaitTimer);
+            this.downloadWaitTimer = null;
         }
     }
 
