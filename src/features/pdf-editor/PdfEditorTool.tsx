@@ -18,6 +18,7 @@ type PdfEditorReadyMessage = { type: "pdf-editor-ready" };
 const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 const EDITOR_READY_TIMEOUT_MS = 12000;
 const PDF_LOAD_TIMEOUT_MS = 60000;
+const IFRAME_LOAD_TIMEOUT_MS = 15000;
 
 function UploadProgressOverlay({
   open,
@@ -191,6 +192,21 @@ export default function PdfEditorTool({
   useEffect(() => {
     setUploadTip(uploadTips[0] ?? "");
   }, [uploadTips]);
+
+  useEffect(() => {
+    setIframeReady(false);
+    setEditorReady(false);
+    setPdfLoaded(false);
+    setLoadCancelled(false);
+    setBusy(false);
+    setError("");
+    pendingLoadTokenRef.current = null;
+    pendingLoadFileRef.current = null;
+    if (editorPingTimerRef.current) {
+      window.clearInterval(editorPingTimerRef.current);
+      editorPingTimerRef.current = null;
+    }
+  }, [iframeSrc]);
 
   const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
     const win = iframeRef.current?.contentWindow;
@@ -391,6 +407,18 @@ export default function PdfEditorTool({
   }, [editorReady, iframeReady, sendLoadToEditor]);
 
   useEffect(() => {
+    if (iframeReady || error || !uploadOverlayOpen) return;
+    const timeoutId = window.setTimeout(() => {
+      setBusy(false);
+      setLoadCancelled(false);
+      setError(
+        t("pdfEditorIframeLoadFailed", "The editor failed to load. Please refresh and try again.")
+      );
+    }, IFRAME_LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [error, iframeReady, t, uploadOverlayOpen]);
+
+  useEffect(() => {
     if (!iframeReady || editorReady || pdfLoaded || error || !busy) return;
     const timeoutId = window.setTimeout(() => {
       setBusy(false);
@@ -502,6 +530,7 @@ export default function PdfEditorTool({
         setEditorReady(true);
         setBusy(false);
         setLoadCancelled(false);
+        setError("");
       }
       if (hasMessageType<PdfProgressMessage["type"]>(evt.data, "pdf-progress")) {
         if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;

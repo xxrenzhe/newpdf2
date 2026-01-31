@@ -67,11 +67,16 @@ class Stamp extends ToolbarItemBase {
         this.dropdown.setAttribute('id','dropdown_stamp')
         this.dropdown.innerHTML = require('./actions.html')();
         var toolStamp = document.querySelector(".tool_stamp");
+        if (!toolStamp) {
+            return;
+        }
         toolStamp.appendChild(this.dropdown);
         const pdfMainWrapper = document.querySelector(".pdf-wrapper");
-        pdfMainWrapper.addEventListener('click',()=>{
-            this.dropdown.style.display = 'none';
-        })
+        if (pdfMainWrapper) {
+            pdfMainWrapper.addEventListener('click',()=>{
+                this.dropdown.style.display = 'none';
+            })
+        }
         
         const elBody = this.dialog.elDialogBody;
         const elDropDowm =  this.dropdown;

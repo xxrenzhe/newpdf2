@@ -49,14 +49,19 @@ class TextArt extends ToolbarItemBase {
         this.dropdown.classList.add('dropdown_box');
         this.dropdown.innerHTML = require('./popup.html')();
         var toolSignature = document.querySelector(".tool_textArt");
+        if (!toolSignature) {
+            return;
+        }
         toolSignature.appendChild(this.dropdown);
         const elBody = this.dropdown;
         const textArtAll = elBody.querySelectorAll("."+textArt);
         const textArtFontDom = elBody.querySelectorAll("."+textArtFont);
         const pdfMainWrapper = document.querySelector(".pdf-wrapper");
-        pdfMainWrapper.addEventListener('click',()=>{
-            this.dropdown.style.display = 'none';
-        })
+        if (pdfMainWrapper) {
+            pdfMainWrapper.addEventListener('click',()=>{
+                this.dropdown.style.display = 'none';
+            })
+        }
         textArtAll.forEach(el=>{
             el.addEventListener('click',()=>{
                 el.classList.add('active');
@@ -102,7 +107,9 @@ class TextArt extends ToolbarItemBase {
                 this.attrs.fontFamily = el.getAttribute('data-fontFamily');
                 this.attrs.fontFile = 'art_font/'+el.getAttribute('data-fontFile');
                 if(fontListBox.indexOf(fontUrl+this.attrs.fontFile) == -1){
-                    loadDom.style.display = 'block';
+                    if (loadDom) {
+                        loadDom.style.display = 'block';
+                    }
                 }
                 this.initFont(fontUrl+this.attrs.fontFile,this.attrs.fontFamily);
                 var siblingDemo = sibling(el);
@@ -333,7 +340,9 @@ class TextArt extends ToolbarItemBase {
             if (window.FontFace) {
                 var newfontFile = new FontFace(fontFamily, 'url('+fontFile+')');
                 newfontFile.load().then( ()=> {
-                    loadDom.style.display = 'none';
+                    if (loadDom) {
+                        loadDom.style.display = 'none';
+                    }
                     setTimeout(()=>{
                             
                             let scale = window.devicePixelRatio || 1;
@@ -347,7 +356,9 @@ class TextArt extends ToolbarItemBase {
                             this.dropdown.style.display = 'none';
                     },100)
                 },  (err)=>{
-                loadDom.style.display = 'none';
+                if (loadDom) {
+                    loadDom.style.display = 'none';
+                }
                 this.attrs.fontFamily = defaultFont.fontFamily;
                 this.attrs.fontFile = defaultFont.fontFile;
                 this.attrs.showName = defaultFont.showName;

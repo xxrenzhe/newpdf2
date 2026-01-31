@@ -18,7 +18,7 @@ export type GuestDocumentRecord = {
 };
 
 const DB_NAME = "qwerpdf";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = "guest-documents";
 
 const inMemoryStore = new Map<string, GuestDocumentRecord>();

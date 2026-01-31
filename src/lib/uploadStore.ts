@@ -56,8 +56,14 @@ const ENCRYPTION_KEY_NAME = "qwerpdf-upload-key-v1";
 // 是否启用加密 (可通过环境变量配置)
 const ENABLE_ENCRYPTION =
   typeof window !== "undefined" &&
-  (process.env.NEXT_PUBLIC_ENABLE_STORAGE_ENCRYPTION === "true" ||
-    localStorage.getItem("qwerpdf-enable-encryption") === "true");
+  (() => {
+    if (process.env.NEXT_PUBLIC_ENABLE_STORAGE_ENCRYPTION === "true") return true;
+    try {
+      return localStorage.getItem("qwerpdf-enable-encryption") === "true";
+    } catch {
+      return false;
+    }
+  })();
 
 // ============================================================================
 // 内存存储
