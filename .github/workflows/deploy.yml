@@ -108,8 +108,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
 
   # ============================================
   # Job 3（可选）：部署到 GCP Cloud Run（自动）
@@ -191,8 +190,7 @@ jobs:
           push: true
           tags: ${{ steps.meta-ar.outputs.tags }}
           labels: ${{ steps.meta-ar.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: 部署到 Cloud Run（仅更新镜像；环境变量建议由 Secret Manager 注入）
         if: ${{ steps.gate.outputs.enabled == 'true' }}
