@@ -51,6 +51,21 @@ const BUILTIN_FONT_NAMES = new Set([
     'Symbol',
     'ZapfDingbats'
 ]);
+const SYSTEM_FONT_FAMILIES = new Set([
+    'Times New Roman',
+    'Arial',
+    'Courier New',
+    'Symbol',
+    'Zapf Dingbats',
+    'ZapfDingbats'
+]);
+const SYSTEM_FONT_ALIASES = [
+    { test: /times\s*new\s*roman|timesnewroman/i, family: 'Times New Roman' },
+    { test: /arial/i, family: 'Arial' },
+    { test: /courier\s*new|couriernew/i, family: 'Courier New' },
+    { test: /symbol/i, family: 'Symbol' },
+    { test: /zapf\s*dingbats|zapfdingbats/i, family: 'Zapf Dingbats' }
+];
 const FONT_NAME_ALIASES = [
     {
         test: /arial/i,
@@ -229,6 +244,30 @@ export class Font {
         return String(locale || '').replace('_', '-').toLowerCase();
     }
 
+    static #normalizeFontName(value) {
+        if (!value) return '';
+        return String(value)
+            .replace(/^[A-Z]{6}\+/, '')
+            .replace(/_/g, ' ')
+            .trim();
+    }
+
+    static #getSystemFontFamily(value) {
+        const normalized = Font.#normalizeFontName(value);
+        if (!normalized) return '';
+        if (SYSTEM_FONT_FAMILIES.has(normalized)) return normalized;
+        for (const alias of SYSTEM_FONT_ALIASES) {
+            if (alias.test.test(normalized)) {
+                return alias.family;
+            }
+        }
+        return '';
+    }
+
+    static isSystemFontFamily(value) {
+        return Boolean(Font.#getSystemFontFamily(value));
+    }
+
     static #isCjkLocale(locale) {
         const normalized = Font.#normalizeLocale(locale);
         return normalized.startsWith('zh') || normalized.startsWith('ja') || normalized.startsWith('ko');
@@ -349,6 +388,7 @@ export class Font {
         if (!fontFile) return false;
         const value = String(fontFile);
         if (Font.isBuiltinFontName(value)) return true;
+        if (Font.isSystemFontFamily(value)) return true;
         if (SAFE_FONT_FILES.has(value)) return true;
         const lower = value.toLowerCase();
         return SAFE_FONT_FILE_PREFIXES.some(prefix => lower.startsWith(prefix));
@@ -359,7 +399,7 @@ export class Font {
     }
 
     static isSafeFontFamily(fontFamily) {
-        return SAFE_FONT_FAMILIES.has(String(fontFamily || ''));
+        return SAFE_FONT_FAMILIES.has(String(fontFamily || '')) || Font.isSystemFontFamily(fontFamily);
     }
 
     static #findAlias(name) {
@@ -375,8 +415,12 @@ export class Font {
 
     static normalizeFontFamily(fontFamily, fontName, text) {
         const family = String(fontFamily || '');
-        if (Font.isSafeFontFamily(family)) {
+        if (Font.isSafeFontFamily(family) || Font.isSystemFontFamily(family)) {
             return family;
+        }
+        const name = String(fontName || '');
+        if (Font.isSafeFontFamily(name) || Font.isSystemFontFamily(name)) {
+            return name;
         }
         const alias = Font.#findAlias(fontName || family);
         if (alias) {
@@ -401,8 +445,8 @@ export class Font {
     }
 
     static resolveSafeFont({ fontFamily, fontFile, fontName, text }) {
-        const originalFamily = fontFamily;
-        const originalFile = fontFile;
+        const originalFamily = fontFamily || fontName || '';
+        const originalFile = fontFile || fontName || fontFamily || '';
         const safeFamily = Font.normalizeFontFamily(fontFamily, fontName, text);
         const safeFile = Font.normalizeFontFile(fontFile, safeFamily, text, fontName);
         const showName = Font.getFontDisplayName(safeFamily);
