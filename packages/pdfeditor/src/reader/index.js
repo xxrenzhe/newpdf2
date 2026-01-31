@@ -105,6 +105,7 @@ export class PDFReader {
 
         PDFEvent.on(Events.SET_SCALE, (e, sendResponse) => {
             this.scale = e.data;
+            if (!this.mainBox) return;
             if (this.viewMode == VIEW_MODE.VIEW_2PAGE) {
                 this.mainBox.classList.add(VIEW_2PAGE_CLASS);
             } else {
@@ -789,7 +790,8 @@ export class PDFReader {
         this.btnZoomPrev = document.getElementById(btnZoomPrev);
         if (this.btnZoomPrev) {
             this.btnZoomPrev.addEventListener('click', () => {
-                this.btnZoomRange?.stepDown(25);
+                if (!this.btnZoomRange) return;
+                this.btnZoomRange.stepDown(25);
                 let scale = this.btnZoomRange.value / 100;
                 this.setViewMode(scale);
             });
@@ -798,7 +800,8 @@ export class PDFReader {
         this.btnZoomNext = document.getElementById(btnZoomNext);
         if (this.btnZoomNext) {
             this.btnZoomNext.addEventListener('click', () => {
-                this.btnZoomRange?.stepUp(25);
+                if (!this.btnZoomRange) return;
+                this.btnZoomRange.stepUp(25);
                 let scale = this.btnZoomRange.value / 100;
                 this.setViewMode(scale);
             });
@@ -821,6 +824,7 @@ export class PDFReader {
         if (this.btnRotatePrev) {
             this.btnRotatePrev.forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (!this.mainBox) return;
                     this.mainBox.classList.remove(rotates[currRotate]);
                     currRotate--;
                     if (currRotate < 0) {
@@ -836,6 +840,7 @@ export class PDFReader {
         if (this.btnRotateNext) {
             this.btnRotateNext.forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (!this.mainBox) return;
                     this.mainBox.classList.remove(rotates[currRotate]);
                     currRotate++;
                     if (currRotate > rotates.length) {
@@ -849,6 +854,9 @@ export class PDFReader {
         }
 
         PDFEvent.on(Events.SET_SCALE, e => {
+            if (!this.btnSelectZoom || !this.btnZoomRange) {
+                return;
+            }
             let scale = e.data;
             let isNewOption = true;
             const options = this.btnSelectZoom.options;
@@ -883,15 +891,18 @@ export class PDFReader {
         this.btnThumbsSlider = document.getElementById(btnThumbsSlider);
         this.btnThumbsClose = document.getElementById(btnThumbsClose);
         this.elThumbsWrapper = document.getElementById(thumbsWrapper);
-        if (this.options.expandThumbs) {
+        if (this.options.expandThumbs && this.btnThumbsSlider && this.elThumbsWrapper) {
             this.btnThumbsSlider.classList.add('active');
-            this.elThumbsWrapper?.classList.add('show');
+            this.elThumbsWrapper.classList.add('show');
             this.elThumbsWrapper.style.display = 'flex';
             // setTimeout(() => {
             //     this.zoom(this.scale, this.renderType, true);
             // }, 200);
         }
         const toggleThumbs = () => {
+            if (!this.btnThumbsSlider || !this.elThumbsWrapper) {
+                return;
+            }
             const opening = !this.btnThumbsSlider.classList.contains('active');
             if (opening) {
                 this.#ensureThumbs();

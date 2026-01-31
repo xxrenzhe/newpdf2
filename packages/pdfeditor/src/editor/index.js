@@ -234,15 +234,20 @@ export class PDFEditor {
         });
 
         window.addEventListener('mousedown', e => {
-            if (e.target.getAttribute('role') == 'presentation' 
-                || e.target.getAttribute('contenteditable')
-                || e.target.parentElement.getAttribute('contenteditable')) {
+            const target = e.target;
+            if (!target || typeof target.getAttribute !== 'function') {
                 return;
             }
-            const page = this.pdfDocument.getPageActive();
+            const parent = target.parentElement;
+            if (target.getAttribute('role') == 'presentation' 
+                || target.getAttribute('contenteditable')
+                || parent?.getAttribute('contenteditable')) {
+                return;
+            }
+            const page = this.pdfDocument?.getPageActive?.();
             if (page && page.elements.activeId) {
                 const element = page.elements.get(page.elements.activeId);
-                if (element.el.classList.contains('active')) {
+                if (element?.el?.classList?.contains('active')) {
                     element.el.classList.remove('active');
                     PDFEvent.dispatch(Events.ELEMENT_BLUR, {
                         page,
@@ -314,10 +319,19 @@ export class PDFEditor {
     }
 
     async reset() {
-        this.pdfDocument.embedFonts = {};
-        this.history.clear();
-        this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS).innerHTML = '';
-        this.elHistoryBtn.style.display = 'none';
+        if (this.pdfDocument) {
+            this.pdfDocument.embedFonts = {};
+        }
+        this.history?.clear();
+        if (this.elHistoryWrapper) {
+            const historyBox = this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS);
+            if (historyBox) {
+                historyBox.innerHTML = '';
+            }
+        }
+        if (this.elHistoryBtn) {
+            this.elHistoryBtn.style.display = 'none';
+        }
         // this.reader.pdfjsLib.getDocument(this.pdfData).promise.then(documentProxy => {
         //     this.reader.pdfDocument.documentProxy = documentProxy;
         // })
@@ -629,6 +643,9 @@ export class PDFEditor {
 
         PDFEvent.on(Events.HISTORY_CHANGE, e => {
             const { step, maxStep } = e.data;
+            if (!this.btnUndo || !this.btnRedo) {
+                return;
+            }
             if (step < 1) {
                 this.btnUndo.classList.add(DISABLED_CLASS);
             } else {
@@ -649,7 +666,10 @@ export class PDFEditor {
         this.btnHistorySlider = document.getElementById(btnHistorySlider);
         this.elHistoryWrapper = document.getElementById(historyWrapper);
         const toggleHistory = () => {
-            if (this.btnFormsSlider.classList.contains('active')) {
+            if (!this.btnHistorySlider || !this.elHistoryWrapper) {
+                return;
+            }
+            if (this.btnFormsSlider?.classList.contains('active')) {
                 this.btnFormsSlider.click();
             }
             
@@ -660,7 +680,7 @@ export class PDFEditor {
             }
             elSliderToggle(this.elHistoryWrapper, 'show', 'flex');
         }
-        if (this.btnHistorySlider) {
+        if (this.btnHistorySlider && this.elHistoryWrapper) {
             this.btnHistorySlider.addEventListener('click', toggleHistory);
         }
 
@@ -693,23 +713,28 @@ export class PDFEditor {
         };
         
 
-        this.elHistoryBtn = this.elHistoryWrapper.querySelector('.' + HISTORY_BTN_CLASS);
-        this.elHistoryBtn.addEventListener('click', e => {
-            let elPageBox = this.elHistoryWrapper.querySelectorAll('.'+ HISTORY_PAGE_CLASS);
-            elPageBox.forEach(elPage => {
-                const page = this.pdfDocument.getPageForId(elPage.getAttribute('data-pageid'));
-                page.elements.removeAll();
-                elPage.querySelectorAll('.history-item').forEach(elItem => {
-                    elItem.remove();
+        this.elHistoryBtn = this.elHistoryWrapper?.querySelector('.' + HISTORY_BTN_CLASS);
+        if (this.elHistoryBtn && this.elHistoryWrapper) {
+            this.elHistoryBtn.addEventListener('click', e => {
+                let elPageBox = this.elHistoryWrapper.querySelectorAll('.'+ HISTORY_PAGE_CLASS);
+                elPageBox.forEach(elPage => {
+                    const page = this.pdfDocument.getPageForId(elPage.getAttribute('data-pageid'));
+                    page.elements.removeAll();
+                    elPage.querySelectorAll('.history-item').forEach(elItem => {
+                        elItem.remove();
+                    });
                 });
             });
-        });
+        }
 
 
         this.btnFormsSlider = document.getElementById(btnFormsSlider);
         this.elFormsWrapper = document.getElementById(formsWrapper);
         const toggleForms = () => {
-            if (this.btnHistorySlider.classList.contains('active')) {
+            if (!this.btnFormsSlider || !this.elFormsWrapper) {
+                return;
+            }
+            if (this.btnHistorySlider?.classList.contains('active')) {
                 this.btnHistorySlider.click();
             }
 
@@ -717,11 +742,11 @@ export class PDFEditor {
                 this.btnFormsSlider.classList.remove('active');
             } else {
                 this.btnFormsSlider.classList.add('active');
-                this.toolbar.get('forms').click();
+                this.toolbar.get('forms')?.click();
             }
             elSliderToggle(this.elFormsWrapper, 'show', 'flex');
         }
-        if (this.btnFormsSlider) {
+        if (this.btnFormsSlider && this.elFormsWrapper) {
             this.btnFormsSlider.addEventListener('click', toggleForms);
         }
 
@@ -735,6 +760,9 @@ export class PDFEditor {
 
         
         PDFEvent.on(Events.ELEMENT_CREATE, e => {
+            if (!this.elHistoryWrapper || !this.elHistoryBtn) {
+                return;
+            }
             this.elHistoryBtn.style.display = 'block';
             const element = e.data.element;
             const page = e.data.page;
@@ -804,41 +832,50 @@ export class PDFEditor {
         });
 
         PDFEvent.on(Events.ELEMENT_UPDATE_AFTER, e => {
-            const element = e.data.element;
+            const element = e.data?.element;
+            if (!element) return;
             if (element.dataType == 'text' && element.elHistory) {
-                element.elHistory.style.fontFamily = element.attrs.fontFamily;
+                element.elHistory.style.fontFamily = element.attrs?.fontFamily;
                 const elHistoryText = element.elHistory.querySelector('.history-item-text');
                 if (elHistoryText) {
-                    elHistoryText.textContent = element.attrs.text ?? '';
+                    elHistoryText.textContent = element.attrs?.text ?? '';
                 }
             }
             scheduleThumbRefresh(e.data.page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_ACTIVE, e => {
-            const element = e.data.element;
-            element.el.style.zIndex = parseInt(element.el.style.zIndex) + 1;
+            const element = e.data?.element;
+            if (!element?.el) return;
+            const currentZ = Number.parseInt(element.el.style.zIndex || '0', 10);
+            const nextZ = Number.isFinite(currentZ) ? currentZ + 1 : 1;
+            element.el.style.zIndex = String(nextZ);
             // console.log(e);
         });
 
         PDFEvent.on(Events.ELEMENT_REMOVE, e => {
             const element = e.data.element;
             const page = e.data.page;
-            let elHistoryBox = this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS);
-            let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
-            elHistoryPage.querySelector('[data-id="'+ element.id +'"]')?.remove();
+            if (this.elHistoryWrapper) {
+                let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
+                elHistoryPage?.querySelector('[data-id="'+ element.id +'"]')?.remove();
+            }
             // this.hideElActions();
             scheduleThumbRefresh(page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_BLUR, e => {
-            const element = e.data.element;
+            const element = e.data?.element;
+            if (!element?.el) return;
             element.el.classList.remove('active');
-            element.el.style.zIndex = Math.max(1, parseInt(element.el.style.zIndex) - 1);
-            if (!element.elHistory) return;
-            if (element.dataType == 'text') {
-                let elText = element.elHistory.querySelector('.history-item-text');
-                elText.textContent = element.attrs.text;
+            const currentZ = Number.parseInt(element.el.style.zIndex || '1', 10);
+            const nextZ = Number.isFinite(currentZ) ? currentZ - 1 : 1;
+            element.el.style.zIndex = String(Math.max(1, nextZ));
+            if (element.elHistory && element.dataType == 'text') {
+                const elText = element.elHistory.querySelector('.history-item-text');
+                if (elText) {
+                    elText.textContent = element.attrs?.text ?? '';
+                }
             }
             scheduleThumbRefresh(e.data.page, { refreshImage: false });
         });
@@ -969,10 +1006,10 @@ export class PDFEditor {
         PDFEvent.on(Events.TOOLBAR_ITEM_ACTIVE, e => {
             showActions(e);
             if (e.data.name == 'forms') {
-                if (this.btnHistorySlider.classList.contains('active')) {
+                if (this.btnHistorySlider?.classList.contains('active')) {
                     this.btnHistorySlider.click();
                 }
-                if (!this.btnFormsSlider.classList.contains('active')) {
+                if (this.btnFormsSlider && !this.btnFormsSlider.classList.contains('active')) {
                     this.btnFormsSlider.click();
                 }
             }
@@ -994,7 +1031,7 @@ export class PDFEditor {
             toolActive = null;
             // elSliderHide(this.pdfElActionsWrapper, 'show');
             if (e.data.name == 'forms') {
-                if (this.btnFormsSlider.classList.contains('active')) {
+                if (this.btnFormsSlider?.classList.contains('active')) {
                     this.btnFormsSlider.click();
                 }
             }

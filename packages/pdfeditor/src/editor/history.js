@@ -190,6 +190,10 @@ export class History {
     constructor(editor) {
         this.editor = editor;
         let elSpan = document.querySelector('#history_slider span');
+        const updateHistoryCount = () => {
+            if (!elSpan) return;
+            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+        };
 
         PDFEvent.on(Events.ELEMENT_CREATE, e => {
             const element = e.data.element;
@@ -203,7 +207,7 @@ export class History {
             }, () => {
                 Operator.create(element, elements);
             });
-            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            updateHistoryCount();
         });
 
         PDFEvent.on(Events.ELEMENT_REMOVE, e => {
@@ -214,7 +218,7 @@ export class History {
             }, () => {
                 Operator.remove(element, elements);
             });
-            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            updateHistoryCount();
         });
 
         PDFEvent.on(Events.PAGE_ADD, e => {

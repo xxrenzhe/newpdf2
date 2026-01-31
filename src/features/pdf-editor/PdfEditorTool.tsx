@@ -223,9 +223,13 @@ export default function PdfEditorTool({
       const useTransfer = targetFile.size <= TRANSFER_PDF_BYTES_LIMIT;
       if (useTransfer) {
         const promise = fileBytesPromiseRef.current ?? targetFile.arrayBuffer();
-        const buffer = await promise.catch(() => null);
+        let buffer = await promise.catch(() => null);
         if (activeLoadTokenRef.current !== token) return;
-        if (!buffer) {
+        if (!buffer || buffer.byteLength === 0) {
+          buffer = await targetFile.arrayBuffer().catch(() => null);
+        }
+        if (!buffer || buffer.byteLength === 0) {
+          fileBytesPromiseRef.current = null;
           postToEditor({ type: "load-pdf", blob: targetFile, loadToken: token, fileName: targetFile.name });
           return;
         }
@@ -233,6 +237,7 @@ export default function PdfEditorTool({
           { type: "load-pdf", data: buffer, loadToken: token, fileName: targetFile.name },
           [buffer]
         );
+        fileBytesPromiseRef.current = null;
         return;
       }
 
