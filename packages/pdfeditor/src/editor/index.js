@@ -67,7 +67,9 @@ export class PDFEditor {
         producer: null,
         creator: null,
         debug: false,
-        history: false
+        history: false,
+        // "auto": detect AssemblePDF support in worker; true/false force behavior.
+        assemblePDF: 'auto'
     };
     reader = null;
     toolbar = null;
@@ -83,6 +85,8 @@ export class PDFEditor {
     downloadInProgress = false;
     downloadWaitTimer = null;
     downloadWaitStartedAt = 0;
+    assembleWorkerSupport = null;
+    assembleWorkerSupportPromise = null;
 
     constructor(options, pdfData, reader) {
         if (typeof(options) == 'object') {
@@ -319,6 +323,11 @@ export class PDFEditor {
         if (!handler?.sendWithPromise) {
             return fallbackToReaderData();
         }
+        const supportsAssemble = await this.#supportsAssemblePDF();
+        if (!supportsAssemble) {
+            console.warn('AssemblePDF unavailable, falling back to reader data.');
+            return fallbackToReaderData();
+        }
 
         const ASSEMBLE_TIMEOUT_MS = 4000;
         const assembleSafe = handler
@@ -346,6 +355,37 @@ export class PDFEditor {
 
         console.warn('AssemblePDF unavailable, falling back to reader data.', result?.error || result?.timeout);
         return fallbackToReaderData();
+    }
+
+    async #supportsAssemblePDF() {
+        const mode = this.options?.assemblePDF;
+        if (mode === true) return true;
+        if (mode === false) return false;
+        if (this.assembleWorkerSupport !== null) return this.assembleWorkerSupport;
+        if (this.assembleWorkerSupportPromise) return this.assembleWorkerSupportPromise;
+
+        const workerSrc = this.reader?.pdfjsLib?.GlobalWorkerOptions?.workerSrc;
+        if (!workerSrc || typeof workerSrc !== 'string' || workerSrc.startsWith('blob:')) {
+            this.assembleWorkerSupport = false;
+            return false;
+        }
+
+        this.assembleWorkerSupportPromise = fetch(workerSrc, { cache: 'force-cache' })
+            .then(res => (res.ok ? res.text() : ''))
+            .then(text => {
+                const supported = text.includes('AssemblePDF');
+                this.assembleWorkerSupport = supported;
+                return supported;
+            })
+            .catch(() => {
+                this.assembleWorkerSupport = false;
+                return false;
+            })
+            .finally(() => {
+                this.assembleWorkerSupportPromise = null;
+            });
+
+        return this.assembleWorkerSupportPromise;
     }
 
     async reset() {

@@ -45,19 +45,19 @@ div[contenteditable] {
 }
 
 ._loadingv2 {
-    width: min(420px, calc(100vw - 2rem));
+    width: min(400px, calc(100vw - 2rem));
     height: auto;
-    padding: 24px 26px 22px;
-    border-radius: 22px;
-    border: 1px solid var(--brand-line);
-    background: linear-gradient(180deg, #ffffff 0%, var(--brand-cream) 100%);
-    box-shadow: 0 26px 60px rgba(44, 30, 74, 0.22);
+    padding: 26px 28px 24px;
+    border-radius: 20px;
+    border: 1px solid rgba(91, 75, 183, 0.18);
+    background: linear-gradient(140deg, var(--brand-lilac) 0%, #ffffff 52%, var(--brand-cream) 100%);
+    box-shadow: 0 24px 54px rgba(44, 30, 74, 0.18), 0 10px 24px rgba(91, 75, 183, 0.12);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
-    gap: 6px;
+    gap: 8px;
     text-align: center;
 }
 
@@ -67,16 +67,16 @@ div[contenteditable] {
 
 ._loadingv2::before {
     content: "";
-    width: 84px;
+    width: 72px;
     height: 6px;
     border-radius: 999px;
-    background: linear-gradient(90deg, rgba(91, 75, 183, 0.2), rgba(242, 140, 40, 0.35));
-    margin-bottom: 2px;
+    background: linear-gradient(90deg, rgba(91, 75, 183, 0.25), rgba(242, 140, 40, 0.35));
+    margin-bottom: 4px;
 }
 
 ._loadingv2 .progress {
-    width: 120px;
-    height: 120px;
+    width: 124px;
+    height: 124px;
     margin: 6px auto 0 !important;
     position: relative;
     display: flex;
@@ -90,18 +90,21 @@ div[contenteditable] {
 }
 
 ._loadingv2 .svg-loading {
-    width: 120px;
-    height: 120px;
-    filter: drop-shadow(0 10px 24px rgba(91, 75, 183, 0.2));
+    width: 124px;
+    height: 124px;
+    filter: drop-shadow(0 12px 26px rgba(91, 75, 183, 0.18));
 }
 
-._loadingv2 circle {
-    stroke: var(--brand-line) !important;
+._loadingv2 .svg-loading circle {
+    stroke: rgba(91, 75, 183, 0.18) !important;
+    stroke-width: 6px !important;
 }
 
-._loadingv2 circle.progress {
+._loadingv2 .svg-loading circle.progress {
     stroke: url(#svg-gradient) !important;
     stroke-linecap: round;
+    stroke-width: 6px !important;
+    transition: stroke-dasharray 200ms ease;
 }
 
 ._loadingv2 #svg-gradient stop:first-child {
@@ -113,41 +116,23 @@ div[contenteditable] {
 }
 
 ._loadingv2 .progress-text {
-    fill: var(--brand-purple) !important;
-    font-size: 20px !important;
-    font-weight: 700 !important;
+    fill: var(--brand-ink) !important;
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em;
 }
 
 ._loadingv2 h3 {
-    margin-top: 10px;
-    font-size: 20px;
+    margin-top: 12px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--brand-ink);
 }
 
 ._loadingv2 span {
     margin-top: 0 !important;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--brand-muted);
-}
-
-._loadingv2 .loading-bar {
-    width: 100%;
-    height: 10px;
-    border-radius: 999px;
-    border: 1px solid var(--brand-line);
-    background: #ffffff;
-    margin-top: 14px;
-    overflow: hidden;
-    position: relative;
-}
-
-._loadingv2 .loading-bar-fill {
-    width: 0%;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--brand-purple), var(--brand-orange));
-    transition: width 200ms ease;
 }
 
 @media (max-width: 480px) {
@@ -158,12 +143,12 @@ div[contenteditable] {
 
     ._loadingv2 .progress,
     ._loadingv2 .svg-loading {
-        width: 104px;
-        height: 104px;
+        width: 108px;
+        height: 108px;
     }
 
     ._loadingv2 .progress-text {
-        font-size: 18px !important;
+        font-size: 20px !important;
     }
 }
 

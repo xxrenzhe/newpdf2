@@ -329,7 +329,6 @@ function downloadLoad(percent){
     if (!elSvg) return;
     const elProgress = elSvg.querySelector("circle.progress");
     const elProgressText = elSvg.querySelector('.progress-text');
-    const elProgressFill = elSvg.querySelector('.loading-bar-fill');
     if (elProgress) {
         elProgress.style.strokeDasharray = _percent;
     }
@@ -338,9 +337,6 @@ function downloadLoad(percent){
     }
     if (elProgressText) {
         elProgressText.textContent = parseInt(percent) + '%';
-    }
-    if (elProgressFill) {
-        elProgressFill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
     }
 }
 
