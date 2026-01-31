@@ -345,15 +345,28 @@ export async function redactPdfRasterize(
   };
   const { dpi, quality } = presets[preset];
 
+  const data = new Uint8Array(await file.arrayBuffer());
+  const hasRedactions = Object.keys(overlays).length > 0;
+  if (!hasRedactions) return data;
+
   const { configurePdfJsWorkerV2, pdfjs } = await import("./pdfjsV2");
   configurePdfJsWorkerV2();
-  const data = new Uint8Array(await file.arrayBuffer());
   const input = await pdfjs.getDocument({ data }).promise;
+  const source = await PDFDocument.load(data);
   const output = await PDFDocument.create();
 
   const renderScale = dpi / 72;
 
-  for (let pageNum = 1; pageNum <= input.numPages; pageNum++) {
+  const totalPages = Math.min(input.numPages, source.getPageCount());
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const overlayJson = overlays[pageNum];
+    if (!overlayJson) {
+      const [copied] = await output.copyPages(source, [pageNum - 1]);
+      output.addPage(copied);
+      continue;
+    }
+
     const page = await input.getPage(pageNum);
     const viewport1 = page.getViewport({ scale: 1 });
     const viewport = page.getViewport({ scale: renderScale });
@@ -364,14 +377,11 @@ export async function redactPdfRasterize(
 
     await page.render({ canvasContext: ctx, canvas: baseCanvas, viewport }).promise;
 
-    const overlayJson = overlays[pageNum];
-    if (overlayJson) {
-      const overlayCanvas = await renderFabricJsonToCanvasElement(overlayJson, {
-        width: viewport1.width,
-        height: viewport1.height,
-      });
-      ctx.drawImage(overlayCanvas, 0, 0, baseCanvas.width, baseCanvas.height);
-    }
+    const overlayCanvas = await renderFabricJsonToCanvasElement(overlayJson, {
+      width: viewport1.width,
+      height: viewport1.height,
+    });
+    ctx.drawImage(overlayCanvas, 0, 0, baseCanvas.width, baseCanvas.height);
 
     const jpgBytes = await canvasToUint8Array(baseCanvas, "image/jpeg", quality);
     const embedded = await output.embedJpg(jpgBytes);
@@ -382,7 +392,7 @@ export async function redactPdfRasterize(
       y: 0,
       width: viewport1.width,
       height: viewport1.height,
-      });
+    });
     (page as { cleanup?: () => void }).cleanup?.();
   }
 

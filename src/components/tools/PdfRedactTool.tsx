@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Document, Page } from "react-pdf";
 import * as fabric from "fabric";
 import FileDropzone from "./FileDropzone";
@@ -11,30 +11,72 @@ import { useLanguage } from "@/components/LanguageProvider";
 
 type Mode = "select" | "redact";
 
-function RedactionCanvas({
-  width,
-  height,
-  mode,
-  initialJson,
-  onChange,
-}: {
+type RedactionCanvasHandle = {
+  deleteSelection: () => void;
+  hasSelection: () => boolean;
+};
+
+const MIN_REDACTION_SIZE = 12;
+
+function hasRedactionObjects(json?: string) {
+  if (!json) return false;
+  try {
+    const parsed = JSON.parse(json) as { objects?: unknown[] } | null;
+    return Array.isArray(parsed?.objects) && parsed.objects.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+const RedactionCanvas = forwardRef<RedactionCanvasHandle, {
   width: number;
   height: number;
   mode: Mode;
   initialJson?: string;
   onChange: (json: string) => void;
-}) {
+  onSelectionChange?: (hasSelection: boolean) => void;
+}>(function RedactionCanvas(
+  { width, height, mode, initialJson, onChange, onSelectionChange },
+  ref
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<fabric.Canvas | null>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
   const currentRef = useRef<fabric.Rect | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const syncingRef = useRef(false);
 
   const save = useCallback(() => {
+    if (syncingRef.current) return;
     const canvas = fabricRef.current;
     if (!canvas) return;
     onChange(JSON.stringify(canvas.toJSON()));
   }, [onChange]);
+
+  const notifySelection = useCallback(() => {
+    if (!onSelectionChange) return;
+    const canvas = fabricRef.current;
+    onSelectionChange(!!canvas && canvas.getActiveObjects().length > 0);
+  }, [onSelectionChange]);
+
+  const deleteSelection = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObjects();
+    if (!active.length) return;
+    active.forEach((obj) => canvas.remove(obj));
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    notifySelection();
+  }, [notifySelection]);
+
+  useImperativeHandle(ref, () => ({
+    deleteSelection,
+    hasSelection: () => {
+      const canvas = fabricRef.current;
+      return !!canvas && canvas.getActiveObjects().length > 0;
+    },
+  }), [deleteSelection]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -48,11 +90,14 @@ function RedactionCanvas({
     canvas.on("object:added", save);
     canvas.on("object:modified", save);
     canvas.on("object:removed", save);
+    canvas.on("selection:created", notifySelection);
+    canvas.on("selection:updated", notifySelection);
+    canvas.on("selection:cleared", notifySelection);
 
     return () => {
       canvas.dispose();
     };
-  }, [height, save, width]);
+  }, [height, notifySelection, save, width]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -69,17 +114,24 @@ function RedactionCanvas({
       obj.selectable = mode === "select";
       obj.evented = mode === "select";
     });
+    if (mode !== "select") {
+      canvas.discardActiveObject();
+    }
     canvas.renderAll();
-  }, [mode]);
+    notifySelection();
+  }, [mode, notifySelection]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
     const load = async () => {
+      syncingRef.current = true;
       canvas.clear();
       if (!initialJson) {
         canvas.renderAll();
+        notifySelection();
+        syncingRef.current = false;
         return;
       }
 
@@ -98,10 +150,12 @@ function RedactionCanvas({
         });
       }
       canvas.renderAll();
+      notifySelection();
+      syncingRef.current = false;
     };
 
     void load();
-  }, [initialJson]);
+  }, [initialJson, notifySelection]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -147,6 +201,16 @@ function RedactionCanvas({
       setIsDrawing(false);
       const rect = currentRef.current;
       if (rect) {
+        const width = rect.width ?? 0;
+        const height = rect.height ?? 0;
+        if (width < MIN_REDACTION_SIZE || height < MIN_REDACTION_SIZE) {
+          canvas.remove(rect);
+          canvas.renderAll();
+          notifySelection();
+          startRef.current = null;
+          currentRef.current = null;
+          return;
+        }
         rect.set({ selectable: true, evented: true });
       }
       startRef.current = null;
@@ -163,7 +227,26 @@ function RedactionCanvas({
       canvas.off("mouse:move", onMouseMove);
       canvas.off("mouse:up", onMouseUp);
     };
-  }, [isDrawing, mode, save]);
+  }, [isDrawing, mode, notifySelection, save]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (mode !== "select") return;
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return;
+      }
+      deleteSelection();
+      event.preventDefault();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [deleteSelection, mode]);
 
   return (
     <canvas
@@ -172,7 +255,7 @@ function RedactionCanvas({
       style={{ touchAction: "none" }}
     />
   );
-}
+});
 
 export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -186,6 +269,8 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
   const [overlays, setOverlays] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [hasSelection, setHasSelection] = useState(false);
+  const canvasHandleRef = useRef<RedactionCanvasHandle | null>(null);
   const { t } = useLanguage();
 
   const isPdf = useMemo(
@@ -203,9 +288,20 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
     setPageDimensions({ width: page.width, height: page.height });
   }, []);
 
-  const onOverlayChange = useCallback((json: string) => {
-    setOverlays((prev) => ({ ...prev, [pageNumber]: json }));
-  }, [pageNumber]);
+  const onOverlayChange = useCallback(
+    (json: string) => {
+      setOverlays((prev) => {
+        if (!hasRedactionObjects(json)) {
+          if (!(pageNumber in prev)) return prev;
+          const next = { ...prev };
+          delete next[pageNumber];
+          return next;
+        }
+        return { ...prev, [pageNumber]: json };
+      });
+    },
+    [pageNumber]
+  );
 
   const clearPage = useCallback(() => {
     setOverlays((prev) => {
@@ -213,14 +309,22 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
       delete next[pageNumber];
       return next;
     });
+    setHasSelection(false);
   }, [pageNumber]);
+
+  const deleteSelection = useCallback(() => {
+    canvasHandleRef.current?.deleteSelection();
+  }, []);
 
   const exportRedacted = useCallback(async () => {
     if (!file || !isPdf) return;
     setBusy(true);
     setError("");
     try {
-      const bytes = await redactPdfRasterize(file, overlays, preset);
+      const sanitized = Object.fromEntries(
+        Object.entries(overlays).filter(([, json]) => hasRedactionObjects(json))
+      ) as Record<number, string>;
+      const bytes = await redactPdfRasterize(file, sanitized, preset);
       const outName = file.name.replace(/\.[^.]+$/, "") + "-redacted.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
@@ -233,6 +337,10 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
   useEffect(() => {
     configurePdfJsWorker();
   }, []);
+
+  useEffect(() => {
+    setHasSelection(false);
+  }, [pageNumber]);
 
   if (!file) {
     return (
@@ -285,6 +393,15 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm hover:bg-[color:var(--brand-cream)]"
           >
             {t("clearPage", "Clear page")}
+          </button>
+          <button
+            type="button"
+            onClick={deleteSelection}
+            disabled={!hasSelection || mode !== "select"}
+            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
+            title={t("deleteSelectionHint", "Delete selection (Del/Backspace)")}
+          >
+            {t("deleteSelection", "Delete selection")}
           </button>
           <select
             className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
@@ -387,6 +504,8 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
               mode={mode}
               initialJson={overlays[pageNumber]}
               onChange={onOverlayChange}
+              onSelectionChange={setHasSelection}
+              ref={canvasHandleRef}
             />
           </div>
         </div>
@@ -395,7 +514,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
       <div className="px-4 py-3 text-xs text-[color:var(--brand-muted)] bg-[color:var(--brand-cream)] border-t border-[color:var(--brand-line)]">
         {t(
           "redactionRasterNote",
-          "Redaction export rasterizes pages to permanently remove underlying text/vectors."
+          "Only pages with redactions are rasterized to permanently remove underlying text/vectors."
         )}
       </div>
     </div>
