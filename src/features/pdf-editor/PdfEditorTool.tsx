@@ -180,6 +180,8 @@ export default function PdfEditorTool({
   const pendingLoadFileRef = useRef<File | null>(null);
   const editorPingTimerRef = useRef<number | null>(null);
   const editorPingAttemptsRef = useRef(0);
+  const editorFallbackTimerRef = useRef<number | null>(null);
+  const editorFallbackUsedRef = useRef(false);
   const iframeSrc = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
@@ -202,6 +204,11 @@ export default function PdfEditorTool({
     setError("");
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
+    editorFallbackUsedRef.current = false;
+    if (editorFallbackTimerRef.current) {
+      window.clearTimeout(editorFallbackTimerRef.current);
+      editorFallbackTimerRef.current = null;
+    }
     if (editorPingTimerRef.current) {
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
@@ -360,6 +367,11 @@ export default function PdfEditorTool({
     setBusy(true);
     appliedToolRef.current = null;
     hasRealProgressRef.current = false;
+    editorFallbackUsedRef.current = false;
+    if (editorFallbackTimerRef.current) {
+      window.clearTimeout(editorFallbackTimerRef.current);
+      editorFallbackTimerRef.current = null;
+    }
 
     if (!editorReady) {
       postToEditor({ type: "ping" });
@@ -400,6 +412,35 @@ export default function PdfEditorTool({
       }
     };
   }, [editorReady, iframeReady, postToEditor]);
+
+  useEffect(() => {
+    if (!iframeReady || editorReady) {
+      if (editorFallbackTimerRef.current) {
+        window.clearTimeout(editorFallbackTimerRef.current);
+        editorFallbackTimerRef.current = null;
+      }
+      return;
+    }
+    if (editorFallbackUsedRef.current || editorFallbackTimerRef.current) return;
+    if (!pendingLoadTokenRef.current || !pendingLoadFileRef.current) return;
+    editorFallbackTimerRef.current = window.setTimeout(() => {
+      editorFallbackTimerRef.current = null;
+      if (editorReady) return;
+      const token = pendingLoadTokenRef.current;
+      const pendingFile = pendingLoadFileRef.current;
+      if (!token || !pendingFile) return;
+      editorFallbackUsedRef.current = true;
+      pendingLoadTokenRef.current = null;
+      pendingLoadFileRef.current = null;
+      void sendLoadToEditor(pendingFile, token);
+    }, 1500);
+    return () => {
+      if (editorFallbackTimerRef.current) {
+        window.clearTimeout(editorFallbackTimerRef.current);
+        editorFallbackTimerRef.current = null;
+      }
+    };
+  }, [editorReady, iframeReady, sendLoadToEditor]);
 
   useEffect(() => {
     if (!iframeReady || !editorReady) return;
@@ -546,6 +587,7 @@ export default function PdfEditorTool({
         const ratio = Math.max(0, Math.min(1, data.loaded / total));
         const pct = Math.min(95, Math.round(ratio * 95));
         hasRealProgressRef.current = true;
+        if (!editorReady) setEditorReady(true);
         if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
         uploadProgressStartTimeoutRef.current = null;
         if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
