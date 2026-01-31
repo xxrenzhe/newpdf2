@@ -7,6 +7,18 @@
     --focus-ring-color: rgba(90, 88, 242, 0.6);
     --focus-ring-offset: 2px;
 
+    /* Brand tokens (match app UI palette) */
+    --brand-purple: #5b4bb7;
+    --brand-purple-dark: #4a3a99;
+    --brand-orange: #f28c28;
+    --brand-orange-dark: #de7a1c;
+    --brand-ink: #2c1e4a;
+    --brand-muted: #6a5f84;
+    --brand-line: #efe2d2;
+    --brand-cream: #fff7ee;
+    --brand-lilac: #f2ecff;
+    --brand-peach: #fff1df;
+
     --scroll-width: 8px;
     --scroll-height: 8px;
     --select-scroll-width: 5px;

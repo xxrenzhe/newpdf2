@@ -841,7 +841,7 @@
     
 
     <div class="hide">
-        <div class="_loadingv2">
+        <div class="_loadingv2" role="dialog" aria-modal="true" aria-live="polite">
             <div class="progress">
                 <!-- <img src="<%= ASSETS_URL %>img/up_loading.png" /> -->
                 <svg xmlns="http://www.w3.org/2000/svg" class="svg-loading" height="110" width="110" viewBox="0 0 110 110">
@@ -858,6 +858,9 @@
             </div>
             <h3 data-locale="processing">${LANG_MESSAGES.processing}</h3>
             <span data-locale="please_wait">${LANG_MESSAGES.please_wait}</span>
+            <div class="loading-bar" aria-hidden="true">
+                <div class="loading-bar-fill"></div>
+            </div>
         </div>
 
     </div>

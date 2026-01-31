@@ -308,14 +308,44 @@ export class PDFEditor {
             }
         }
 
+        const fallbackToReaderData = () =>
+            this.reader.getData().then(int8Array => this.setDocumentProxy(int8Array));
+
         if (!isUpdateStream) {
-            return this.reader.getData().then(int8Array => this.setDocumentProxy(int8Array));
-        } else {
-            return this.reader.pdfDocument.documentProxy._transport.messageHandler.sendWithPromise('AssemblePDF', {
+            return fallbackToReaderData();
+        }
+
+        const handler = this.reader?.pdfDocument?.documentProxy?._transport?.messageHandler;
+        if (!handler?.sendWithPromise) {
+            return fallbackToReaderData();
+        }
+
+        const ASSEMBLE_TIMEOUT_MS = 4000;
+        const assembleSafe = handler
+            .sendWithPromise('AssemblePDF', {
                 outType: 'Uint8Array',
                 chars: chars
-            }).then(stream => this.setDocumentProxy(stream));
+            })
+            .then(stream => ({ ok: true, stream }))
+            .catch(error => ({ ok: false, error }));
+
+        let timeoutId = null;
+        const timeoutSafe = new Promise(resolve => {
+            timeoutId = setTimeout(() => resolve({ ok: false, timeout: true }), ASSEMBLE_TIMEOUT_MS);
+        });
+
+        const result = await Promise.race([assembleSafe, timeoutSafe]).finally(() => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        });
+
+        if (result?.ok) {
+            return this.setDocumentProxy(result.stream);
         }
+
+        console.warn('AssemblePDF unavailable, falling back to reader data.', result?.error || result?.timeout);
+        return fallbackToReaderData();
     }
 
     async reset() {

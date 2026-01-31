@@ -47,25 +47,31 @@ div[contenteditable] {
 ._loadingv2 {
     width: min(420px, calc(100vw - 2rem));
     height: auto;
-    padding: 26px 28px 24px;
-    border-radius: 20px;
+    padding: 24px 26px 22px;
+    border-radius: 22px;
     border: 1px solid var(--brand-line);
     background: linear-gradient(180deg, #ffffff 0%, var(--brand-cream) 100%);
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+    box-shadow: 0 26px 60px rgba(44, 30, 74, 0.22);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
     gap: 6px;
+    text-align: center;
+}
+
+._loadingv2._loading {
+    animation: none;
 }
 
 ._loadingv2::before {
     content: "";
-    width: 72px;
+    width: 84px;
     height: 6px;
     border-radius: 999px;
-    background: linear-gradient(90deg, rgba(90, 88, 242, 0.18), rgba(242, 140, 40, 0.3));
+    background: linear-gradient(90deg, rgba(91, 75, 183, 0.2), rgba(242, 140, 40, 0.35));
+    margin-bottom: 2px;
 }
 
 ._loadingv2 .progress {
@@ -86,7 +92,7 @@ div[contenteditable] {
 ._loadingv2 .svg-loading {
     width: 120px;
     height: 120px;
-    filter: drop-shadow(0 10px 24px rgba(90, 88, 242, 0.2));
+    filter: drop-shadow(0 10px 24px rgba(91, 75, 183, 0.2));
 }
 
 ._loadingv2 circle {
@@ -113,9 +119,9 @@ div[contenteditable] {
 }
 
 ._loadingv2 h3 {
-    margin-top: 12px;
+    margin-top: 10px;
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--brand-ink);
 }
 
@@ -125,9 +131,28 @@ div[contenteditable] {
     color: var(--brand-muted);
 }
 
+._loadingv2 .loading-bar {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    border: 1px solid var(--brand-line);
+    background: #ffffff;
+    margin-top: 14px;
+    overflow: hidden;
+    position: relative;
+}
+
+._loadingv2 .loading-bar-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--brand-purple), var(--brand-orange));
+    transition: width 200ms ease;
+}
+
 @media (max-width: 480px) {
     ._loadingv2 {
-        padding: 22px 20px 20px;
+        padding: 20px 18px 18px;
         border-radius: 16px;
     }
 
