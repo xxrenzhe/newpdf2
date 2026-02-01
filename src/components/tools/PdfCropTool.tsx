@@ -47,7 +47,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="min-w-0">
           <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
             {t("cropPages", "Crop Pages")}
@@ -56,10 +56,10 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
         </div>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
+          className="w-full sm:w-auto sm:shrink-0 px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center justify-center"
           onClick={() => setFile(null)}
         >
-          {t("changeFile", "Change file")}
+          <span className="min-w-0 truncate">{t("changeFile", "Change file")}</span>
         </button>
       </div>
 

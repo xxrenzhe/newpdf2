@@ -421,7 +421,7 @@ export default function UnifiedToolPage({
           ? "min-h-screen bg-white"
           : isPdfEditor && files.length > 0
             ? "py-4 sm:py-6"
-            : "py-8 sm:py-12 md:py-20"
+            : "py-6 sm:py-8 md:py-12"
       }
     >
       {guestHeader}
@@ -433,8 +433,8 @@ export default function UnifiedToolPage({
       }>
         {/* Tool Header - only when not showing editor */}
         {!showEditor && !useGuestUi && (
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-sm">
+          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-sm">
               <ToolIcon name={tool.iconName} className="w-8 h-8 stroke-[2px]" />
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3 sm:mb-4">
@@ -448,7 +448,7 @@ export default function UnifiedToolPage({
                 {t("comingSoon", "Coming soon")}
               </div>
             )}
-            <div className="mt-6">
+            <div className="mt-4">
               <Link href="/" className="text-sm text-[color:var(--brand-muted)] hover:text-primary transition-colors inline-flex items-center gap-1">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="3" width="7" height="7" />
@@ -464,7 +464,7 @@ export default function UnifiedToolPage({
 
         {/* Tool Header - guest mode */}
         {!useGuestUi ? null : !documentId && (
-          <div className="max-w-2xl mx-auto text-center mb-8">
+          <div className="max-w-2xl mx-auto text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3">
               {t(tool.nameKey, tool.name)}
             </h1>

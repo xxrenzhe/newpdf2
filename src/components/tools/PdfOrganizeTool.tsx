@@ -250,7 +250,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
   return (
     <div className="max-w-5xl mx-auto">
       <div className="bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6 mb-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
               {t("organizePagesTitle", "Organize Pages")}
@@ -260,21 +260,21 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
               {numPages ? ` | ${t("pageCount", "{count} pages").replace("{count}", `${numPages}`)}` : ""}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto sm:shrink-0">
             <button
               type="button"
-              className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)]"
+              className="w-full sm:w-auto px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center justify-center"
               onClick={() => {
                 resetFileState();
                 setFile(null);
               }}
             >
-              {t("changeFile", "Change file")}
+              <span className="min-w-0 truncate">{t("changeFile", "Change file")}</span>
             </button>
             <button
               type="button"
               disabled={items.length === 0 || busy}
-              className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 whitespace-nowrap"
               onClick={() => void exportPdf(false)}
             >
               {busy ? t("working", "Working…") : t("exportPdf", "Export PDF")}

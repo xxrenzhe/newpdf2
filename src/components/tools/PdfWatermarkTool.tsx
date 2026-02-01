@@ -61,8 +61,8 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="w-14 h-14 bg-gradient-to-br from-[color:var(--brand-lilac)] to-[color:var(--brand-peach)] rounded-xl flex items-center justify-center flex-shrink-0">
             <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -77,13 +77,13 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
         </div>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center gap-2 transition-colors"
+          className="w-full sm:w-auto sm:shrink-0 px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center justify-center gap-2 transition-colors"
           onClick={() => setFile(null)}
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
-          {t("changeFile", "Change file")}
+          <span className="min-w-0 truncate">{t("changeFile", "Change file")}</span>
         </button>
       </div>
 

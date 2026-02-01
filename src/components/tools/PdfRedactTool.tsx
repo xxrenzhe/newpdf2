@@ -357,8 +357,8 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
 
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--brand-cream)] border-b border-[color:var(--brand-line)]">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 px-4 py-3 bg-[color:var(--brand-cream)] border-b border-[color:var(--brand-line)]">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={() => setFile(null)}
@@ -369,28 +369,28 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="font-medium text-[color:var(--brand-ink)] truncate max-w-[260px]">{file.name}</span>
+          <span className="font-medium text-[color:var(--brand-ink)] truncate max-w-full sm:max-w-[360px]">{file.name}</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <button
             type="button"
             onClick={() => setMode("redact")}
-            className={`px-3 py-2 rounded-lg border ${mode === "redact" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-sm`}
+            className={`px-3 py-2 rounded-lg border ${mode === "redact" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-xs sm:text-sm whitespace-nowrap`}
           >
             {t("redactMode", "Redact")}
           </button>
           <button
             type="button"
             onClick={() => setMode("select")}
-            className={`px-3 py-2 rounded-lg border ${mode === "select" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-sm`}
+            className={`px-3 py-2 rounded-lg border ${mode === "select" ? "border-primary bg-[color:var(--brand-lilac)]" : "border-[color:var(--brand-line)] bg-white"} text-xs sm:text-sm whitespace-nowrap`}
           >
             {t("selectMode", "Select")}
           </button>
           <button
             type="button"
             onClick={clearPage}
-            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm hover:bg-[color:var(--brand-cream)]"
+            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-xs sm:text-sm hover:bg-[color:var(--brand-cream)] whitespace-nowrap"
           >
             {t("clearPage", "Clear page")}
           </button>
@@ -398,13 +398,13 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             type="button"
             onClick={deleteSelection}
             disabled={!hasSelection || mode !== "select"}
-            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm hover:bg-[color:var(--brand-cream)] disabled:opacity-50"
+            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] bg-white text-xs sm:text-sm hover:bg-[color:var(--brand-cream)] disabled:opacity-50 whitespace-nowrap"
             title={t("deleteSelectionHint", "Delete selection (Del/Backspace)")}
           >
             {t("deleteSelection", "Delete selection")}
           </button>
           <select
-            className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-sm"
+            className="h-10 px-3 rounded-lg border border-[color:var(--brand-line)] bg-white text-xs sm:text-sm max-w-full"
             value={preset}
             onChange={(e) => setPreset(e.target.value as PdfRasterPreset)}
             title={t("outputQuality", "Output quality")}
@@ -417,7 +417,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
             type="button"
             disabled={busy}
             onClick={exportRedacted}
-            className="px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50"
+            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
           >
             {busy ? t("exporting", "Exporting…") : t("exportRedacted", "Export redacted PDF")}
           </button>

@@ -59,8 +59,8 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm p-6">
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div className="min-w-0">
           <h3 className="text-lg font-semibold text-[color:var(--brand-ink)]">
             {t("mergeDocuments", "Merge Documents")}
           </h3>
@@ -70,7 +70,7 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
               .replace("{size}", (totalSize / 1024 / 1024).toFixed(2))}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto sm:shrink-0">
           <label
             htmlFor={inputId}
             role="button"
@@ -80,12 +80,12 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
               e.preventDefault();
               inputRef.current?.click();
             }}
-            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center gap-2"
+            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center justify-center gap-2"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            {t("addMore", "Add more")}
+            <span className="min-w-0 truncate">{t("addMore", "Add more")}</span>
           </label>
           <input
             ref={inputRef}
@@ -106,9 +106,9 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
           <button
             type="button"
             onClick={() => setFiles([])}
-            className="px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm"
+            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] text-sm flex items-center justify-center"
           >
-            {t("reset", "Reset")}
+            <span className="min-w-0 truncate">{t("reset", "Reset")}</span>
           </button>
         </div>
       </div>
