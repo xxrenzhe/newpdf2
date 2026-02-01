@@ -47,6 +47,9 @@ FROM gotenberg AS runtime
 
 USER root
 
+ARG APP_BUILD_SHA=dev
+ENV NEXT_PUBLIC_PDFEDITOR_BUILD_ID=$APP_BUILD_SHA
+
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC

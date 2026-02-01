@@ -193,6 +193,7 @@ export default function PdfEditorTool({
   const editorFallbackUsedRef = useRef(false);
   const compatPollTimerRef = useRef<number | null>(null);
   const compatPollTokenRef = useRef<number | null>(null);
+  const pendingEditorLoadIdRef = useRef<number | null>(null);
   const blockedEmbedCountRef = useRef(0);
   const iframeSrc = useMemo(() => {
     const params = new URLSearchParams();
@@ -221,6 +222,7 @@ export default function PdfEditorTool({
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
     editorFallbackUsedRef.current = false;
+    pendingEditorLoadIdRef.current = null;
     if (editorFallbackTimerRef.current) {
       window.clearTimeout(editorFallbackTimerRef.current);
       editorFallbackTimerRef.current = null;
@@ -296,23 +298,39 @@ export default function PdfEditorTool({
     }
   }, []);
 
+  const getEditorSnapshot = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return null;
+    try {
+      const win = iframe.contentWindow as (Window & {
+        reader?: { pdfDocument?: { pageCount?: number; numPages?: number }; pageCount?: number; loadId?: number };
+      }) | null;
+      const reader = win?.reader;
+      if (!reader) return null;
+      const pageCount = reader?.pdfDocument?.pageCount ?? reader?.pdfDocument?.numPages ?? reader?.pageCount;
+      const loadId = typeof reader?.loadId === "number" ? reader.loadId : null;
+      return { pageCount: typeof pageCount === "number" ? pageCount : null, loadId };
+    } catch {
+      return null;
+    }
+  }, []);
+
   const detectPdfLoadedFromIframe = useCallback(() => {
+    const snapshot = getEditorSnapshot();
+    if (snapshot?.pageCount && snapshot.pageCount > 0) {
+      const pendingLoadId = pendingEditorLoadIdRef.current;
+      if (pendingLoadId === null || snapshot.loadId === null || snapshot.loadId !== pendingLoadId) return true;
+    }
     const iframe = iframeRef.current;
     if (!iframe) return false;
     try {
-      const win = iframe.contentWindow as (Window & {
-        reader?: { pdfDocument?: { pageCount?: number; numPages?: number }; pageCount?: number };
-      }) | null;
-      const reader = win?.reader;
-      const pageCount = reader?.pdfDocument?.pageCount ?? reader?.pdfDocument?.numPages ?? reader?.pageCount;
-      if (typeof pageCount === "number" && pageCount > 0) return true;
       const doc = iframe.contentDocument;
-      if (doc?.querySelector("#pdf-main .__pdf_page_preview")) return true;
+      if (doc?.querySelector("#pdf-main .__pdf_page_preview, #pdf-main .page, #pdf-main canvas")) return true;
     } catch {
       // ignore
     }
     return false;
-  }, []);
+  }, [getEditorSnapshot]);
 
   const injectMobileOverrides = useCallback(() => {
     const iframe = iframeRef.current;
@@ -416,6 +434,7 @@ export default function PdfEditorTool({
     activeLoadTokenRef.current = token;
     pendingLoadTokenRef.current = token;
     pendingLoadFileRef.current = file;
+    pendingEditorLoadIdRef.current = getEditorSnapshot()?.loadId ?? null;
     setError("");
     setPdfLoaded(false);
     setLoadCancelled(false);
@@ -436,7 +455,7 @@ export default function PdfEditorTool({
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
     void sendLoadToEditor(file, token);
-  }, [editorReady, file, iframeReady, postToEditor, sendLoadToEditor]);
+  }, [editorReady, file, iframeReady, postToEditor, sendLoadToEditor, getEditorSnapshot]);
 
   useEffect(() => {
     if (!iframeReady) return;
@@ -563,7 +582,6 @@ export default function PdfEditorTool({
       compatPollTimerRef.current = null;
     }
 
-    const startedAt = Date.now();
     compatPollTimerRef.current = window.setInterval(() => {
       if (compatPollTokenRef.current !== token) {
         if (compatPollTimerRef.current) {
@@ -579,16 +597,13 @@ export default function PdfEditorTool({
         setBusy(false);
         setLoadCancelled(false);
         setError("");
+        pendingEditorLoadIdRef.current = null;
         if (compatPollTimerRef.current) {
           window.clearInterval(compatPollTimerRef.current);
           compatPollTimerRef.current = null;
         }
         compatPollTokenRef.current = null;
         return;
-      }
-      if (Date.now() - startedAt > 20000 && compatPollTimerRef.current) {
-        window.clearInterval(compatPollTimerRef.current);
-        compatPollTimerRef.current = null;
       }
     }, 500);
 
@@ -606,6 +621,7 @@ export default function PdfEditorTool({
     activeLoadTokenRef.current = tokenToCancel + 1;
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
+    pendingEditorLoadIdRef.current = null;
     hasRealProgressRef.current = false;
     setUploadProgress(0);
     setError("");
@@ -690,6 +706,7 @@ export default function PdfEditorTool({
         setBusy(false);
         setLoadCancelled(false);
         setError("");
+        pendingEditorLoadIdRef.current = null;
       }
       if (hasMessageType<PdfProgressMessage["type"]>(evt.data, "pdf-progress")) {
         if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
@@ -713,6 +730,7 @@ export default function PdfEditorTool({
         hasRealProgressRef.current = false;
         setBusy(false);
         setLoadCancelled(false);
+        pendingEditorLoadIdRef.current = null;
         setError(
           t(
             "pdfPasswordProtected",
@@ -730,6 +748,7 @@ export default function PdfEditorTool({
           : t("pdfEditorFailed", "Something went wrong in the PDF editor. Please try again.");
         setBusy(false);
         setLoadCancelled(false);
+        pendingEditorLoadIdRef.current = null;
         setError(message);
       }
       if (hasMessageType<PdfExternalEmbedBlockedMessage["type"]>(evt.data, "pdf-external-embed-blocked")) {
@@ -755,6 +774,7 @@ export default function PdfEditorTool({
         setBusy(false);
         setPdfLoaded(false);
         setLoadCancelled(true);
+        pendingEditorLoadIdRef.current = null;
       }
       if (hasMessageType<PdfOpenToolMessage["type"]>(evt.data, "open-tool")) {
         const toolKey = (evt.data as PdfOpenToolMessage).tool;
