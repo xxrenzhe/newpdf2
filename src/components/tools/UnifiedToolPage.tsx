@@ -122,6 +122,7 @@ export default function UnifiedToolPage({
   const isPdfEditor = toolKey === "annotate" || toolKey === "edit";
   const uiVariant = editorUiVariant ?? (isGuest ? "guest" : "tool");
   const useGuestUi = uiVariant === "guest";
+  const useGuestEditorChrome = uiVariant === "guest";
 
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(Boolean(isGuest && documentId));
@@ -343,12 +344,12 @@ export default function UnifiedToolPage({
           file={files[0]!}
           onBack={isGuest ? () => goGuest(chosenToolFromToolKey(toolKey)) : reset}
           onReplaceFile={(next) => isGuest ? void onFilesGuest([next]) : setFiles([next])}
-          variant={isGuest ? "shell" : undefined}
-          showChangeFile={isGuest ? false : undefined}
-          initialTool={isGuest ? pdfEditorInitialTool(chosenTool) : undefined}
-          showBrand={isGuest ? true : undefined}
+          variant={useGuestEditorChrome ? "shell" : undefined}
+          showChangeFile={useGuestEditorChrome ? false : undefined}
+          initialTool={useGuestEditorChrome ? pdfEditorInitialTool(chosenTool) : undefined}
+          showBrand={useGuestEditorChrome ? true : undefined}
           onOpenTool={handleEditorToolShortcut}
-          actionsPosition={isGuest ? "top-right" : undefined}
+          actionsPosition={useGuestEditorChrome ? "top-right" : undefined}
         />
       );
     }
