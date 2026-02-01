@@ -11,6 +11,12 @@ type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number; loadToken?: nu
 type PdfProgressMessage = { type: "pdf-progress"; loaded: number; total?: number; loadToken?: number };
 type PdfPasswordErrorMessage = { type: "pdf-password-error"; loadToken?: number };
 type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number };
+type PdfExternalEmbedBlockedMessage = {
+  type: "pdf-external-embed-blocked";
+  count?: number;
+  origins?: string[];
+  loadToken?: number;
+};
 type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
 type PdfOpenToolMessage = { type: "open-tool"; tool?: string };
 type PdfEditorReadyMessage = { type: "pdf-editor-ready" };
@@ -170,6 +176,7 @@ export default function PdfEditorTool({
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [externalEmbedWarning, setExternalEmbedWarning] = useState("");
   const [loadCancelled, setLoadCancelled] = useState(false);
   const appliedToolRef = useRef<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -185,6 +192,7 @@ export default function PdfEditorTool({
   const editorFallbackUsedRef = useRef(false);
   const compatPollTimerRef = useRef<number | null>(null);
   const compatPollTokenRef = useRef<number | null>(null);
+  const blockedEmbedCountRef = useRef(0);
   const iframeSrc = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
@@ -206,6 +214,8 @@ export default function PdfEditorTool({
     setLoadCancelled(false);
     setBusy(false);
     setError("");
+    setExternalEmbedWarning("");
+    blockedEmbedCountRef.current = 0;
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
     editorFallbackUsedRef.current = false;
@@ -223,6 +233,11 @@ export default function PdfEditorTool({
     }
     compatPollTokenRef.current = null;
   }, [iframeSrc]);
+
+  useEffect(() => {
+    setExternalEmbedWarning("");
+    blockedEmbedCountRef.current = 0;
+  }, [file]);
 
   const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
     const win = iframeRef.current?.contentWindow;
@@ -715,6 +730,23 @@ export default function PdfEditorTool({
         setLoadCancelled(false);
         setError(message);
       }
+      if (hasMessageType<PdfExternalEmbedBlockedMessage["type"]>(evt.data, "pdf-external-embed-blocked")) {
+        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
+        const payload = evt.data as PdfExternalEmbedBlockedMessage;
+        const count = typeof payload.count === "number" ? payload.count : 0;
+        if (count <= blockedEmbedCountRef.current) return;
+        blockedEmbedCountRef.current = count;
+        const origins = Array.isArray(payload.origins)
+          ? payload.origins.filter((origin) => typeof origin === "string" && origin.trim().length > 0)
+          : [];
+        const originLabel = origins.slice(0, 3).join(", ");
+        const base = t(
+          "pdfExternalEmbedsBlocked",
+          "External content in this PDF was blocked for security. The editor should still work."
+        );
+        const message = originLabel ? `${base} (${originLabel})` : base;
+        setExternalEmbedWarning(message);
+      }
       if (hasMessageType<PdfLoadCancelledMessage["type"]>(evt.data, "pdf-load-cancelled")) {
         if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
         hasRealProgressRef.current = false;
@@ -897,6 +929,12 @@ export default function PdfEditorTool({
       {error && (
         <div className="m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
           {error}
+        </div>
+      )}
+
+      {externalEmbedWarning && !error && (
+        <div className="mx-5 mb-5 text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-3">
+          {externalEmbedWarning}
         </div>
       )}
 

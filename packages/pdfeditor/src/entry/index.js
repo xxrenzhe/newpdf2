@@ -166,6 +166,9 @@ if (isEmbedded) {
 }
 
 const XFA_EMBED_SELECTOR = 'iframe, frame, object, embed';
+const blockedEmbedOrigins = new Set();
+let blockedEmbedCount = 0;
+let blockedEmbedNoticeTimer = null;
 let xfaEmbedObserver = null;
 
 const isExternalUrl = (rawUrl) => {
@@ -175,6 +178,31 @@ const isExternalUrl = (rawUrl) => {
         return parsed.origin !== window.location.origin;
     } catch {
         return true;
+    }
+};
+
+const notifyBlockedEmbeds = () => {
+    if (blockedEmbedNoticeTimer) return;
+    blockedEmbedNoticeTimer = setTimeout(() => {
+        blockedEmbedNoticeTimer = null;
+        const payload = {
+            type: 'pdf-external-embed-blocked',
+            count: blockedEmbedCount,
+            origins: Array.from(blockedEmbedOrigins).slice(0, 4)
+        };
+        if (hostLoadToken) {
+            payload.loadToken = hostLoadToken;
+        }
+        postToParent(payload);
+    }, 200);
+};
+
+const resetBlockedEmbeds = () => {
+    blockedEmbedOrigins.clear();
+    blockedEmbedCount = 0;
+    if (blockedEmbedNoticeTimer) {
+        clearTimeout(blockedEmbedNoticeTimer);
+        blockedEmbedNoticeTimer = null;
     }
 };
 
@@ -189,6 +217,17 @@ const scrubXfaEmbeds = (root) => {
                 ? el.getAttribute('data')
                 : el.getAttribute('src');
             if (!url || isExternalUrl(url)) {
+                if (url) {
+                    try {
+                        const parsed = new URL(url, window.location.href);
+                        blockedEmbedOrigins.add(parsed.origin);
+                    } catch {
+                        blockedEmbedOrigins.add('unknown');
+                    }
+                } else {
+                    blockedEmbedOrigins.add('unknown');
+                }
+                blockedEmbedCount += 1;
                 try {
                     if (el instanceof HTMLIFrameElement) {
                         el.src = 'about:blank';
@@ -201,6 +240,7 @@ const scrubXfaEmbeds = (root) => {
                     // ignore
                 }
                 el.replaceWith(document.createComment('XFA embedded content blocked'));
+                notifyBlockedEmbeds();
             }
         });
     });
@@ -553,6 +593,7 @@ window.addEventListener('message', e => {
         postEditorReady();
         const payload = e.data || {};
         hostLoadToken = typeof payload.loadToken === 'number' ? payload.loadToken : 0;
+        resetBlockedEmbeds();
         const payloadName = payload.fileName || payload.name;
         if (payloadName) {
             setFileName(payloadName);
@@ -581,6 +622,7 @@ window.addEventListener('message', e => {
         }
         const cancelledToken = hostLoadToken;
         hostLoadToken = 0;
+        resetBlockedEmbeds();
         try {
             reader.cancelLoad?.();
         } catch {
