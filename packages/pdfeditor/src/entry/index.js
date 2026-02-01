@@ -300,7 +300,7 @@ const reader = new PDFReader({
     viewMode: VIEW_MODE.AUTO_ZOOM,
     cMapUrl: cMapUrl,
     standardFontDataUrl: standardFontDataUrl,
-    enableXfa: true,
+    enableXfa: false,
     fontExtraProperties: true,
     usePageBase: false,
     expandThumbs: false,

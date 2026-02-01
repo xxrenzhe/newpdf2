@@ -48,7 +48,7 @@ export class PDFReader {
         disableViewer: false,
         cMapUrl: null,
         standardFontDataUrl: null,
-        enableXfa: true,
+        enableXfa: false,
         fontExtraProperties: true,
         initialOutputScale: null,
         maxOutputScale: null,
