@@ -165,6 +165,64 @@ if (isEmbedded) {
         });
 }
 
+const XFA_EMBED_SELECTOR = 'iframe, frame, object, embed';
+let xfaEmbedObserver = null;
+
+const isExternalUrl = (rawUrl) => {
+    if (!rawUrl) return false;
+    try {
+        const parsed = new URL(rawUrl, window.location.href);
+        return parsed.origin !== window.location.origin;
+    } catch {
+        return true;
+    }
+};
+
+const scrubXfaEmbeds = (root) => {
+    if (!(root instanceof Element)) return;
+    const layers = root.matches('.xfaLayer') ? [root] : Array.from(root.querySelectorAll('.xfaLayer'));
+    if (layers.length === 0) return;
+    layers.forEach(layer => {
+        layer.querySelectorAll(XFA_EMBED_SELECTOR).forEach((el) => {
+            const tag = el.tagName.toLowerCase();
+            const url = tag === 'object'
+                ? el.getAttribute('data')
+                : el.getAttribute('src');
+            if (!url || isExternalUrl(url)) {
+                try {
+                    if (el instanceof HTMLIFrameElement) {
+                        el.src = 'about:blank';
+                    } else if (el instanceof HTMLObjectElement) {
+                        el.data = '';
+                    } else if (el instanceof HTMLEmbedElement) {
+                        el.src = '';
+                    }
+                } catch {
+                    // ignore
+                }
+                el.replaceWith(document.createComment('XFA embedded content blocked'));
+            }
+        });
+    });
+};
+
+const ensureXfaEmbedSanitizer = () => {
+    if (xfaEmbedObserver) return;
+    const target = document.querySelector('#pdf-main') || document.body;
+    if (!target) return;
+    xfaEmbedObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node instanceof Element) {
+                    scrubXfaEmbeds(node);
+                }
+            });
+        });
+    });
+    xfaEmbedObserver.observe(target, { childList: true, subtree: true });
+    scrubXfaEmbeds(target);
+};
+
 let hostLoadToken = 0;
 
 const interactiveSelectors = [
@@ -300,7 +358,7 @@ const reader = new PDFReader({
     viewMode: VIEW_MODE.AUTO_ZOOM,
     cMapUrl: cMapUrl,
     standardFontDataUrl: standardFontDataUrl,
-    enableXfa: false,
+    enableXfa: true,
     fontExtraProperties: true,
     usePageBase: false,
     expandThumbs: false,
@@ -310,6 +368,7 @@ const reader = new PDFReader({
 }, pdfjsLib);
 
 reader.init();
+ensureXfaEmbedSanitizer();
 setupButtonA11y();
 
 const editor = new PDFEditor({
@@ -410,6 +469,7 @@ let sentLoadedForLoadId = 0;
 let readyFallbackTimer = null;
 
 PDFEvent.on(Events.READER_INIT, () => {
+    ensureXfaEmbedSanitizer();
     if (elDownload) {
         elDownload.style.display = 'block';
     }
@@ -470,6 +530,9 @@ PDFEvent.on(Events.READER_INIT, () => {
 
 PDFEvent.on(Events.PAGE_RENDERED, (evt) => {
     const page = evt?.data;
+    if (page?.elWrapper) {
+        scrubXfaEmbeds(page.elWrapper);
+    }
     if (!page || page.pageNum !== 1) return;
     if (reader.loadId !== readyLoadId) return;
     if (sentLoadedForLoadId === reader.loadId) return;
