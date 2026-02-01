@@ -64,8 +64,8 @@ jobs:
       - name: 安装依赖（Bun）
         run: bun install --frozen-lockfile
 
-      - name: 构建 PDF Editor 静态资源
-        run: bun run build:pdfeditor
+      - name: 构建（包含 PDF Editor + Next build）
+        run: npm run build
 
       - name: 代码检查（TypeScript + ESLint）
         run: bun run lint
