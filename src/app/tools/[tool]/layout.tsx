@@ -68,11 +68,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ToolLayout({ children, params }: Props) {
   const { tool: toolKey } = await params;
   const isEditorTool = toolKey === "annotate" || toolKey === "edit";
+  if (isEditorTool) {
+    return <div className="min-h-screen bg-white">{children}</div>;
+  }
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <div className={isEditorTool ? "flex-1 bg-white" : "flex-1 bg-gradient-pink"}>{children}</div>
-      {isEditorTool ? null : <Footer />}
+      <div className="flex-1 bg-gradient-pink">{children}</div>
+      <Footer />
     </div>
   );
 }

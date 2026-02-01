@@ -80,6 +80,8 @@ async function prefetchPdfEditor(signal?: AbortSignal) {
 export interface UnifiedToolPageProps {
   /** Guest mode: shows login prompts, uses query param URLs */
   isGuest?: boolean;
+  /** UI variant for editor layout (guest vs tools shell) */
+  editorUiVariant?: "guest" | "tool";
   /** Tool key from route param (logged-in mode) */
   toolKey?: string;
   /** Chosen tool from query param (guest mode) */
@@ -92,6 +94,7 @@ export interface UnifiedToolPageProps {
 
 export default function UnifiedToolPage({
   isGuest = false,
+  editorUiVariant,
   toolKey: propToolKey,
   chosenTool,
   documentId,
@@ -117,6 +120,8 @@ export default function UnifiedToolPage({
 
   const tool = toolByKey[displayToolKey] ?? toolByKey.annotate;
   const isPdfEditor = toolKey === "annotate" || toolKey === "edit";
+  const uiVariant = editorUiVariant ?? (isGuest ? "guest" : "tool");
+  const useGuestUi = uiVariant === "guest";
 
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(Boolean(isGuest && documentId));
@@ -387,7 +392,7 @@ export default function UnifiedToolPage({
   };
 
   // Guest mode header
-  const guestHeader = isGuest && (!showEditor || !isPdfEditor) ? (
+  const guestHeader = useGuestUi && (!showEditor || !isPdfEditor) ? (
     <header className="sticky top-0 z-40 bg-white border-b border-[color:var(--brand-line)]">
       <div className="h-16 sm:h-20 md:h-24 px-4 flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2">
@@ -410,16 +415,24 @@ export default function UnifiedToolPage({
   ) : null;
 
   return (
-    <main className={isGuest ? "min-h-screen bg-white" : (isPdfEditor && files.length > 0 ? "py-4 sm:py-6" : "py-8 sm:py-12 md:py-20")}>
+    <main
+      className={
+        useGuestUi
+          ? "min-h-screen bg-white"
+          : isPdfEditor && files.length > 0
+            ? "py-4 sm:py-6"
+            : "py-8 sm:py-12 md:py-20"
+      }
+    >
       {guestHeader}
 
       <div className={
-        isGuest
+        useGuestUi
           ? (showEditor && isPdfEditor ? "p-0" : showEditor ? "py-3 sm:py-4 px-2 md:px-4 lg:px-6" : "py-8 sm:py-12 px-4")
           : (isPdfEditor && files.length > 0 ? "w-full px-2 md:px-4 lg:px-6" : "container mx-auto px-4 md:px-6 lg:px-8")
       }>
         {/* Tool Header - only when not showing editor */}
-        {!showEditor && !isGuest && (
+        {!showEditor && !useGuestUi && (
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[color:var(--brand-lilac)] text-primary flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-sm">
               <ToolIcon name={tool.iconName} className="w-8 h-8 stroke-[2px]" />
@@ -450,7 +463,7 @@ export default function UnifiedToolPage({
         )}
 
         {/* Tool Header - guest mode */}
-        {!isGuest ? null : !documentId && (
+        {!useGuestUi ? null : !documentId && (
           <div className="max-w-2xl mx-auto text-center mb-8">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[color:var(--brand-ink)] mb-3">
               {t(tool.nameKey, tool.name)}
