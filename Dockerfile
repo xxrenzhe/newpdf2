@@ -17,6 +17,9 @@ FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
+ARG APP_BUILD_SHA=dev
+ENV NEXT_PUBLIC_PDFEDITOR_BUILD_ID=$APP_BUILD_SHA
+
 # Docker build 不需要 Playwright 浏览器，避免在依赖安装阶段下载，显著加速构建
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 

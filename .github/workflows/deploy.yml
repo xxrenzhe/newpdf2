@@ -64,6 +64,9 @@ jobs:
       - name: 安装依赖（Bun）
         run: bun install --frozen-lockfile
 
+      - name: 构建 PDF Editor 静态资源
+        run: bun run build:pdfeditor
+
       - name: 代码检查（TypeScript + ESLint）
         run: bun run lint
 
@@ -109,6 +112,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           no-cache: true
+          build-args: |
+            APP_BUILD_SHA=${{ github.sha }}
 
   # ============================================
   # Job 3（可选）：部署到 GCP Cloud Run（自动）
@@ -191,6 +196,8 @@ jobs:
           tags: ${{ steps.meta-ar.outputs.tags }}
           labels: ${{ steps.meta-ar.outputs.labels }}
           no-cache: true
+          build-args: |
+            APP_BUILD_SHA=${{ github.sha }}
 
       - name: 部署到 Cloud Run（仅更新镜像；环境变量建议由 Secret Manager 注入）
         if: ${{ steps.gate.outputs.enabled == 'true' }}

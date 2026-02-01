@@ -25,6 +25,7 @@ const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 const EDITOR_READY_TIMEOUT_MS = 12000;
 const PDF_LOAD_TIMEOUT_MS = 60000;
 const IFRAME_LOAD_TIMEOUT_MS = 15000;
+const PDFEDITOR_BUILD_ID = (process.env.NEXT_PUBLIC_PDFEDITOR_BUILD_ID ?? "").trim();
 
 function UploadProgressOverlay({
   open,
@@ -196,6 +197,7 @@ export default function PdfEditorTool({
   const iframeSrc = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
+    if (PDFEDITOR_BUILD_ID) params.set("v", PDFEDITOR_BUILD_ID.slice(0, 12));
     const qs = params.toString();
     return qs ? `/pdfeditor/index.html?${qs}#embed` : "/pdfeditor/index.html#embed";
   }, [lang]);
