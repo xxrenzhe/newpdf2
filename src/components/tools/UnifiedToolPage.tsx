@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "@/components/AppLink";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import FileDropzone from "@/components/tools/FileDropzone";
 import { toolByKey, TOOLS } from "@/lib/tools";
@@ -131,6 +131,7 @@ export default function UnifiedToolPage({
   const [resumeInput, setResumeInput] = useState<File | null>(null);
   const [resumeOutput, setResumeOutput] = useState<File | null>(null);
   const [resumeBusy, setResumeBusy] = useState(false);
+  const redirectingToGuestRef = useRef(false);
 
   const isMulti = toolKey === "merge" || toolKey === "convert";
   const accept = useMemo(() => {
@@ -312,6 +313,25 @@ export default function UnifiedToolPage({
     },
     [documentId, goGuest]
   );
+
+  // For /tools/edit: once a file is loaded, redirect into the guest editor route
+  useEffect(() => {
+    if (isGuest) return;
+    if (!useGuestEditorChrome) return;
+    if (toolKey !== "edit" && toolKey !== "annotate") return;
+    if (files.length === 0) return;
+    if (redirectingToGuestRef.current) return;
+
+    redirectingToGuestRef.current = true;
+    void (async () => {
+      try {
+        const id = await createGuestDocument(toolKey, files);
+        goGuest(chosenToolFromToolKey(toolKey), id);
+      } catch {
+        redirectingToGuestRef.current = false;
+      }
+    })();
+  }, [files, goGuest, isGuest, toolKey, useGuestEditorChrome]);
 
   const handleEditorToolShortcut = useCallback(
     (nextToolKey: string) => {
