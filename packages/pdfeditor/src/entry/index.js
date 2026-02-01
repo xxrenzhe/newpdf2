@@ -170,11 +170,15 @@ const blockedEmbedOrigins = new Set();
 let blockedEmbedCount = 0;
 let blockedEmbedNoticeTimer = null;
 let xfaEmbedObserver = null;
+let embedGuardInstalled = false;
 
 const isExternalUrl = (rawUrl) => {
     if (!rawUrl) return false;
     try {
         const parsed = new URL(rawUrl, window.location.href);
+        if (parsed.protocol === 'blob:' || parsed.protocol === 'data:' || parsed.protocol === 'about:') {
+            return false;
+        }
         return parsed.origin !== window.location.origin;
     } catch {
         return true;
@@ -206,43 +210,112 @@ const resetBlockedEmbeds = () => {
     }
 };
 
-const scrubXfaEmbeds = (root) => {
-    if (!(root instanceof Element)) return;
-    const layers = root.matches('.xfaLayer') ? [root] : Array.from(root.querySelectorAll('.xfaLayer'));
-    if (layers.length === 0) return;
-    layers.forEach(layer => {
-        layer.querySelectorAll(XFA_EMBED_SELECTOR).forEach((el) => {
-            const tag = el.tagName.toLowerCase();
-            const url = tag === 'object'
-                ? el.getAttribute('data')
-                : el.getAttribute('src');
-            if (!url || isExternalUrl(url)) {
-                if (url) {
-                    try {
-                        const parsed = new URL(url, window.location.href);
-                        blockedEmbedOrigins.add(parsed.origin);
-                    } catch {
-                        blockedEmbedOrigins.add('unknown');
-                    }
-                } else {
-                    blockedEmbedOrigins.add('unknown');
+const markBlockedEmbed = (url) => {
+    if (url) {
+        try {
+            const parsed = new URL(url, window.location.href);
+            blockedEmbedOrigins.add(parsed.origin || 'unknown');
+        } catch {
+            blockedEmbedOrigins.add('unknown');
+        }
+    } else {
+        blockedEmbedOrigins.add('unknown');
+    }
+    blockedEmbedCount += 1;
+    notifyBlockedEmbeds();
+};
+
+const installEmbedGuard = () => {
+    if (embedGuardInstalled) return;
+    embedGuardInstalled = true;
+
+    const wrapProp = (proto, prop, fallback) => {
+        const desc = Object.getOwnPropertyDescriptor(proto, prop);
+        if (!desc || typeof desc.set !== 'function') return;
+        Object.defineProperty(proto, prop, {
+            configurable: true,
+            get: desc.get,
+            set(value) {
+                const next = !value || isExternalUrl(value) ? fallback : value;
+                if (next !== value) {
+                    markBlockedEmbed(value);
                 }
-                blockedEmbedCount += 1;
-                try {
-                    if (el instanceof HTMLIFrameElement) {
-                        el.src = 'about:blank';
-                    } else if (el instanceof HTMLObjectElement) {
-                        el.data = '';
-                    } else if (el instanceof HTMLEmbedElement) {
-                        el.src = '';
-                    }
-                } catch {
-                    // ignore
-                }
-                el.replaceWith(document.createComment('XFA embedded content blocked'));
-                notifyBlockedEmbeds();
+                return desc.set.call(this, next);
             }
         });
+    };
+
+    wrapProp(HTMLIFrameElement.prototype, 'src', 'about:blank');
+    if (typeof HTMLFrameElement !== 'undefined') {
+        wrapProp(HTMLFrameElement.prototype, 'src', 'about:blank');
+    }
+    wrapProp(HTMLObjectElement.prototype, 'data', '');
+    wrapProp(HTMLEmbedElement.prototype, 'src', '');
+
+    const originalSetAttribute = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function (name, value) {
+        if (typeof name === 'string') {
+            const lower = name.toLowerCase();
+            if ((this instanceof HTMLIFrameElement || this instanceof HTMLFrameElement) && lower === 'src') {
+                if (!value || isExternalUrl(value)) {
+                    markBlockedEmbed(String(value));
+                    return originalSetAttribute.call(this, name, 'about:blank');
+                }
+            }
+            if (this instanceof HTMLObjectElement && lower === 'data') {
+                if (!value || isExternalUrl(value)) {
+                    markBlockedEmbed(String(value));
+                    return originalSetAttribute.call(this, name, '');
+                }
+            }
+            if (this instanceof HTMLEmbedElement && lower === 'src') {
+                if (!value || isExternalUrl(value)) {
+                    markBlockedEmbed(String(value));
+                    return originalSetAttribute.call(this, name, '');
+                }
+            }
+        }
+        return originalSetAttribute.call(this, name, value);
+    };
+};
+
+const scrubXfaEmbeds = (root) => {
+    if (!(root instanceof Element)) return;
+    const embeds = root.matches(XFA_EMBED_SELECTOR)
+        ? [root]
+        : Array.from(root.querySelectorAll(XFA_EMBED_SELECTOR));
+    if (embeds.length === 0) return;
+    embeds.forEach((el) => {
+        const tag = el.tagName.toLowerCase();
+        const url = tag === 'object'
+            ? el.getAttribute('data')
+            : el.getAttribute('src');
+        if (!url || isExternalUrl(url)) {
+            if (url) {
+                try {
+                    const parsed = new URL(url, window.location.href);
+                    blockedEmbedOrigins.add(parsed.origin || 'unknown');
+                } catch {
+                    blockedEmbedOrigins.add('unknown');
+                }
+            } else {
+                blockedEmbedOrigins.add('unknown');
+            }
+            blockedEmbedCount += 1;
+            try {
+                if (el instanceof HTMLIFrameElement) {
+                    el.src = 'about:blank';
+                } else if (el instanceof HTMLObjectElement) {
+                    el.data = '';
+                } else if (el instanceof HTMLEmbedElement) {
+                    el.src = '';
+                }
+            } catch {
+                // ignore
+            }
+            el.replaceWith(document.createComment('External embedded content blocked'));
+            notifyBlockedEmbeds();
+        }
     });
 };
 
@@ -407,6 +480,7 @@ const reader = new PDFReader({
     initThumbBatchSize: 40
 }, pdfjsLib);
 
+installEmbedGuard();
 reader.init();
 ensureXfaEmbedSanitizer();
 setupButtonA11y();
