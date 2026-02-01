@@ -17,7 +17,7 @@ const nextConfig = {
       "font-src 'self' data:",
       isProd ? "connect-src 'self' https:" : "connect-src 'self' https: http: ws: wss:",
       "worker-src 'self' blob:",
-      "frame-src 'self' https://accounts.google.com https://docs.google.com https://drive.google.com https://www.dropbox.com https://onedrive.live.com https://login.live.com https://login.microsoftonline.com https://*.sharepoint.com https://*.sharepoint-df.com",
+      "frame-src 'self' blob: https://qwerpdf.com https://*.qwerpdf.com https://accounts.google.com https://docs.google.com https://drive.google.com https://www.dropbox.com https://onedrive.live.com https://login.live.com https://login.microsoftonline.com https://*.sharepoint.com https://*.sharepoint-df.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
