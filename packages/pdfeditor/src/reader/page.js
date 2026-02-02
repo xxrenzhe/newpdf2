@@ -139,11 +139,12 @@ export class PDFPage extends PDFPageBase {
                         rawWidth: textWidth,
                         itemIndices: itemIndices
                     };
-                    this.#filterDiv(n);
+                    const partsAdded = this.#filterDiv(n);
+                    const increment = Number.isFinite(partsAdded) && partsAdded > 0 ? partsAdded : 1;
                     text = '';
                     textWidth = 0;
                     elements = [];
-                    n++;
+                    n += increment;
                     return true;
                 };
 
@@ -560,12 +561,13 @@ export class PDFPage extends PDFPageBase {
         return true;
     }
 
-    #filterDiv(n) {
+    #filterDiv(n, options = {}) {
         const textParts = this.textParts[n];
         if (!textParts || !Array.isArray(textParts.elements)) return;
         if (!Number.isFinite(textParts.rawWidth) && Number.isFinite(textParts.width)) {
             textParts.rawWidth = textParts.width;
         }
+        const allowSplit = options?.allowSplit !== false;
         const elements = textParts.elements.filter(el => el && el.isConnected);
         if (!elements.length) return;
 
@@ -641,13 +643,52 @@ export class PDFPage extends PDFPageBase {
             if (Number.isFinite(bottom)) maxBottom = Math.max(maxBottom, bottom);
         });
 
+        const coverData = this.#buildCoverRects(itemBoxes, baseFontSize, spaceThreshold);
+        if (allowSplit && coverData && Array.isArray(coverData.elements) && coverData.elements.length > 1) {
+            const clusters = this.#splitElementsByAnchors(sorted, coverData.elements);
+            if (Array.isArray(clusters) && clusters.length > 1) {
+                const boxByElement = new Map(itemBoxes.map(box => [box.element, box]));
+                const outputScale = this.outputScale || 1;
+                const nextParts = clusters.map(clusterEls => {
+                    const clusterIndices = Array.from(new Set(clusterEls.map(el => {
+                        const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
+                        return Number.isFinite(idx) ? idx : null;
+                    }).filter(idx => idx !== null)));
+                    let clusterWidthPx = 0;
+                    clusterEls.forEach(el => {
+                        const box = boxByElement.get(el);
+                        if (box && Number.isFinite(box.left) && Number.isFinite(box.right)) {
+                            clusterWidthPx += Math.max(0, box.right - box.left);
+                        } else {
+                            const rect = el.getBoundingClientRect();
+                            if (Number.isFinite(rect.width)) {
+                                clusterWidthPx += rect.width;
+                            }
+                        }
+                    });
+                    const rawWidth = outputScale ? clusterWidthPx / outputScale : clusterWidthPx;
+                    return {
+                        text: '',
+                        elements: clusterEls,
+                        width: rawWidth,
+                        rawWidth: rawWidth,
+                        itemIndices: clusterIndices
+                    };
+                });
+                this.textParts.splice(n, 1, ...nextParts);
+                for (let i = 0; i < nextParts.length; i++) {
+                    this.#filterDiv(n + i, { allowSplit: false });
+                }
+                return nextParts.length;
+            }
+        }
+
         const mergedText = trimSpace(lineText);
         textParts.text = mergedText;
 
         const firstElement = anchorElement;
         firstElement.textContent = mergedText;
         firstElement.style.transform = 'none';
-        const coverData = this.#buildCoverRects(itemBoxes, baseFontSize, spaceThreshold);
         if (coverData) {
             textParts.coverRects = coverData.rects;
             textParts.coverElements = coverData.elements;
@@ -760,6 +801,37 @@ export class PDFPage extends PDFPageBase {
             }
         });
         textParts.elements = Array.from(keepElements);
+        this.#syncPartElementIds(textParts, n);
+        return 1;
+    }
+
+    #splitElementsByAnchors(sorted, anchors) {
+        if (!Array.isArray(sorted) || !sorted.length) return null;
+        if (!Array.isArray(anchors) || anchors.length < 2) return null;
+        const indices = anchors.map(el => sorted.indexOf(el)).filter(idx => idx >= 0);
+        if (indices.length < 2) return null;
+        indices.sort((a, b) => a - b);
+        const clusters = [];
+        for (let i = 0; i < indices.length; i++) {
+            const start = indices[i];
+            const end = i + 1 < indices.length ? indices[i + 1] : sorted.length;
+            const slice = sorted.slice(start, end);
+            if (slice.length) {
+                clusters.push(slice);
+            }
+        }
+        return clusters.length > 1 ? clusters : null;
+    }
+
+    #syncPartElementIds(textPart, partIndex) {
+        if (!textPart || !Array.isArray(textPart.elements)) return;
+        const baseId = this.pageNum + '_' + partIndex + '_';
+        textPart.elements.forEach((el, idx) => {
+            if (!el) return;
+            el.setAttribute('data-parts', partIndex);
+            el.setAttribute('data-l', idx);
+            el.setAttribute('data-id', baseId + idx);
+        });
     }
 
     #buildCoverRects(itemBoxes, baseFontSize, spaceThreshold) {
