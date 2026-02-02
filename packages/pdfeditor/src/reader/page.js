@@ -134,17 +134,15 @@ export class PDFPage extends PDFPageBase {
                     }).filter(idx => idx !== null)));
                     this.textParts[n] = {
                         text: lineText,
-                        elements: elements,
+                        elements: elements.slice(),
                         width: textWidth,
                         rawWidth: textWidth,
                         itemIndices: itemIndices
                     };
-                    const partsAdded = this.#filterDiv(n);
-                    const increment = Number.isFinite(partsAdded) && partsAdded > 0 ? partsAdded : 1;
                     text = '';
                     textWidth = 0;
                     elements = [];
-                    n += increment;
+                    n += 1;
                     return true;
                 };
 
@@ -236,6 +234,14 @@ export class PDFPage extends PDFPageBase {
                         prevTextIndex = null;
                         lineHasLeader = false;
                         finalizeLine(true);
+                    }
+                }
+
+                this.#mergeTextPartsByLine();
+                for (let i = 0; i < this.textParts.length; i++) {
+                    const partsAdded = this.#filterDiv(i);
+                    if (Number.isFinite(partsAdded) && partsAdded > 1) {
+                        i += partsAdded - 1;
                     }
                 }
             });
@@ -1180,6 +1186,148 @@ export class PDFPage extends PDFPageBase {
         }
 
         return Boolean(hasEOL);
+    }
+
+    #mergeTextPartsByLine() {
+        if (!Array.isArray(this.textParts) || this.textParts.length < 2) return;
+        const metrics = [];
+        this.textParts.forEach(part => {
+            if (!part) return;
+            const indices = Array.isArray(part.itemIndices) && part.itemIndices.length
+                ? part.itemIndices
+                : Array.isArray(part.elements)
+                    ? part.elements.map(el => {
+                        const idx = Number.parseInt(el?.getAttribute?.('data-idx'), 10);
+                        return Number.isFinite(idx) ? idx : null;
+                    }).filter(idx => idx !== null)
+                    : [];
+            if (!indices.length) return;
+            const lineMetrics = indices.map(idx => this.#getTextItemLineMetrics(idx)).filter(Boolean);
+            if (!lineMetrics.length) return;
+            const ys = lineMetrics.map(entry => entry.y).filter(value => Number.isFinite(value));
+            if (!ys.length) return;
+            ys.sort((a, b) => a - b);
+            const medianY = ys[Math.floor(ys.length / 2)];
+            const maxHeight = lineMetrics.reduce((acc, entry) => {
+                const next = Number.isFinite(entry.height) ? entry.height : 0;
+                return Math.max(acc, next);
+            }, 0);
+            const minX = lineMetrics.reduce((acc, entry) => {
+                const next = Number.isFinite(entry.x) ? entry.x : acc;
+                return Math.min(acc, next);
+            }, Infinity);
+            const rotated = lineMetrics.some(entry => entry.rotated || entry.isVertical);
+            metrics.push({
+                part,
+                y: medianY,
+                height: maxHeight,
+                minX,
+                rotated
+            });
+        });
+
+        if (!metrics.length) return;
+        const clusters = [];
+        metrics.forEach(entry => {
+            if (!Number.isFinite(entry.y) || entry.rotated) {
+                clusters.push({
+                    y: entry.y,
+                    height: entry.height,
+                    minX: entry.minX,
+                    parts: [entry.part],
+                    rotated: true,
+                    count: 1
+                });
+                return;
+            }
+            let match = null;
+            for (const cluster of clusters) {
+                if (cluster.rotated) continue;
+                const baseHeight = Math.min(cluster.height || 0, entry.height || 0)
+                    || Math.max(cluster.height || 0, entry.height || 0)
+                    || 1;
+                const tolerance = Math.max(baseHeight * 0.5, 1);
+                if (Math.abs(entry.y - cluster.y) <= tolerance) {
+                    match = cluster;
+                    break;
+                }
+            }
+            if (!match) {
+                clusters.push({
+                    y: entry.y,
+                    height: entry.height,
+                    minX: entry.minX,
+                    parts: [entry.part],
+                    rotated: false,
+                    count: 1
+                });
+                return;
+            }
+            match.parts.push(entry.part);
+            match.count += 1;
+            match.y = (match.y * (match.count - 1) + entry.y) / match.count;
+            match.height = Math.max(match.height, entry.height);
+            match.minX = Math.min(match.minX, entry.minX);
+        });
+
+        const mergedParts = clusters
+            .sort((a, b) => {
+                const yDiff = (b.y ?? 0) - (a.y ?? 0);
+                if (Math.abs(yDiff) > 0.01) return yDiff;
+                return (a.minX ?? 0) - (b.minX ?? 0);
+            })
+            .map(cluster => {
+                if (!Array.isArray(cluster.parts) || cluster.parts.length === 0) {
+                    return null;
+                }
+                if (cluster.parts.length === 1) {
+                    return cluster.parts[0];
+                }
+                const merged = {
+                    text: '',
+                    elements: [],
+                    width: 0,
+                    rawWidth: 0,
+                    itemIndices: []
+                };
+                const elementSet = new Set();
+                cluster.parts.forEach(part => {
+                    if (Array.isArray(part.elements)) {
+                        part.elements.forEach(el => {
+                            if (!el || elementSet.has(el)) return;
+                            elementSet.add(el);
+                            merged.elements.push(el);
+                        });
+                    }
+                    if (Array.isArray(part.itemIndices)) {
+                        merged.itemIndices.push(...part.itemIndices);
+                    }
+                    const width = Number.isFinite(part.rawWidth) ? part.rawWidth : part.width;
+                    if (Number.isFinite(width)) {
+                        merged.rawWidth += width;
+                        merged.width += width;
+                    }
+                });
+                merged.itemIndices = Array.from(new Set(merged.itemIndices));
+                if (!Number.isFinite(merged.rawWidth) || merged.rawWidth <= 0) {
+                    const fallbackWidth = cluster.parts.reduce((sum, part) => {
+                        const width = Number.isFinite(part.width) ? part.width : 0;
+                        return sum + width;
+                    }, 0);
+                    if (fallbackWidth > 0) {
+                        merged.rawWidth = fallbackWidth;
+                        merged.width = fallbackWidth;
+                    }
+                } else {
+                    merged.width = merged.rawWidth;
+                }
+                return merged;
+            })
+            .filter(part => part && Array.isArray(part.elements) && part.elements.length);
+
+        if (mergedParts.length) {
+            this.textParts = mergedParts;
+        }
     }
 
     #normalizeTextItemColor(value) {
