@@ -12,6 +12,7 @@
     "start": "node scripts/validate-prod-env.mjs && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next start",
     "prelint": "node scripts/ensure-next-types.mjs",
     "lint": "tsc --noEmit && next lint",
+    "validate-all": "npm run lint && npm run build",
     "test:e2e": "playwright test",
     "format": "biome format --write"
   },

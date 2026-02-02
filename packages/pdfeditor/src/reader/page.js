@@ -168,7 +168,12 @@ export class PDFPage extends PDFPageBase {
                     if (this.#isLeaderText(rawText)) {
                         lineHasLeader = true;
                     }
-                    textWidth += this.textDivs[i].getBoundingClientRect().width;
+                    const itemWidth = this.#getTextItemWidth(textItem, viewport);
+                    if (Number.isFinite(itemWidth) && itemWidth > 0) {
+                        textWidth += itemWidth;
+                    } else if (this.textDivs[i]) {
+                        textWidth += this.textDivs[i].getBoundingClientRect().width;
+                    }
 
                     let elDiv = this.textDivs[i];
                     if (this.hideOriginElements.findIndex(data => data.idx == i) === -1) {
@@ -822,6 +827,17 @@ export class PDFPage extends PDFPageBase {
             return null;
         }
         return { rects, elements };
+    }
+
+    #getTextItemWidth(textItem, viewport) {
+        if (!textItem) return null;
+        const scale = viewport && Number.isFinite(viewport.scale) ? viewport.scale : null;
+        const style = this.textContentStyles ? this.textContentStyles[textItem.fontName] : null;
+        const isVertical = Boolean(style?.vertical);
+        const baseWidth = isVertical ? textItem.height : textItem.width;
+        if (!Number.isFinite(baseWidth)) return null;
+        if (scale === null) return baseWidth;
+        return baseWidth * scale;
     }
 
     #getPdfLineWidth(elements, itemIndices) {
