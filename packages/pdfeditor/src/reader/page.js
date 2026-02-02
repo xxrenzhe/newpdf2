@@ -1005,7 +1005,44 @@ export class PDFPage extends PDFPageBase {
         if (nextIsLeader || lineHasLeader) {
             return false;
         }
-        return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
+        const currentColor = this.#normalizeTextItemColor(textItem?.color);
+        const nextColor = this.#normalizeTextItemColor(nextTextItem?.color);
+        const colorBreak = currentColor && nextColor ? currentColor !== nextColor : false;
+        return nextTextItem.height != textItem.height || colorBreak;
+    }
+
+    #normalizeTextItemColor(value) {
+        const normalizeString = (input) => {
+            if (typeof input !== 'string') return null;
+            const trimmed = input.trim();
+            if (!trimmed) return null;
+            return trimmed.replace(/\s+/g, '').toLowerCase();
+        };
+        if (value === undefined || value === null) return null;
+        if (typeof value === 'string') {
+            const normalized = this.#normalizeFontColor(value);
+            const normalizedString = normalizeString(normalized || value);
+            return normalizedString === 'transparent' ? null : normalizedString;
+        }
+        if (Array.isArray(value)) {
+            const parts = value
+                .map(part => {
+                    const num = typeof part === 'number' ? part : parseFloat(part);
+                    return Number.isFinite(num) ? num : null;
+                })
+                .filter(part => part !== null);
+            if (!parts.length) return null;
+            const serialized = parts.join(',');
+            const normalized = this.#normalizeFontColor(serialized) || serialized;
+            return normalizeString(normalized);
+        }
+        if (typeof value === 'number') {
+            if (!Number.isFinite(value)) return null;
+            const serialized = String(value);
+            const normalized = this.#normalizeFontColor(serialized) || serialized;
+            return normalizeString(normalized);
+        }
+        return null;
     }
 
     #isVisualLineBreak(currentIdx, nextIdx) {
