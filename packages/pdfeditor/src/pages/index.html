@@ -4,6 +4,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Block unexpected client-side redirects from the editor runtime. -->
+    <meta http-equiv="Content-Security-Policy" content="navigate-to 'self'">
     <title><%= htmlWebpackPlugin.options.title %></title>
     <script>
         (function () {

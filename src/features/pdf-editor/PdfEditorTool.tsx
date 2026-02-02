@@ -195,6 +195,7 @@ export default function PdfEditorTool({
   const compatPollTokenRef = useRef<number | null>(null);
   const pendingEditorLoadIdRef = useRef<number | null>(null);
   const blockedEmbedCountRef = useRef(0);
+  const externalNavAttemptsRef = useRef(0);
   const iframeSrc = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
@@ -219,6 +220,7 @@ export default function PdfEditorTool({
     setError("");
     setExternalEmbedWarning("");
     blockedEmbedCountRef.current = 0;
+    externalNavAttemptsRef.current = 0;
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
     editorFallbackUsedRef.current = false;
@@ -860,6 +862,36 @@ export default function PdfEditorTool({
           : t("statusLoading", "Loading…");
 
   const handleIframeLoad = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (iframe) {
+      let sameOrigin = false;
+      try {
+        const href = iframe.contentWindow?.location?.href;
+        if (href) {
+          const parsed = new URL(href);
+          sameOrigin = parsed.origin === window.location.origin;
+        }
+      } catch {
+        sameOrigin = false;
+      }
+      if (!sameOrigin) {
+        externalNavAttemptsRef.current += 1;
+        setIframeReady(false);
+        setEditorReady(false);
+        setEditorBooted(false);
+        setBusy(false);
+        setError(
+          t(
+            "pdfEditorExternalNavigation",
+            "The editor tried to open an external page and was blocked. Retrying…"
+          )
+        );
+        if (externalNavAttemptsRef.current <= 2) {
+          iframe.src = iframeSrc;
+        }
+        return;
+      }
+    }
     injectMobileOverrides();
     setIframeReady(true);
     setEditorReady(false);
@@ -870,7 +902,7 @@ export default function PdfEditorTool({
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
     }
-  }, [detectEditorBooted, injectMobileOverrides]);
+  }, [detectEditorBooted, iframeSrc, injectMobileOverrides, t]);
 
   return (
     <div className={shellClassName}>
