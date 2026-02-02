@@ -184,6 +184,11 @@ class BaseElement {
         this.attrs.height = this.actualRect.height * this.scale;
     }
 
+    getPageContentElement() {
+        const readerPage = this.page?.readerPage;
+        return readerPage?.content || readerPage?.elWrapper || null;
+    }
+
     //抛开缩放后的实际大小
     setActualRect() {
         this.actualRect = {
@@ -213,11 +218,12 @@ class BaseElement {
 
         this.updateAttrSize();
 
-        if (this.dragElement.options.draggable) {
-            this.dragElement.plugins.draggable.inElement = this.page.readerPage.content;
+        const pageContent = this.getPageContentElement();
+        if (this.dragElement.options.draggable && pageContent) {
+            this.dragElement.plugins.draggable.inElement = pageContent;
         }
-        if (this.dragElement.options.resizable) {
-            this.dragElement.plugins.resizable.inElement = this.page.readerPage.content;
+        if (this.dragElement.options.resizable && pageContent) {
+            this.dragElement.plugins.resizable.inElement = pageContent;
         }
         return rect;
     }
@@ -265,7 +271,9 @@ class BaseElement {
 
     getY() {
         const height = this.page.height;
-        let rect = this.page.readerPage.content.getBoundingClientRect();
+        const pageContent = this.getPageContentElement();
+        if (!pageContent) return 0;
+        let rect = pageContent.getBoundingClientRect();
         let scale = height / rect.height;
         let y = !this.el.style.top ? 0 : parseFloat(this.el.style.top);
         return y * scale + (this.options.drawOffset.y / this.pageScale);
@@ -273,7 +281,9 @@ class BaseElement {
 
     getX() {
         const width = this.page.width;
-        let rect = this.page.readerPage.content.getBoundingClientRect();
+        const pageContent = this.getPageContentElement();
+        if (!pageContent) return 0;
+        let rect = pageContent.getBoundingClientRect();
         let scale = width / rect.width;
         let x = !this.el.style.left ? 0 : parseFloat(this.el.style.left);
         return x * scale + (this.options.drawOffset.x / this.pageScale);
@@ -287,7 +297,10 @@ class BaseElement {
         this.el.classList.add('active');
         this.el.setAttribute('data-type', this.dataType);
 
-        const elCanvas = this.page.readerPage.content;
+        const elCanvas = this.getPageContentElement();
+        if (!elCanvas) {
+            return;
+        }
         if (this.options.pos.x === null) {
             this.options.pos.x = (elCanvas.offsetWidth / 2.2) + 'px';
         }

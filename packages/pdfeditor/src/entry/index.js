@@ -162,6 +162,10 @@ if (isEmbedded) {
         });
 }
 
+// XFA rendering is opt-in to avoid external embeds inside the editor iframe.
+const enableXfaParam = getUrlParam('enableXfa');
+const shouldEnableXfa = enableXfaParam === '1' || enableXfaParam === 'true';
+
 const XFA_EMBED_SELECTOR = 'iframe, frame, object, embed';
 const blockedEmbedOrigins = new Set();
 let blockedEmbedCount = 0;
@@ -468,7 +472,7 @@ const reader = new PDFReader({
     viewMode: VIEW_MODE.AUTO_ZOOM,
     cMapUrl: cMapUrl,
     standardFontDataUrl: standardFontDataUrl,
-    enableXfa: true,
+    enableXfa: shouldEnableXfa,
     fontExtraProperties: true,
     usePageBase: false,
     expandThumbs: false,

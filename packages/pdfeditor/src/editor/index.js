@@ -836,6 +836,9 @@ export class PDFEditor {
             this.elHistoryBtn.style.display = 'block';
             const element = e.data.element;
             const page = e.data.page;
+            if (!page) {
+                return;
+            }
             let elHistoryBox = this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS);
             let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
             if (!elHistoryPage) {
@@ -926,6 +929,9 @@ export class PDFEditor {
         PDFEvent.on(Events.ELEMENT_REMOVE, e => {
             const element = e.data.element;
             const page = e.data.page;
+            if (!page) {
+                return;
+            }
             if (this.elHistoryWrapper) {
                 let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
                 elHistoryPage?.querySelector('[data-id="'+ element.id +'"]')?.remove();

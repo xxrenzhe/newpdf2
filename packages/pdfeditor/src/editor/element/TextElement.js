@@ -387,8 +387,9 @@ class TextElement extends BaseElement {
                 let maxWidth = 0;
 
                 if (typeof this.attrs.backgroundWidth === 'number' && Number.isFinite(this.attrs.backgroundWidth)) {
-                    const rect = this.page.readerPage.content.getBoundingClientRect();
-                    if (rect.width) {
+                    const pageContent = this.getPageContentElement();
+                    const rect = pageContent?.getBoundingClientRect?.();
+                    if (rect?.width) {
                         const scaleX = this.page.width / rect.width;
                         maxWidth = Math.max(maxWidth, this.attrs.backgroundWidth * scaleX);
                     }
@@ -450,8 +451,9 @@ class TextElement extends BaseElement {
             let maxWidth = Math.max(0, ...lineWidths);
 
             if (typeof this.attrs.backgroundWidth === 'number' && Number.isFinite(this.attrs.backgroundWidth)) {
-                const rect = this.page.readerPage.content.getBoundingClientRect();
-                if (rect.width) {
+                const pageContent = this.getPageContentElement();
+                const rect = pageContent?.getBoundingClientRect?.();
+                if (rect?.width) {
                     const scaleX = this.page.width / rect.width;
                     maxWidth = Math.max(maxWidth, this.attrs.backgroundWidth * scaleX);
                 }
