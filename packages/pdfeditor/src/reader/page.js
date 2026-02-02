@@ -918,6 +918,9 @@ export class PDFPage extends PDFPageBase {
         const medianWordGap = sortedWordGaps.length
             ? sortedWordGaps[Math.floor(sortedWordGaps.length / 2)] || 0
             : 0;
+        const sortedGapSizes = [...gaps].sort((a, b) => b - a);
+        const maxGapValue = sortedGapSizes[0] || 0;
+        const secondGapValue = sortedGapSizes[1] || 0;
         const safeFontSize = Number.isFinite(baseFontSize) ? baseFontSize : 0;
         const safeSpace = Number.isFinite(spaceThreshold) ? spaceThreshold : 0;
         const baseThreshold = Math.max(safeFontSize * 0.75, safeSpace * 3, 6);
@@ -933,6 +936,14 @@ export class PDFPage extends PDFPageBase {
         const maxReasonableThreshold = Math.max(baseThreshold * 6, safeFontSize * 6, 36);
         if (leaderGapThreshold > maxReasonableThreshold) {
             leaderGapThreshold = maxReasonableThreshold;
+        }
+        const largeGapTrigger = Math.max(baseThreshold * 4, safeFontSize * 5, 60);
+        if (maxGapValue >= largeGapTrigger) {
+            const capTarget = secondGapValue >= largeGapTrigger ? secondGapValue : maxGapValue;
+            const cappedThreshold = Math.max(baseThreshold, capTarget * 0.9);
+            if (leaderGapThreshold > cappedThreshold) {
+                leaderGapThreshold = cappedThreshold;
+            }
         }
         let hasLargeGap = false;
 
