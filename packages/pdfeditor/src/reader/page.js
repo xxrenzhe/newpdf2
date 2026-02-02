@@ -120,10 +120,52 @@ export class PDFPage extends PDFPageBase {
                 let lineHasLeader = false;
                 // console.log(this.textContentItems);
                 
+                const finalizeLine = (shouldTrim = true) => {
+                    const lineText = shouldTrim ? trimSpace(text) : text;
+                    if (!elements.length && !trimSpace(lineText)) {
+                        text = '';
+                        textWidth = 0;
+                        elements = [];
+                        return false;
+                    }
+                    const itemIndices = Array.from(new Set(elements.map(el => {
+                        const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
+                        return Number.isFinite(idx) ? idx : null;
+                    }).filter(idx => idx !== null)));
+                    this.textParts[n] = {
+                        text: lineText,
+                        elements: elements,
+                        width: textWidth,
+                        rawWidth: textWidth,
+                        itemIndices: itemIndices
+                    };
+                    this.#filterDiv(n);
+                    text = '';
+                    textWidth = 0;
+                    elements = [];
+                    n++;
+                    return true;
+                };
+
                 for (let i = 0; i < this.textContentItems.length; i++) {
                     let textItem = this.textContentItems[i];
-                    text += textItem.str;
-                    if (this.#isLeaderText(textItem?.str)) {
+                    const rawText = typeof textItem?.str === 'string' ? textItem.str : '';
+                    const isEmptyText = trimSpace(rawText) === '';
+                    const isLineBreakMarker = Boolean(
+                        textItem?.hasEOL
+                        && isEmptyText
+                        && (!Number.isFinite(textItem.width) || textItem.width === 0)
+                        && (!Number.isFinite(textItem.height) || textItem.height === 0)
+                    );
+                    if (isLineBreakMarker) {
+                        finalizeLine(true);
+                        prevTextItem = null;
+                        lineHasLeader = false;
+                        continue;
+                    }
+
+                    text += rawText;
+                    if (this.#isLeaderText(rawText)) {
                         lineHasLeader = true;
                     }
                     textWidth += this.textDivs[i].getBoundingClientRect().width;
@@ -175,18 +217,7 @@ export class PDFPage extends PDFPageBase {
                     });
 
                     if ((i+1) == this.textContentItems.length) {
-                        const itemIndices = Array.from(new Set(elements.map(el => {
-                            const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
-                            return Number.isFinite(idx) ? idx : null;
-                        }).filter(idx => idx !== null)));
-                        this.textParts[n] = {
-                            text: text,
-                            elements: elements,
-                            width: textWidth,
-                            rawWidth: textWidth,
-                            itemIndices: itemIndices
-                        };
-                        this.#filterDiv(n);
+                        finalizeLine(false);
                         break;
                     }
 
@@ -197,22 +228,7 @@ export class PDFPage extends PDFPageBase {
                     if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1, lineHasLeader))) {
                         prevTextItem = null;
                         lineHasLeader = false;
-                        const itemIndices = Array.from(new Set(elements.map(el => {
-                            const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
-                            return Number.isFinite(idx) ? idx : null;
-                        }).filter(idx => idx !== null)));
-                        this.textParts[n] = {
-                            text: trimSpace(text),
-                            elements: elements,
-                            width: textWidth,
-                            rawWidth: textWidth,
-                            itemIndices: itemIndices
-                        };
-                        this.#filterDiv(n);
-                        text = '';
-                        textWidth = 0;
-                        elements = [];
-                        n++;
+                        finalizeLine(true);
                     }
                 }
             });
@@ -557,7 +573,9 @@ export class PDFPage extends PDFPageBase {
         const layerRect = this.elTextLayer ? this.elTextLayer.getBoundingClientRect() : null;
         const layerLeft = layerRect ? layerRect.left : 0;
         const layerTop = layerRect ? layerRect.top : 0;
-        const baseFontSize = this.#parsePx(sorted[0].getAttribute('data-fontsize')) || this.#parsePx(sorted[0].style.fontSize);
+        const nonEmptySorted = sorted.filter(el => trimSpace(el.textContent || '') !== '');
+        const anchorElement = nonEmptySorted[0] || sorted[0];
+        const baseFontSize = this.#parsePx(anchorElement.getAttribute('data-fontsize')) || this.#parsePx(anchorElement.style.fontSize);
         const spaceThreshold = Math.max(baseFontSize * 0.25, 1);
         let lineText = '';
         let prevRight = null;
@@ -569,6 +587,9 @@ export class PDFPage extends PDFPageBase {
         sorted.forEach(el => {
             const text = el.textContent || '';
             const rect = el.getBoundingClientRect();
+            if (text === '' && rect.width === 0 && rect.height === 0) {
+                return;
+            }
             let left = rect.left - layerLeft;
             let right = rect.right - layerLeft;
             let top = rect.top - layerTop;
@@ -618,7 +639,7 @@ export class PDFPage extends PDFPageBase {
         const mergedText = trimSpace(lineText);
         textParts.text = mergedText;
 
-        const firstElement = sorted[0];
+        const firstElement = anchorElement;
         firstElement.textContent = mergedText;
         firstElement.style.transform = 'none';
         const coverData = this.#buildCoverRects(itemBoxes, baseFontSize, spaceThreshold);
@@ -646,6 +667,18 @@ export class PDFPage extends PDFPageBase {
                 if (Number.isFinite(scaledRawWidth) && scaledRawWidth > lineWidth) {
                     bounds.right = bounds.left + scaledRawWidth;
                     lineWidth = scaledRawWidth;
+                }
+            }
+            // Clamp overly wide boxes (often caused by large column gaps) so the editor
+            // doesn't cover adjacent text. Prefer the measured glyph width.
+            if (Number.isFinite(textParts.rawWidth) && textParts.rawWidth > 0) {
+                const clampPadding = Math.max(2, baseFontSize * 0.2);
+                const scaledRawWidth = textParts.rawWidth * (this.outputScale || 1);
+                const clampTarget = scaledRawWidth + clampPadding;
+                const shouldClamp = coverData || lineWidth > clampTarget * 1.2;
+                if (shouldClamp && clampTarget < lineWidth) {
+                    lineWidth = clampTarget;
+                    bounds.right = bounds.left + lineWidth;
                 }
             }
             bounds.width = lineWidth;
@@ -1034,6 +1067,22 @@ export class PDFPage extends PDFPageBase {
         bounds = this.#applyPdfLineWidth(bounds, elements, textPart.itemIndices) || bounds;
         bounds.width = bounds.right - bounds.left;
         bounds.height = bounds.bottom - bounds.top;
+        if (textPart && Number.isFinite(textPart.rawWidth) && textPart.rawWidth > 0) {
+            const fontSource = baseElement || elements[0];
+            const baseFontSize = fontSource
+                ? (this.#parsePx(fontSource.getAttribute('data-fontsize')) || this.#parsePx(fontSource.style.fontSize))
+                : null;
+            const clampPadding = Number.isFinite(baseFontSize)
+                ? Math.max(2, baseFontSize * 0.2)
+                : 2;
+            const scaledRawWidth = textPart.rawWidth * (this.outputScale || 1);
+            const clampTarget = scaledRawWidth + clampPadding;
+            const hasCoverRects = Array.isArray(textPart.coverRects) && textPart.coverRects.length > 1;
+            if ((hasCoverRects || bounds.width > clampTarget * 1.2) && clampTarget < bounds.width) {
+                bounds.right = bounds.left + clampTarget;
+                bounds.width = clampTarget;
+            }
+        }
         if (textPart) {
             textPart.bounds = bounds;
         }
