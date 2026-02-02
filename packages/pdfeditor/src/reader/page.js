@@ -666,41 +666,47 @@ export class PDFPage extends PDFPageBase {
 
         const coverData = this.#buildCoverRects(itemBoxes, baseFontSize, spaceThreshold);
         if (allowSplit && coverData && Array.isArray(coverData.elements) && coverData.elements.length > 1) {
-            const clusters = this.#splitElementsByAnchors(sorted, coverData.elements);
-            if (Array.isArray(clusters) && clusters.length > 1) {
-                const boxByElement = new Map(itemBoxes.map(box => [box.element, box]));
-                const outputScale = this.outputScale || 1;
-                const nextParts = clusters.map(clusterEls => {
-                    const clusterIndices = Array.from(new Set(clusterEls.map(el => {
-                        const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
-                        return Number.isFinite(idx) ? idx : null;
-                    }).filter(idx => idx !== null)));
-                    let clusterWidthPx = 0;
-                    clusterEls.forEach(el => {
-                        const box = boxByElement.get(el);
-                        if (box && Number.isFinite(box.left) && Number.isFinite(box.right)) {
-                            clusterWidthPx += Math.max(0, box.right - box.left);
-                        } else {
-                            const rect = el.getBoundingClientRect();
-                            if (Number.isFinite(rect.width)) {
-                                clusterWidthPx += rect.width;
+            const layerWidth = layerRect ? layerRect.width : null;
+            const shouldSplit = this.#shouldSplitByGap(coverData, baseFontSize, layerWidth);
+            if (!shouldSplit) {
+                // Keep a single editable box when the gap is too small to be a real column.
+            } else {
+                const clusters = this.#splitElementsByAnchors(sorted, coverData.elements);
+                if (Array.isArray(clusters) && clusters.length > 1) {
+                    const boxByElement = new Map(itemBoxes.map(box => [box.element, box]));
+                    const outputScale = this.outputScale || 1;
+                    const nextParts = clusters.map(clusterEls => {
+                        const clusterIndices = Array.from(new Set(clusterEls.map(el => {
+                            const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
+                            return Number.isFinite(idx) ? idx : null;
+                        }).filter(idx => idx !== null)));
+                        let clusterWidthPx = 0;
+                        clusterEls.forEach(el => {
+                            const box = boxByElement.get(el);
+                            if (box && Number.isFinite(box.left) && Number.isFinite(box.right)) {
+                                clusterWidthPx += Math.max(0, box.right - box.left);
+                            } else {
+                                const rect = el.getBoundingClientRect();
+                                if (Number.isFinite(rect.width)) {
+                                    clusterWidthPx += rect.width;
+                                }
                             }
-                        }
+                        });
+                        const rawWidth = outputScale ? clusterWidthPx / outputScale : clusterWidthPx;
+                        return {
+                            text: '',
+                            elements: clusterEls,
+                            width: rawWidth,
+                            rawWidth: rawWidth,
+                            itemIndices: clusterIndices
+                        };
                     });
-                    const rawWidth = outputScale ? clusterWidthPx / outputScale : clusterWidthPx;
-                    return {
-                        text: '',
-                        elements: clusterEls,
-                        width: rawWidth,
-                        rawWidth: rawWidth,
-                        itemIndices: clusterIndices
-                    };
-                });
-                this.textParts.splice(n, 1, ...nextParts);
-                for (let i = 0; i < nextParts.length; i++) {
-                    this.#filterDiv(n + i, { allowSplit: false });
+                    this.textParts.splice(n, 1, ...nextParts);
+                    for (let i = 0; i < nextParts.length; i++) {
+                        this.#filterDiv(n + i, { allowSplit: false });
+                    }
+                    return nextParts.length;
                 }
-                return nextParts.length;
             }
         }
 
@@ -861,12 +867,19 @@ export class PDFPage extends PDFPageBase {
         const wordGaps = [];
         let prevBox = null;
         let prevWordBox = null;
+        let lineLeft = Infinity;
+        let lineRight = -Infinity;
+        let maxGap = 0;
         for (let i = 0; i < itemBoxes.length; i++) {
             const box = itemBoxes[i];
             if (!box) continue;
             const left = box.left;
             const right = box.right;
             const hasPos = Number.isFinite(left) && Number.isFinite(right);
+            if (hasPos) {
+                lineLeft = Math.min(lineLeft, left);
+                lineRight = Math.max(lineRight, right);
+            }
             if (prevBox && hasPos && Number.isFinite(prevBox.right)) {
                 const gap = left - prevBox.right;
                 if (Number.isFinite(gap) && gap > 0) {
@@ -937,6 +950,9 @@ export class PDFPage extends PDFPageBase {
             const gap = itemBoxes[i].left - itemBoxes[i - 1].right;
             if (Number.isFinite(gap) && gap > leaderGapThreshold) {
                 hasLargeGap = true;
+                if (gap > maxGap) {
+                    maxGap = gap;
+                }
                 pushCluster(i);
                 continue;
             }
@@ -950,7 +966,43 @@ export class PDFPage extends PDFPageBase {
         if (!hasLargeGap || rects.length < 2 || rects.length !== elements.length) {
             return null;
         }
-        return { rects, elements };
+        const lineWidth = Number.isFinite(lineLeft) && Number.isFinite(lineRight)
+            ? Math.max(0, lineRight - lineLeft)
+            : 0;
+        return { rects, elements, maxGap, lineWidth };
+    }
+
+    #shouldSplitByGap(coverData, baseFontSize, layerWidth) {
+        if (!coverData) return true;
+        const maxGap = coverData.maxGap;
+        const lineWidth = coverData.lineWidth;
+        if (!Number.isFinite(maxGap) || !Number.isFinite(lineWidth) || lineWidth <= 0) {
+            return true;
+        }
+        const gapRatio = maxGap / lineWidth;
+        const safeFontSize = Number.isFinite(baseFontSize) ? baseFontSize : 0;
+        const isColumnGap = this.#isLikelyColumnGap(coverData, layerWidth);
+        const minGapPx = Math.max(safeFontSize * 6, 60);
+        // Only split when the gap is clearly a column break.
+        if (!isColumnGap && gapRatio < 0.12 && maxGap < minGapPx) {
+            return false;
+        }
+        const tinyGap = Math.max(safeFontSize * 3, 12);
+        if (!isColumnGap && maxGap < tinyGap) {
+            return false;
+        }
+        return true;
+    }
+
+    #isLikelyColumnGap(coverData, layerWidth) {
+        if (!coverData || !Array.isArray(coverData.rects) || coverData.rects.length < 2) {
+            return false;
+        }
+        if (!Number.isFinite(layerWidth) || layerWidth <= 0) {
+            return false;
+        }
+        const columnThreshold = layerWidth * 0.45;
+        return coverData.rects.slice(1).some(rect => Number.isFinite(rect.left) && rect.left >= columnThreshold);
     }
 
     #getTextItemBox(element, viewport) {
@@ -1277,7 +1329,7 @@ export class PDFPage extends PDFPageBase {
                 const baseHeight = Math.min(cluster.height || 0, entry.height || 0)
                     || Math.max(cluster.height || 0, entry.height || 0)
                     || 1;
-                const tolerance = Math.max(baseHeight * 0.5, 1);
+                const tolerance = Math.max(baseHeight * 0.8, 1);
                 if (Math.abs(entry.y - cluster.y) <= tolerance) {
                     match = cluster;
                     break;

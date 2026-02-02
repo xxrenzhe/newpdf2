@@ -133,13 +133,17 @@ class Toolbar {
         
         //已经有选中的元素时触发失去焦点事件
         if (this.toolActive) {
-            this.reader.mainBox.classList.remove('__cursor_' + this.toolActive.name);
+            if (this.reader.mainBox) {
+                this.reader.mainBox.classList.remove('__cursor_' + this.toolActive.name);
+            }
             this.toolActive.container.classList.remove('active');
             this.toolActive.setActive(false);
             // PDFEvent.dispatch(Events.TOOLBAR_ITEM_BLUR, this.toolActive);
         }
         this.toolActive = tool;
-        this.reader.mainBox.classList.add('__cursor_' + this.toolActive.name);
+        if (this.reader.mainBox) {
+            this.reader.mainBox.classList.add('__cursor_' + this.toolActive.name);
+        }
         this.toolActive.container.classList.add('active');
         // Ensure draw layer z-index matches the active tool even when switching programmatically
         // (e.g. auto-switch on text conversion).

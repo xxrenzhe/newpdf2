@@ -107,10 +107,17 @@ class ToolbarItemBase {
     }
 
     __setzIndex() {
-        for (let i in this.reader.pdfDocument.pages) {
-            const page = this.reader.pdfDocument.getPage(parseInt(i) + 1);
-            if (!page.rendered) continue;
-            page.elDrawLayer.style.zIndex = this.zIndex;
+        const readerDoc = this.reader?.pdfDocument;
+        const pages = readerDoc?.pages;
+        if (!readerDoc || !Array.isArray(pages) || pages.length === 0) {
+            return;
+        }
+        for (let i = 0; i < pages.length; i++) {
+            const page = readerDoc.getPage(i + 1);
+            if (!page || !page.rendered) continue;
+            if (page.elDrawLayer) {
+                page.elDrawLayer.style.zIndex = this.zIndex;
+            }
         }
     }
 

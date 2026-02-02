@@ -8,6 +8,7 @@ export class PDFPage {
     pageNum = 1;
     elements = null;
     #id = null;
+    _idFallback = false;
     newPagesize = false;
 
     constructor(pdfDocument, pageNum) {
@@ -22,7 +23,14 @@ export class PDFPage {
         if (!this.#id) {
             //AssemblePDF使用了压缩流，ref已经改变了
             // this.#id = this.pageProxy.ref ? this.pageProxy.ref.objectNumber + '_' + this.pageProxy.ref.generationNumber : createId('page');
-            this.#id = this.reader.pdfDocument.getPage(this.pageNum).id;
+            const readerPage = this.reader?.pdfDocument?.getPage?.(this.pageNum);
+            const readerId = readerPage?.id;
+            if (readerId) {
+                this.#id = readerId;
+            } else if (!this.#id) {
+                this.#id = createId('page');
+                this._idFallback = true;
+            }
         }
         return this.#id;
     }
@@ -40,7 +48,7 @@ export class PDFPage {
     }
 
     get readerPage() {
-        return this.reader.pdfDocument.getPage(this.pageNum);
+        return this.reader?.pdfDocument?.getPage?.(this.pageNum) || null;
     }
 
     get pageProxy() {
