@@ -578,9 +578,17 @@ export class PDFPage extends PDFPageBase {
         const elements = textParts.elements.filter(el => el && el.isConnected);
         if (!elements.length) return;
 
+        const fontSizeForSort = elements.reduce((acc, el) => {
+            if (Number.isFinite(acc)) return acc;
+            const size = this.#parsePx(el.getAttribute('data-fontsize')) || this.#parsePx(el.style.fontSize);
+            return Number.isFinite(size) && size > 0 ? size : acc;
+        }, NaN);
+        const topTolerance = Number.isFinite(fontSizeForSort)
+            ? Math.max(fontSizeForSort * 0.4, 1)
+            : 0.5;
         const sorted = [...elements].sort((a, b) => {
             const topDiff = this.#parsePx(a.style.top) - this.#parsePx(b.style.top);
-            if (Math.abs(topDiff) > 0.5) return topDiff;
+            if (Math.abs(topDiff) > topTolerance) return topDiff;
             return this.#parsePx(a.style.left) - this.#parsePx(b.style.left);
         });
 
@@ -589,7 +597,9 @@ export class PDFPage extends PDFPageBase {
         const layerTop = layerRect ? layerRect.top : 0;
         const nonEmptySorted = sorted.filter(el => trimSpace(el.textContent || '') !== '');
         const anchorElement = nonEmptySorted[0] || sorted[0];
-        const baseFontSize = this.#parsePx(anchorElement.getAttribute('data-fontsize')) || this.#parsePx(anchorElement.style.fontSize);
+        const baseFontSize = this.#parsePx(anchorElement.getAttribute('data-fontsize'))
+            || this.#parsePx(anchorElement.style.fontSize)
+            || fontSizeForSort;
         const spaceThreshold = Math.max(baseFontSize * 0.25, 1);
         let lineText = '';
         let prevRight = null;
@@ -912,9 +922,18 @@ export class PDFPage extends PDFPageBase {
         const safeSpace = Number.isFinite(spaceThreshold) ? spaceThreshold : 0;
         const baseThreshold = Math.max(safeFontSize * 0.75, safeSpace * 3, 6);
         const typicalGap = medianWordGap || medianGap || 0;
-        const leaderGapThreshold = typicalGap > 0
-            ? Math.max(baseThreshold, typicalGap * 2.2)
-            : baseThreshold;
+        let leaderGapThreshold = baseThreshold;
+        if (medianWordGap > 0) {
+            leaderGapThreshold = Math.max(baseThreshold, medianWordGap * 2.2);
+        } else if (gaps.length > 1) {
+            leaderGapThreshold = Math.max(baseThreshold, typicalGap * 2.2);
+        } else if (gaps.length === 1) {
+            leaderGapThreshold = Math.max(baseThreshold * 2, safeFontSize * 3, 20);
+        }
+        const maxReasonableThreshold = Math.max(baseThreshold * 6, safeFontSize * 6, 36);
+        if (leaderGapThreshold > maxReasonableThreshold) {
+            leaderGapThreshold = maxReasonableThreshold;
+        }
         let hasLargeGap = false;
 
         const rects = [];
