@@ -239,7 +239,7 @@ export class PDFPage extends PDFPageBase {
 
                 this.#mergeTextPartsByLine();
                 for (let i = 0; i < this.textParts.length; i++) {
-                    const partsAdded = this.#filterDiv(i);
+                    const partsAdded = this.#filterDiv(i, { allowSplit: true });
                     if (Number.isFinite(partsAdded) && partsAdded > 1) {
                         i += partsAdded - 1;
                     }
@@ -858,18 +858,49 @@ export class PDFPage extends PDFPageBase {
     #buildCoverRects(itemBoxes, baseFontSize, spaceThreshold) {
         if (!Array.isArray(itemBoxes) || itemBoxes.length < 2) return null;
         const gaps = [];
-        for (let i = 1; i < itemBoxes.length; i++) {
-            const gap = itemBoxes[i].left - itemBoxes[i - 1].right;
-            if (Number.isFinite(gap) && gap > 0) {
-                gaps.push(gap);
+        const wordGaps = [];
+        let prevBox = null;
+        let prevWordBox = null;
+        for (let i = 0; i < itemBoxes.length; i++) {
+            const box = itemBoxes[i];
+            if (!box) continue;
+            const left = box.left;
+            const right = box.right;
+            const hasPos = Number.isFinite(left) && Number.isFinite(right);
+            if (prevBox && hasPos && Number.isFinite(prevBox.right)) {
+                const gap = left - prevBox.right;
+                if (Number.isFinite(gap) && gap > 0) {
+                    gaps.push(gap);
+                }
+            }
+            const text = box.element?.textContent || '';
+            const isWhitespace = trimSpace(text) === '';
+            if (!isWhitespace && hasPos) {
+                if (prevWordBox && Number.isFinite(prevWordBox.right)) {
+                    const wordGap = left - prevWordBox.right;
+                    if (Number.isFinite(wordGap) && wordGap > 0) {
+                        wordGaps.push(wordGap);
+                    }
+                }
+                prevWordBox = box;
+            }
+            if (hasPos) {
+                prevBox = box;
             }
         }
         if (!gaps.length) return null;
         const sortedGaps = [...gaps].sort((a, b) => a - b);
         const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)] || 0;
-        const baseThreshold = Math.max(baseFontSize * 1.4, spaceThreshold * 5);
-        const leaderGapThreshold = gaps.length > 1
-            ? Math.max(baseThreshold, medianGap * 3)
+        const sortedWordGaps = wordGaps.length ? [...wordGaps].sort((a, b) => a - b) : [];
+        const medianWordGap = sortedWordGaps.length
+            ? sortedWordGaps[Math.floor(sortedWordGaps.length / 2)] || 0
+            : 0;
+        const safeFontSize = Number.isFinite(baseFontSize) ? baseFontSize : 0;
+        const safeSpace = Number.isFinite(spaceThreshold) ? spaceThreshold : 0;
+        const baseThreshold = Math.max(safeFontSize * 0.75, safeSpace * 3, 6);
+        const typicalGap = medianWordGap || medianGap || 0;
+        const leaderGapThreshold = typicalGap > 0
+            ? Math.max(baseThreshold, typicalGap * 2.2)
             : baseThreshold;
         let hasLargeGap = false;
 
