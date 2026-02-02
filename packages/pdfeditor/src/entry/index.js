@@ -226,6 +226,55 @@ const markBlockedEmbed = (url) => {
     notifyBlockedEmbeds();
 };
 
+const installNavigationGuard = () => {
+    if (!isEmbedded) return;
+    const blockExternal = (url) => {
+        if (!url) return false;
+        if (!isExternalUrl(url)) return false;
+        markBlockedEmbed(url);
+        return true;
+    };
+
+    if (typeof window.open === 'function') {
+        const originalOpen = window.open;
+        window.open = function (url, target, features) {
+            if (blockExternal(url)) return null;
+            return originalOpen.call(window, url, target, features);
+        };
+    }
+
+    try {
+        const loc = window.location;
+        const originalAssign = loc.assign?.bind(loc);
+        if (originalAssign) {
+            loc.assign = (url) => {
+                if (blockExternal(url)) return;
+                return originalAssign(url);
+            };
+        }
+        const originalReplace = loc.replace?.bind(loc);
+        if (originalReplace) {
+            loc.replace = (url) => {
+                if (blockExternal(url)) return;
+                return originalReplace(url);
+            };
+        }
+    } catch {
+        // ignore
+    }
+
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const anchor = target?.closest?.('a');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href') || anchor.href;
+        if (blockExternal(href)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+};
+
 const installEmbedGuard = () => {
     if (embedGuardInstalled) return;
     embedGuardInstalled = true;
@@ -482,6 +531,7 @@ const reader = new PDFReader({
 }, pdfjsLib);
 
 installEmbedGuard();
+installNavigationGuard();
 reader.init();
 ensureXfaEmbedSanitizer();
 setupButtonA11y();
