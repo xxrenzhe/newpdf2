@@ -11,6 +11,8 @@ class TextElement extends BaseElement {
             size: 20,
             color: '#000000',
             text: '',
+            textOriginal: null,
+            useOriginalText: false,
             lineHeight: null,
             opacity: 1,
             lineStyle: null,    //underline, strike
@@ -144,9 +146,18 @@ class TextElement extends BaseElement {
         const nextAttrs = Object.assign({}, attrs);
         const hasFontFamily = Object.prototype.hasOwnProperty.call(attrs, 'fontFamily');
         const hasFontFile = Object.prototype.hasOwnProperty.call(attrs, 'fontFile');
+        const hasText = Object.prototype.hasOwnProperty.call(attrs, 'text');
         if ((hasFontFamily || hasFontFile)
             && !Object.prototype.hasOwnProperty.call(attrs, 'displayFontFamily')) {
             nextAttrs.displayFontFamily = null;
+        }
+        if (hasText && this.attrs.useOriginalText
+            && !Object.prototype.hasOwnProperty.call(attrs, 'useOriginalText')) {
+            const nextText = typeof attrs.text === 'string' ? attrs.text : String(attrs.text ?? '');
+            const currentText = typeof this.attrs.text === 'string' ? this.attrs.text : String(this.attrs.text ?? '');
+            if (nextText !== currentText) {
+                nextAttrs.useOriginalText = false;
+            }
         }
         super.edit(nextAttrs);
     }
@@ -155,12 +166,17 @@ class TextElement extends BaseElement {
         this.setStyle();
         this.elText.addEventListener('input', () => {
             this.attrs.text = this.elText.innerText;
+            if (this.attrs.useOriginalText) {
+                this.attrs.useOriginalText = false;
+            }
         });
 
         this.elText.addEventListener('focus', () => {
             this._historyTextSnapshot = {
                 text: this.attrs.text ?? '',
-                hidden: Boolean(this.attrs.hidden)
+                hidden: Boolean(this.attrs.hidden),
+                useOriginalText: Boolean(this.attrs.useOriginalText),
+                textOriginal: typeof this.attrs.textOriginal === 'string' ? this.attrs.textOriginal : null
             };
         });
 
@@ -219,17 +235,32 @@ class TextElement extends BaseElement {
             const afterText = typeof this.attrs.text === 'string' ? this.attrs.text : '';
             const beforeHidden = Boolean(historySnapshot.hidden);
             const afterHidden = Boolean(this.attrs.hidden);
-            if (beforeText === afterText && beforeHidden === afterHidden) {
+            const beforeUseOriginal = Boolean(historySnapshot.useOriginalText);
+            const afterUseOriginal = Boolean(this.attrs.useOriginalText);
+            const beforeTextOriginal = typeof historySnapshot.textOriginal === 'string'
+                ? historySnapshot.textOriginal
+                : null;
+            const afterTextOriginal = typeof this.attrs.textOriginal === 'string'
+                ? this.attrs.textOriginal
+                : null;
+            if (beforeText === afterText
+                && beforeHidden === afterHidden
+                && beforeUseOriginal === afterUseOriginal
+                && beforeTextOriginal === afterTextOriginal) {
                 return;
             }
 
             const beforeAttrs = Object.assign({}, this.attrs, {
                 text: beforeText,
-                hidden: beforeHidden
+                hidden: beforeHidden,
+                useOriginalText: beforeUseOriginal,
+                textOriginal: beforeTextOriginal
             });
             const afterAttrs = Object.assign({}, this.attrs, {
                 text: afterText,
-                hidden: afterHidden
+                hidden: afterHidden,
+                useOriginalText: afterUseOriginal,
+                textOriginal: afterTextOriginal
             });
             const element = this;
             const applyAttrs = (attrs) => {
@@ -268,7 +299,10 @@ class TextElement extends BaseElement {
     }
 
     async insertToPDF() {
-        const rawText = typeof this.attrs.text === 'string' ? this.attrs.text : '';
+        const currentText = typeof this.attrs.text === 'string' ? this.attrs.text : '';
+        const originalText = typeof this.attrs.textOriginal === 'string' ? this.attrs.textOriginal : '';
+        const useOriginalText = Boolean(this.attrs.useOriginalText && trimSpace(originalText));
+        const rawText = useOriginalText ? originalText : currentText;
         const hasText = trimSpace(rawText) !== '';
 
         let lineTop = 2.5;
