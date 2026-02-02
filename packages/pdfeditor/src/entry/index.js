@@ -8,15 +8,12 @@ import { PDFReader } from '../../src/reader';
 import { PDFEditor } from '../../src/editor';
 import { Font } from '../../src/font';
 import { Events, PDFEvent } from '../../src/event';
-import * as pdfjsLib from 'pdfjsLib';
+import * as pdfjsLib from 'pdfjs-dist-v2/legacy/build/pdf';
 import { LANG_LIST, VIEW_MODE } from '../../src/defines';
 import Loading from '../components/loading';
 import { getUrlParam,downloadLoad } from '../misc';
 import { Locale } from '../locale';
 let baseUrl = ASSETS_URL + 'js/pdfjs/';
-if (NODE_ENV == 'development') {
-    baseUrl = 'http://localhost/pdf/pdf.js/build/generic/build/';
-}
 pdfjsLib.GlobalWorkerOptions.workerSrc = baseUrl + 'pdf.worker.min.js';
 const cMapUrl = baseUrl + 'cmaps/';
 const standardFontDataUrl = baseUrl + 'standard_fonts/';
