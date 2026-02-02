@@ -567,7 +567,7 @@ export class PDFPage extends PDFPageBase {
         if (!Number.isFinite(textParts.rawWidth) && Number.isFinite(textParts.width)) {
             textParts.rawWidth = textParts.width;
         }
-        const allowSplit = options?.allowSplit !== false;
+        const allowSplit = options?.allowSplit === true;
         const elements = textParts.elements.filter(el => el && el.isConnected);
         if (!elements.length) return;
 
@@ -734,7 +734,7 @@ export class PDFPage extends PDFPageBase {
                 const clampPadding = Math.max(2, baseFontSize * 0.2);
                 const scaledRawWidth = textParts.rawWidth * (this.outputScale || 1);
                 const clampTarget = scaledRawWidth + clampPadding;
-                const shouldClamp = coverData || lineWidth > clampTarget * 1.2;
+                const shouldClamp = !coverData && lineWidth > clampTarget * 1.2;
                 if (shouldClamp && clampTarget < lineWidth) {
                     lineWidth = clampTarget;
                     bounds.right = bounds.left + lineWidth;
@@ -1094,10 +1094,6 @@ export class PDFPage extends PDFPageBase {
         let nextTextItem = this.textContentItems[nextIdx];
         if (!nextTextItem) return true;
         const nextIsLeader = this.#isLeaderText(nextTextItem.str);
-        if (nextTextItem.height == 0) {
-            // return nextTextItem.width >= 2.5;
-            return nextIsLeader ? false : nextTextItem.width > 8;
-        }
         const currentIdx = nextIdx - 1;
         if (!nextIsLeader && !lineHasLeader && this.#isVisualLineBreak(currentIdx, nextIdx)) {
             return true;
@@ -1112,7 +1108,7 @@ export class PDFPage extends PDFPageBase {
                 const nextHeight = Number.isFinite(nextTextItem.height) ? nextTextItem.height : 0;
                 const height = Math.max(currentHeight, nextHeight, 1);
                 const yDiff = Math.abs(nextY - currentY);
-                if (yDiff > height * 0.5) {
+                if (yDiff > height * 0.85) {
                     return true;
                 }
             }
@@ -1120,10 +1116,7 @@ export class PDFPage extends PDFPageBase {
         if (nextIsLeader || lineHasLeader) {
             return false;
         }
-        const currentColor = this.#normalizeTextItemColor(textItem?.color);
-        const nextColor = this.#normalizeTextItemColor(nextTextItem?.color);
-        const colorBreak = currentColor && nextColor ? currentColor !== nextColor : false;
-        return nextTextItem.height != textItem.height || colorBreak;
+        return false;
     }
 
     #normalizeTextItemColor(value) {
@@ -1181,8 +1174,8 @@ export class PDFPage extends PDFPageBase {
 
         const topDiff = Math.abs(nextBox.top - currentBox.top);
         const leftReset = nextBox.left < currentBox.left - Math.max(maxSize * 0.5, 6);
-        const strongThreshold = Math.max(minSize * 0.6, 2);
-        const weakThreshold = Math.max(minSize * 0.25, 2);
+        const strongThreshold = Math.max(minSize * 0.85, 3);
+        const weakThreshold = Math.max(minSize * 0.45, 3);
 
         if (topDiff > strongThreshold) {
             return true;
