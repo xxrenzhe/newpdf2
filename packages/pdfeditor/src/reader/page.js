@@ -116,7 +116,7 @@ export class PDFPage extends PDFPageBase {
                 let textWidth = 0;
                 let elements = [];
                 let n = 0;
-                let prevTextItem = null;
+                let prevTextIndex = null;
                 let lineHasLeader = false;
                 // console.log(this.textContentItems);
                 
@@ -160,7 +160,7 @@ export class PDFPage extends PDFPageBase {
                     );
                     if (isLineBreakMarker) {
                         finalizeLine(true);
-                        prevTextItem = null;
+                        prevTextIndex = null;
                         lineHasLeader = false;
                         continue;
                     }
@@ -227,12 +227,13 @@ export class PDFPage extends PDFPageBase {
                         break;
                     }
 
-                    if (!prevTextItem && textItem.height > 0) {
-                        prevTextItem = textItem;
+                    if (Number.isFinite(textItem.height) && textItem.height > 0) {
+                        prevTextIndex = i;
                     }
 
-                    if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1, lineHasLeader))) {
-                        prevTextItem = null;
+                    const boundaryIdx = Number.isFinite(prevTextIndex) ? prevTextIndex : i;
+                    if (this.#isBreak(boundaryIdx, i + 1, lineHasLeader, Boolean(textItem.hasEOL))) {
+                        prevTextIndex = null;
                         lineHasLeader = false;
                         finalizeLine(true);
                     }
@@ -358,11 +359,22 @@ export class PDFPage extends PDFPageBase {
         }
         const originalFontFamily = baseElement.getAttribute('data-loadedname') || 'Helvetica';
         const originalFontName = baseElement.getAttribute('data-fontname') || originalFontFamily;
+        let displayTextValue = null;
+        let coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
+        const leaderGapWidth = this.#getLeaderGapWidth(coverRectsPx);
+        if (this.#shouldInsertLeaderDots(textValue, leaderGapWidth, fontSize)) {
+            const leaderDots = this.#buildLeaderDots(leaderGapWidth, baseElement, fontSize);
+            const nextTextValue = this.#insertLeaderDots(textValue, leaderDots);
+            if (nextTextValue !== textValue) {
+                displayTextValue = nextTextValue;
+            }
+        }
+        const editorTextValue = displayTextValue || textValue;
         const resolvedFont = Font.resolveSafeFont({
             fontFamily: originalFontFamily,
             fontFile: originalFontFamily,
             fontName: originalFontName,
-            text: textValue
+            text: editorTextValue
         });
         const useInferredStyle = Boolean(resolvedFont.replaced);
         // Apply bold/italic only when we fall back to a safe font to avoid synthetic styling
@@ -370,19 +382,6 @@ export class PDFPage extends PDFPageBase {
         const bold = useInferredStyle ? inferredStyle.bold : false;
         const italic = useInferredStyle ? inferredStyle.italic : false;
         let fontFamily = resolvedFont.fontFamily;
-        let coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
-        const leaderGapWidth = this.#getLeaderGapWidth(coverRectsPx);
-        if (this.#shouldInsertLeaderDots(textValue, leaderGapWidth, fontSize)) {
-            const leaderDots = this.#buildLeaderDots(leaderGapWidth, baseElement, fontSize);
-            const nextTextValue = this.#insertLeaderDots(textValue, leaderDots);
-            if (nextTextValue !== textValue) {
-                textValue = nextTextValue;
-                textPart.text = nextTextValue;
-                coverRectsPx = null;
-                textPart.coverRects = null;
-                textPart.coverElements = null;
-            }
-        }
         if (!Array.isArray(textPart.coverRects) || textPart.coverRects.length === 0) {
             const refined = this.#refineLineBoundsByCanvas(bounds, bgColor, fontSize);
             if (refined) {
@@ -451,7 +450,9 @@ export class PDFPage extends PDFPageBase {
                 // size: fontSize / this.scale / this.outputScale,
                 size: fontSize / this.scale,
                 color: color,
-                text: textValue,
+                text: editorTextValue,
+                textOriginal: displayTextValue ? textValue : null,
+                useOriginalText: Boolean(displayTextValue),
                 lineHeight: null,
                 lineHeightMeasured: false,
                 lineOffsets: null,
@@ -590,10 +591,11 @@ export class PDFPage extends PDFPageBase {
         let maxRight = -Infinity;
         let minTop = Infinity;
         let maxBottom = -Infinity;
+        const metricsViewport = this.#getMetricsViewport();
         const itemBoxes = [];
         sorted.forEach(el => {
             const text = el.textContent || '';
-            const itemBox = this.#getTextItemBox(el);
+            const itemBox = metricsViewport ? this.#getTextItemBox(el, metricsViewport) : null;
             let left = itemBox ? itemBox.left : null;
             let right = itemBox ? itemBox.right : null;
             let top = itemBox ? itemBox.top : null;
@@ -914,34 +916,91 @@ export class PDFPage extends PDFPageBase {
         return { rects, elements };
     }
 
-    #getTextItemBox(element) {
+    #getTextItemBox(element, viewport) {
         if (!element) return null;
+        const util = this.reader?.pdfjsLib?.Util;
+        if (!util || typeof util.transform !== 'function') return null;
+        if (!viewport || !viewport.transform) return null;
         const idx = Number.parseInt(element.getAttribute('data-idx'), 10);
         if (!Number.isFinite(idx)) return null;
         const item = this.textContentItems ? this.textContentItems[idx] : null;
         if (!item || !Array.isArray(item.transform)) return null;
-        const left = this.#parsePx(element.style.left);
-        const top = this.#parsePx(element.style.top);
-        if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
-        const tx = item.transform;
-        if (Math.abs(tx[1]) > 0.01 || Math.abs(tx[2]) > 0.01) {
+        const style = this.textContentStyles ? this.textContentStyles[item.fontName] : null;
+        const tx = util.transform(viewport.transform, item.transform);
+        if (!tx || tx.length < 6) return null;
+        let angle = Math.atan2(tx[1], tx[0]);
+        if (style?.vertical) {
+            angle += Math.PI / 2;
+        }
+        const fontHeight = Math.hypot(tx[2], tx[3]);
+        if (!Number.isFinite(fontHeight) || fontHeight <= 0) return null;
+        const ascentRatioRaw = Number.isFinite(style?.ascent) ? style.ascent : 0.8;
+        const ascentRatio = Math.min(Math.max(ascentRatioRaw, 0), 1.2);
+        const fontAscent = fontHeight * ascentRatio;
+        let left;
+        let top;
+        if (angle === 0) {
+            left = tx[4];
+            top = tx[5] - fontAscent;
+        } else {
+            left = tx[4] + fontAscent * Math.sin(angle);
+            top = tx[5] - fontAscent * Math.cos(angle);
+        }
+        const divWidth = (style?.vertical ? item.height : item.width) * viewport.scale;
+        const divHeight = fontHeight;
+        if (!Number.isFinite(divWidth) || !Number.isFinite(divHeight)) return null;
+        const offsetX = 2;
+        const originX = left + offsetX;
+        const originY = top;
+        if (angle === 0) {
+            return {
+                left: originX,
+                right: originX + Math.max(0, divWidth),
+                top: originY,
+                bottom: originY + Math.max(0, divHeight)
+            };
+        }
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const corners = [
+            { x: originX, y: originY },
+            { x: originX + divWidth * cos, y: originY + divWidth * sin },
+            { x: originX - divHeight * sin, y: originY + divHeight * cos },
+            { x: originX + divWidth * cos - divHeight * sin, y: originY + divWidth * sin + divHeight * cos }
+        ];
+        let minLeft = Infinity;
+        let maxRight = -Infinity;
+        let minTop = Infinity;
+        let maxBottom = -Infinity;
+        corners.forEach(pt => {
+            if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
+            minLeft = Math.min(minLeft, pt.x);
+            maxRight = Math.max(maxRight, pt.x);
+            minTop = Math.min(minTop, pt.y);
+            maxBottom = Math.max(maxBottom, pt.y);
+        });
+        if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)
+            || !Number.isFinite(minTop) || !Number.isFinite(maxBottom)) {
             return null;
         }
-        const style = this.textContentStyles ? this.textContentStyles[item.fontName] : null;
-        const isVertical = Boolean(style?.vertical);
-        const baseWidth = isVertical ? item.height : item.width;
-        const baseHeight = isVertical ? item.width : item.height;
-        if (!Number.isFinite(baseWidth) || !Number.isFinite(baseHeight)) return null;
-        const scale = this.scale || 1;
-        const width = baseWidth * scale;
-        const height = baseHeight * scale;
-        if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
         return {
-            left,
-            right: left + Math.max(0, width),
-            top,
-            bottom: top + Math.max(0, height)
+            left: minLeft,
+            right: maxRight,
+            top: minTop,
+            bottom: maxBottom
         };
+    }
+
+    #getMetricsViewport() {
+        if (!this.pageProxy) return null;
+        const scale = this.scale || 1;
+        if (this._metricsViewport && this._metricsViewportScale === scale) {
+            return this._metricsViewport;
+        }
+        const viewport = this.pageProxy.getViewport({ scale });
+        this._metricsViewport = viewport;
+        this._metricsViewportScale = scale;
+        return viewport;
     }
 
     #getTextItemWidth(textItem, viewport) {
@@ -1090,21 +1149,27 @@ export class PDFPage extends PDFPageBase {
         return /^[.\u00b7\u2022\u2219\u2024]+$/.test(value);
     }
 
-    #isBreak(textItem, nextIdx, lineHasLeader = false) {
-        let nextTextItem = this.textContentItems[nextIdx];
+    #isBreak(currentIdx, nextIdx, lineHasLeader = false, hasEOL = false) {
+        const nextTextItem = this.textContentItems[nextIdx];
         if (!nextTextItem) return true;
         const nextIsLeader = this.#isLeaderText(nextTextItem.str);
-        const currentIdx = nextIdx - 1;
-        if (!nextIsLeader && !lineHasLeader && this.#isVisualLineBreak(currentIdx, nextIdx)) {
-            return true;
+        if (nextIsLeader) {
+            return false;
         }
-        const currentTransform = Array.isArray(textItem?.transform) ? textItem.transform : null;
+
+        const suppressVisual = lineHasLeader;
+        const visualBreak = suppressVisual ? null : this.#isVisualLineBreak(currentIdx, nextIdx);
+        if (visualBreak === true) return true;
+        if (visualBreak === false) return false;
+
+        const currentTextItem = this.textContentItems[currentIdx];
+        const currentTransform = Array.isArray(currentTextItem?.transform) ? currentTextItem.transform : null;
         const nextTransform = Array.isArray(nextTextItem?.transform) ? nextTextItem.transform : null;
         if (currentTransform && nextTransform) {
             const currentY = currentTransform[5];
             const nextY = nextTransform[5];
             if (Number.isFinite(currentY) && Number.isFinite(nextY)) {
-                const currentHeight = Number.isFinite(textItem.height) ? textItem.height : 0;
+                const currentHeight = Number.isFinite(currentTextItem?.height) ? currentTextItem.height : 0;
                 const nextHeight = Number.isFinite(nextTextItem.height) ? nextTextItem.height : 0;
                 const height = Math.max(currentHeight, nextHeight, 1);
                 const yDiff = Math.abs(nextY - currentY);
@@ -1113,10 +1178,8 @@ export class PDFPage extends PDFPageBase {
                 }
             }
         }
-        if (nextIsLeader || lineHasLeader) {
-            return false;
-        }
-        return false;
+
+        return Boolean(hasEOL);
     }
 
     #normalizeTextItemColor(value) {
@@ -1154,28 +1217,23 @@ export class PDFPage extends PDFPageBase {
     }
 
     #isVisualLineBreak(currentIdx, nextIdx) {
-        if (!Array.isArray(this.textDivs)) return false;
-        const currentEl = this.textDivs[currentIdx];
-        const nextEl = this.textDivs[nextIdx];
-        if (!currentEl || !nextEl) return false;
+        if (!Array.isArray(this.textContentItems)) return null;
+        const current = this.#getTextItemLineMetrics(currentIdx);
+        const next = this.#getTextItemLineMetrics(nextIdx);
+        if (!current || !next) return null;
+        if (current.isVertical || next.isVertical || current.rotated || next.rotated) {
+            return null;
+        }
 
-        const currentBox = this.#getElementBox(currentEl);
-        const nextBox = this.#getElementBox(nextEl);
-        if (!currentBox || !nextBox) return false;
-
-        const sizeCandidates = [
-            this.#parsePx(currentEl.getAttribute('data-fontsize')),
-            this.#parsePx(nextEl.getAttribute('data-fontsize')),
-            currentBox.height,
-            nextBox.height
-        ].filter(value => Number.isFinite(value) && value > 0);
+        const sizeCandidates = [current.height, next.height].filter(value => Number.isFinite(value) && value > 0);
         const minSize = sizeCandidates.length ? Math.min(...sizeCandidates) : 1;
         const maxSize = sizeCandidates.length ? Math.max(...sizeCandidates) : minSize;
+        const baseSize = Math.max(minSize, maxSize);
 
-        const topDiff = Math.abs(nextBox.top - currentBox.top);
-        const leftReset = nextBox.left < currentBox.left - Math.max(maxSize * 0.5, 6);
-        const strongThreshold = Math.max(minSize * 0.85, 3);
-        const weakThreshold = Math.max(minSize * 0.45, 3);
+        const topDiff = Math.abs(next.y - current.y);
+        const leftReset = next.x < current.x - Math.max(maxSize * 0.5, 6);
+        const strongThreshold = Math.max(baseSize * 0.9, 3);
+        const weakThreshold = Math.max(baseSize * 0.55, 3);
 
         if (topDiff > strongThreshold) {
             return true;
@@ -1184,6 +1242,30 @@ export class PDFPage extends PDFPageBase {
             return true;
         }
         return false;
+    }
+
+    #getTextItemLineMetrics(idx) {
+        const item = Array.isArray(this.textContentItems) ? this.textContentItems[idx] : null;
+        if (!item || !Array.isArray(item.transform)) return null;
+        const style = this.textContentStyles ? this.textContentStyles[item.fontName] : null;
+        const tx = item.transform;
+        const x = tx[4];
+        const y = tx[5];
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+        const height = Number.isFinite(item.height)
+            ? item.height
+            : Math.hypot(tx[2], tx[3]);
+        const width = Number.isFinite(item.width)
+            ? item.width
+            : Math.hypot(tx[0], tx[1]);
+        return {
+            x,
+            y,
+            height,
+            width,
+            isVertical: Boolean(style?.vertical),
+            rotated: Math.abs(tx[1]) > 0.01 || Math.abs(tx[2]) > 0.01
+        };
     }
 
     #getTextPartBounds(textPart, baseElement, forceRefresh = false) {
