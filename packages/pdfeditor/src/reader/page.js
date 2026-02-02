@@ -593,25 +593,38 @@ export class PDFPage extends PDFPageBase {
         const itemBoxes = [];
         sorted.forEach(el => {
             const text = el.textContent || '';
-            const rect = el.getBoundingClientRect();
-            if (text === '' && rect.width === 0 && rect.height === 0) {
+            const itemBox = this.#getTextItemBox(el);
+            let left = itemBox ? itemBox.left : null;
+            let right = itemBox ? itemBox.right : null;
+            let top = itemBox ? itemBox.top : null;
+            let bottom = itemBox ? itemBox.bottom : null;
+            let rect = null;
+            if (!itemBox) {
+                rect = el.getBoundingClientRect();
+                if (text === '' && rect.width === 0 && rect.height === 0) {
+                    return;
+                }
+                left = rect.left - layerLeft;
+                right = rect.right - layerLeft;
+                top = rect.top - layerTop;
+                bottom = rect.bottom - layerTop;
+            }
+            const width = Number.isFinite(left) && Number.isFinite(right) ? Math.max(0, right - left) : null;
+            const height = Number.isFinite(top) && Number.isFinite(bottom) ? Math.max(0, bottom - top) : null;
+            if (text === '' && itemBox && width === 0 && height === 0) {
                 return;
             }
-            let left = rect.left - layerLeft;
-            let right = rect.right - layerLeft;
-            let top = rect.top - layerTop;
-            let bottom = rect.bottom - layerTop;
             if (!Number.isFinite(left) || !Number.isFinite(right)) {
                 const styleLeft = this.#parsePx(el.style.left);
-                const styleWidth = this.#parsePx(el.style.width) || rect.width;
+                const styleWidth = this.#parsePx(el.style.width) || rect?.width;
                 left = styleLeft;
-                right = styleLeft + styleWidth;
+                right = styleLeft + (Number.isFinite(styleWidth) ? styleWidth : 0);
             }
             if (!Number.isFinite(top) || !Number.isFinite(bottom)) {
                 const styleTop = this.#parsePx(el.style.top);
-                const styleHeight = this.#parsePx(el.style.height) || rect.height;
+                const styleHeight = this.#parsePx(el.style.height) || rect?.height;
                 top = styleTop;
-                bottom = styleTop + styleHeight;
+                bottom = styleTop + (Number.isFinite(styleHeight) ? styleHeight : 0);
             }
             itemBoxes.push({
                 element: el,
@@ -899,6 +912,36 @@ export class PDFPage extends PDFPageBase {
             return null;
         }
         return { rects, elements };
+    }
+
+    #getTextItemBox(element) {
+        if (!element) return null;
+        const idx = Number.parseInt(element.getAttribute('data-idx'), 10);
+        if (!Number.isFinite(idx)) return null;
+        const item = this.textContentItems ? this.textContentItems[idx] : null;
+        if (!item || !Array.isArray(item.transform)) return null;
+        const left = this.#parsePx(element.style.left);
+        const top = this.#parsePx(element.style.top);
+        if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+        const tx = item.transform;
+        if (Math.abs(tx[1]) > 0.01 || Math.abs(tx[2]) > 0.01) {
+            return null;
+        }
+        const style = this.textContentStyles ? this.textContentStyles[item.fontName] : null;
+        const isVertical = Boolean(style?.vertical);
+        const baseWidth = isVertical ? item.height : item.width;
+        const baseHeight = isVertical ? item.width : item.height;
+        if (!Number.isFinite(baseWidth) || !Number.isFinite(baseHeight)) return null;
+        const scale = this.scale || 1;
+        const width = baseWidth * scale;
+        const height = baseHeight * scale;
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
+        return {
+            left,
+            right: left + Math.max(0, width),
+            top,
+            bottom: top + Math.max(0, height)
+        };
     }
 
     #getTextItemWidth(textItem, viewport) {
