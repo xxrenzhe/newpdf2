@@ -4,6 +4,7 @@ import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base';
 import { getPixelColor, trimSpace } from '../misc';
 import { Locale } from '../locale';
+import { shouldBreakLine } from './text_detection.mjs';
 
 const textContentOptions = {
     // Match old editor behavior so PDF.js marks line endings correctly.
@@ -1281,20 +1282,17 @@ export class PDFPage extends PDFPageBase {
         if (visualBreak === true) return true;
         if (visualBreak === false) return false;
 
-        const currentTextItem = this.textContentItems[currentIdx];
-        const currentTransform = Array.isArray(currentTextItem?.transform) ? currentTextItem.transform : null;
-        const nextTransform = Array.isArray(nextTextItem?.transform) ? nextTextItem.transform : null;
-        if (currentTransform && nextTransform) {
-            const currentY = currentTransform[5];
-            const nextY = nextTransform[5];
-            if (Number.isFinite(currentY) && Number.isFinite(nextY)) {
-                const currentHeight = Number.isFinite(currentTextItem?.height) ? currentTextItem.height : 0;
-                const nextHeight = Number.isFinite(nextTextItem.height) ? nextTextItem.height : 0;
-                const height = Math.max(currentHeight, nextHeight, 1);
-                const yDiff = Math.abs(nextY - currentY);
-                if (yDiff > height * 0.85) {
-                    return true;
-                }
+        const currentMetrics = this.#getTextItemLineMetrics(currentIdx);
+        const nextMetrics = this.#getTextItemLineMetrics(nextIdx);
+        if (currentMetrics && nextMetrics) {
+            const decision = shouldBreakLine({
+                current: currentMetrics,
+                next: nextMetrics,
+                hasEOL,
+                lineHasLeader
+            });
+            if (decision?.reason === 'orientation' || decision?.reason === 'y-gap') {
+                return decision.shouldBreak;
             }
         }
 
@@ -1519,13 +1517,15 @@ export class PDFPage extends PDFPageBase {
         const width = Number.isFinite(item.width)
             ? item.width
             : Math.hypot(tx[0], tx[1]);
+        const rotationDeg = Math.abs(Math.atan2(tx[1], tx[0]) * 180 / Math.PI);
         return {
             x,
             y,
             height,
             width,
             isVertical: Boolean(style?.vertical),
-            rotated: Math.abs(tx[1]) > 0.01 || Math.abs(tx[2]) > 0.01
+            rotated: Math.abs(tx[1]) > 0.01 || Math.abs(tx[2]) > 0.01,
+            rotationDeg
         };
     }
 
