@@ -4,7 +4,7 @@ import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base';
 import { getPixelColor, trimSpace } from '../misc';
 import { Locale } from '../locale';
-import { shouldBreakLine } from './text_detection.mjs';
+import { shouldBreakLine, splitCoverRectsByLines } from './text_detection.mjs';
 
 const textContentOptions = {
     // Match old editor behavior so PDF.js marks line endings correctly.
@@ -308,6 +308,22 @@ export class PDFPage extends PDFPageBase {
             return;
         }
         const inferredStyle = this.#inferPdfFontStyle(baseElement);
+        const primaryIndex = Array.isArray(textPart.itemIndices) && textPart.itemIndices.length
+            ? textPart.itemIndices[0]
+            : null;
+        const primaryMetrics = Number.isFinite(primaryIndex)
+            ? this.#getTextItemLineMetrics(primaryIndex)
+            : null;
+        let rotate = null;
+        if (primaryMetrics) {
+            if (primaryMetrics.isVertical) {
+                rotate = 90;
+            } else if (Number.isFinite(primaryMetrics.rotationDeg)
+                && primaryMetrics.rotationDeg >= 80
+                && primaryMetrics.rotationDeg <= 100) {
+                rotate = primaryMetrics.rotationDeg;
+            }
+        }
 
         // Keep the historical width tweak for italic PDF fonts so the cover box doesn't clip.
         const rawFontName = baseElement.getAttribute('data-fontname');
@@ -368,6 +384,12 @@ export class PDFPage extends PDFPageBase {
         const originalFontName = baseElement.getAttribute('data-fontname') || originalFontFamily;
         let displayTextValue = null;
         let coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
+        if (coverRectsPx && coverRectsPx.length) {
+            const tableLineMap = this.#buildTableLineMap(coverRectsPx);
+            if (tableLineMap) {
+                coverRectsPx = splitCoverRectsByLines(coverRectsPx, tableLineMap);
+            }
+        }
         const leaderGapWidth = this.#getLeaderGapWidth(coverRectsPx);
         if (this.#shouldInsertLeaderDots(textValue, leaderGapWidth, fontSize)) {
             const leaderDots = this.#buildLeaderDots(leaderGapWidth, baseElement, fontSize);
@@ -487,7 +509,7 @@ export class PDFPage extends PDFPageBase {
                 coverRects: coverRectsPdf,
                 bold: bold,
                 italic: italic,
-                rotate: null
+                rotate: rotate
             },
             options: {
                 pos: {
@@ -1034,6 +1056,115 @@ export class PDFPage extends PDFPageBase {
         }
         const columnThreshold = layerWidth * 0.45;
         return coverData.rects.slice(1).some(rect => Number.isFinite(rect.left) && rect.left >= columnThreshold);
+    }
+
+    #buildTableLineMap(coverRectsPx) {
+        if (!Array.isArray(coverRectsPx) || coverRectsPx.length === 0) return null;
+        const canvas = this.content;
+        if (!canvas || typeof canvas.getContext !== 'function') return null;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        const scale = Number.isFinite(this.outputScale) && this.outputScale > 0 ? this.outputScale : 1;
+        const minCoverage = 0.85;
+        const minWidthPx = Math.max(60 * scale, 1);
+        const maxAreaPx = 1_000_000;
+        const rowStep = Math.max(1, Math.round(scale));
+        const colStep = Math.max(1, Math.round(scale * 2));
+        const maxBandPx = Math.max(1, Math.round(scale * 2));
+
+        const horizontal = [];
+
+        coverRectsPx.forEach(rect => {
+            if (!rect) return;
+            const rectLeft = Number.isFinite(rect.left) ? rect.left : 0;
+            const rectTop = Number.isFinite(rect.top) ? rect.top : 0;
+            const rectRight = Number.isFinite(rect.right)
+                ? rect.right
+                : (Number.isFinite(rect.width) ? rectLeft + rect.width : rectLeft);
+            const rectBottom = Number.isFinite(rect.bottom)
+                ? rect.bottom
+                : (Number.isFinite(rect.height) ? rectTop + rect.height : rectTop);
+            const rectWidth = rectRight - rectLeft;
+            const rectHeight = rectBottom - rectTop;
+            if (!Number.isFinite(rectWidth) || !Number.isFinite(rectHeight)) return;
+
+            const widthPx = Math.max(0, Math.round(rectWidth * scale));
+            const heightPx = Math.max(0, Math.round(rectHeight * scale));
+            if (widthPx < minWidthPx || heightPx < rowStep * 2) return;
+            if (widthPx * heightPx > maxAreaPx) return;
+
+            const xPx = Math.max(0, Math.round(rectLeft * scale));
+            const yPx = Math.max(0, Math.round(rectTop * scale));
+            let image;
+            try {
+                image = ctx.getImageData(xPx, yPx, widthPx, heightPx);
+            } catch (err) {
+                return;
+            }
+            const data = image.data;
+            const rowHits = [];
+            for (let row = 0; row < heightPx; row += rowStep) {
+                let darkCount = 0;
+                let total = 0;
+                const rowOffset = row * widthPx * 4;
+                for (let col = 0; col < widthPx; col += colStep) {
+                    const idx = rowOffset + col * 4;
+                    const alpha = data[idx + 3];
+                    if (alpha < 200) {
+                        total += 1;
+                        continue;
+                    }
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    const brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    if (brightness < 80) {
+                        darkCount += 1;
+                    }
+                    total += 1;
+                }
+                if (total > 0 && darkCount / total >= minCoverage) {
+                    rowHits.push(row);
+                }
+            }
+            if (!rowHits.length) return;
+
+            let bandStart = rowHits[0];
+            let bandEnd = rowHits[0];
+            const flush = () => {
+                const bandHeight = bandEnd - bandStart + rowStep;
+                if (bandHeight <= maxBandPx) {
+                    const mid = (bandStart + bandEnd) / 2;
+                    horizontal.push({
+                        y: (yPx + mid) / scale,
+                        x1: rectLeft,
+                        x2: rectRight
+                    });
+                }
+            };
+            for (let i = 1; i < rowHits.length; i++) {
+                if (rowHits[i] - bandEnd <= rowStep) {
+                    bandEnd = rowHits[i];
+                    continue;
+                }
+                flush();
+                bandStart = rowHits[i];
+                bandEnd = rowHits[i];
+            }
+            flush();
+        });
+
+        if (!horizontal.length) return null;
+        const seen = new Set();
+        const unique = [];
+        horizontal.forEach(line => {
+            const key = Math.round(line.y * 2) / 2;
+            if (seen.has(key)) return;
+            seen.add(key);
+            unique.push({ ...line, y: key });
+        });
+        return unique.length ? { horizontal: unique } : null;
     }
 
     #getTextItemBox(element, viewport) {

@@ -112,7 +112,11 @@ class TextElement extends BaseElement {
             this.elText.style.paddingLeft = (this.attrs.textPaddingLeft * this.pageScale) + 'px';
         }
         if (this.attrs.rotate) {
-            this.elText.style.transform = 'rotate('+ this.attrs.rotate +'deg)';
+            this.elText.style.transformOrigin = '0 0';
+            this.elText.style.transform = 'rotate(' + this.attrs.rotate + 'deg)';
+        } else {
+            this.elText.style.transformOrigin = '';
+            this.elText.style.transform = '';
         }
         switch (this.attrs.lineStyle) {
             case 'underline':
