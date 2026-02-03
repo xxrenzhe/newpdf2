@@ -1,5 +1,4 @@
 import { Events, PDFEvent } from '../event';
-import { Font } from '../font';
 import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base';
 import { getPixelColor, trimSpace } from '../misc';
@@ -110,84 +109,27 @@ export class PDFPage extends PDFPageBase {
                     textDiv.style.padding = data.padding;
                     textDiv.style.backgroundColor = data.backgroundColor;
                 });
-
                 this.textParts = [];
                 let text = '';
                 let textWidth = 0;
                 let elements = [];
                 let n = 0;
-                let prevTextIndex = null;
-                let lineHasLeader = false;
+                let prevTextItem = null;
                 // console.log(this.textContentItems);
                 
-                const finalizeLine = (shouldTrim = true) => {
-                    const lineText = shouldTrim ? trimSpace(text) : text;
-                    if (!elements.length && !trimSpace(lineText)) {
-                        text = '';
-                        textWidth = 0;
-                        elements = [];
-                        return false;
-                    }
-                    const itemIndices = Array.from(new Set(elements.map(el => {
-                        const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
-                        return Number.isFinite(idx) ? idx : null;
-                    }).filter(idx => idx !== null)));
-                    this.textParts[n] = {
-                        text: lineText,
-                        elements: elements.slice(),
-                        width: textWidth,
-                        rawWidth: textWidth,
-                        itemIndices: itemIndices
-                    };
-                    text = '';
-                    textWidth = 0;
-                    elements = [];
-                    n += 1;
-                    return true;
-                };
-
                 for (let i = 0; i < this.textContentItems.length; i++) {
                     let textItem = this.textContentItems[i];
-                    const rawText = typeof textItem?.str === 'string' ? textItem.str : '';
-                    const isEmptyText = trimSpace(rawText) === '';
-                    const isLineBreakMarker = Boolean(
-                        textItem?.hasEOL
-                        && isEmptyText
-                        && (!Number.isFinite(textItem.width) || textItem.width === 0)
-                        && (!Number.isFinite(textItem.height) || textItem.height === 0)
-                    );
-                    if (isLineBreakMarker) {
-                        finalizeLine(true);
-                        prevTextIndex = null;
-                        lineHasLeader = false;
-                        continue;
-                    }
-
-                    text += rawText;
-                    if (this.#isLeaderText(rawText)) {
-                        lineHasLeader = true;
-                    }
-                    const itemWidth = this.#getTextItemWidth(textItem, viewport);
-                    if (Number.isFinite(itemWidth) && itemWidth > 0) {
-                        textWidth += itemWidth;
-                    } else if (this.textDivs[i]) {
-                        textWidth += this.textDivs[i].getBoundingClientRect().width;
-                    }
+                    text += textItem.str;
+                    textWidth += this.textDivs[i].getBoundingClientRect().width;
 
                     let elDiv = this.textDivs[i];
                     if (this.hideOriginElements.findIndex(data => data.idx == i) === -1) {
                         elDiv.classList.add('text-border');
                     }
                     let offsetX = 2;
-                    const rawLeft = parseFloat(elDiv.style.left);
-                    const rawTop = parseFloat(elDiv.style.top);
-                    const rawFontSize = parseFloat(elDiv.style.fontSize);
-                    const leftPx = Number.isFinite(rawLeft) ? rawLeft : 0;
-                    const topPx = Number.isFinite(rawTop) ? rawTop : 0;
-                    const fontSizePx = Number.isFinite(rawFontSize) ? rawFontSize : 0;
-                    let styleLeft  = (leftPx * this.outputScale) + offsetX + 'px';
-                    let styleTop = (topPx * this.outputScale) + 'px';
-                    let styleFontSize = (fontSizePx * this.outputScale) + 'px';
+                    let styleLeft  = (parseInt(elDiv.style.left) * this.outputScale) + offsetX + 'px';
+                    let styleTop = (parseInt(elDiv.style.top) * this.outputScale) + 'px';
+                    let styleFontSize = (parseInt(elDiv.style.fontSize) * this.outputScale) + 'px';
                     elDiv.style.left = styleLeft;
                     elDiv.style.top = styleTop;
                     elDiv.style.fontSize = styleFontSize;
@@ -204,11 +146,8 @@ export class PDFPage extends PDFPageBase {
                     elDiv.setAttribute('data-fallbackname', style.fontFamily);
                     elDiv.setAttribute('data-ascent', style.ascent || 0);
                     elDiv.setAttribute('data-descent', style.descent || 0);
-                    if (textItem.color !== undefined && textItem.color !== null) {
-                        const colorValue = Array.isArray(textItem.color)
-                            ? textItem.color.join(',')
-                            : String(textItem.color);
-                        elDiv.setAttribute('data-fontcolor', colorValue);
+                    if (textItem.color) {
+                        elDiv.setAttribute('data-fontcolor', textItem.color);
                     }
                     if (this.pageProxy.commonObjs.has(textItem.fontName)) {
                         let objs = this.pageProxy.commonObjs.get(textItem.fontName);
@@ -221,27 +160,30 @@ export class PDFPage extends PDFPageBase {
                     });
 
                     if ((i+1) == this.textContentItems.length) {
-                        finalizeLine(false);
+                        this.textParts[n] = {
+                            text: text,
+                            elements: elements
+                        };
+                        this.#filterDiv(n);
                         break;
                     }
 
-                    if (Number.isFinite(textItem.height) && textItem.height > 0) {
-                        prevTextIndex = i;
+                    if (!prevTextItem && textItem.height > 0) {
+                        prevTextItem = textItem;
                     }
 
-                    const boundaryIdx = Number.isFinite(prevTextIndex) ? prevTextIndex : i;
-                    if (this.#isBreak(boundaryIdx, i + 1, lineHasLeader, Boolean(textItem.hasEOL))) {
-                        prevTextIndex = null;
-                        lineHasLeader = false;
-                        finalizeLine(true);
-                    }
-                }
-
-                this.#mergeTextPartsByLine();
-                for (let i = 0; i < this.textParts.length; i++) {
-                    const partsAdded = this.#filterDiv(i, { allowSplit: true });
-                    if (Number.isFinite(partsAdded) && partsAdded > 1) {
-                        i += partsAdded - 1;
+                    if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1))) {
+                        prevTextItem = null;
+                        this.textParts[n] = {
+                            text: trimSpace(text),
+                            elements: elements,
+                            width: textWidth
+                        };
+                        this.#filterDiv(n);
+                        text = '';
+                        textWidth = 0;
+                        elements = [];
+                        n++;
                     }
                 }
             });
@@ -288,165 +230,26 @@ export class PDFPage extends PDFPageBase {
     }
 
     async convertWidget(elDiv) {
-        const idx = Number.parseInt(elDiv.getAttribute('data-parts'), 10);
-        if (!Number.isFinite(idx)) {
-            return;
-        }
-        const textPart = this.textParts ? this.textParts[idx] : null;
-        if (!textPart) {
-            return;
-        }
-        const convertKey = String(idx);
-        if (this.isConvertWidget.indexOf(convertKey) > -1) {
+        let idx = elDiv.getAttribute('data-parts');
+        if (this.isConvertWidget.indexOf(idx) > -1) {
             return;
         }
 
-        let id = `${this.pageNum}_${idx}_${elDiv.getAttribute('data-l')}`;
-        const baseElement = this.#getTextPartElement(textPart, elDiv);
-        if (!baseElement) {
-            return;
+        let id = this.pageNum + '_' + idx + '_' + elDiv.getAttribute('data-l');
+        const textPart = this.textParts[idx];
+        let x = parseFloat(elDiv.style.left);
+        let y = parseFloat(elDiv.style.top);
+        let fontName = textPart.elements[0].getAttribute('data-fontname')?.toLocaleLowerCase();
+        let bold = fontName && fontName.indexOf('bold') > -1 ? true : false;
+        let italic = fontName && (fontName.indexOf('oblique') > -1 || fontName.indexOf('italic') > -1);
+        if (italic) {
+            elDiv.style.width = (parseFloat(elDiv.style.width) + 3) + 'px';
         }
-        const inferredStyle = this.#inferPdfFontStyle(baseElement);
 
-        // Keep the historical width tweak for italic PDF fonts so the cover box doesn't clip.
-        const rawFontName = baseElement.getAttribute('data-fontname');
-        const fontName = typeof rawFontName === 'string' ? rawFontName.toLowerCase() : '';
-        const isItalicFont = fontName.includes('oblique') || fontName.includes('italic');
-        if (isItalicFont) {
-            this.#applyItalicWidthPadding(textPart);
-        }
-        let bounds = this.#getTextPartBounds(textPart, baseElement, isItalicFont);
-        if (!bounds) {
-            return;
-        }
-        const coverBoundsBase = bounds ? { ...bounds } : null;
-        let x = bounds.left;
-        let y = bounds.top;
-        const rawTextValue = typeof textPart.text === 'string' ? textPart.text : '';
-        let textValue = rawTextValue;
-
-        let fontSize = parseFloat(baseElement.getAttribute('data-fontsize'));
-        if (!Number.isFinite(fontSize)) {
-            const computed = window.getComputedStyle(baseElement);
-            fontSize = parseFloat(computed?.fontSize) || 12;
-        }
-        let color = this.#normalizeFontColor(baseElement.getAttribute('data-fontcolor'));
-        if (!color) {
-            const computed = window.getComputedStyle(baseElement);
-            color = this.#normalizeFontColor(computed?.color || baseElement.style.color);
-        }
-        let bgColor = baseElement.getAttribute('data-bgcolor');
-        if (!bgColor) {
-            bgColor = this.#getBackgroundColorByCanvas(bounds, color);
-        }
-        if (!bgColor) {
-            bgColor = getPixelColor(this.content.getContext('2d'), bounds.left * this.outputScale, bounds.top * this.outputScale);
-        }
-        if (!color) {
-            const inferredColor = this.#inferTextColorByCanvas(bounds, bgColor);
-            if (inferredColor) {
-                color = inferredColor;
-            }
-        }
-        if (!color) {
-            color = '#000000';
-        }
-        if (bgColor && color) {
-            const bgRgb = this.#parseColorToRgba(bgColor);
-            const textRgb = this.#parseColorToRgba(color);
-            if (bgRgb && textRgb && this.#isNearColor(bgRgb.r, bgRgb.g, bgRgb.b, textRgb, 18)) {
-                const fallbackBg = this.#getBackgroundColorByCanvas(bounds, color, true);
-                if (fallbackBg) {
-                    bgColor = fallbackBg;
-                } else {
-                    bgColor = '#ffffff';
-                }
-            }
-        }
-        const originalFontFamily = baseElement.getAttribute('data-loadedname') || 'Helvetica';
-        const originalFontName = baseElement.getAttribute('data-fontname') || originalFontFamily;
-        let displayTextValue = null;
-        let coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
-        const leaderGapWidth = this.#getLeaderGapWidth(coverRectsPx);
-        if (this.#shouldInsertLeaderDots(textValue, leaderGapWidth, fontSize)) {
-            const leaderDots = this.#buildLeaderDots(leaderGapWidth, baseElement, fontSize);
-            const nextTextValue = this.#insertLeaderDots(textValue, leaderDots);
-            if (nextTextValue !== textValue) {
-                displayTextValue = nextTextValue;
-            }
-        }
-        const editorTextValue = displayTextValue || textValue;
-        const resolvedFont = Font.resolveSafeFont({
-            fontFamily: originalFontFamily,
-            fontFile: originalFontFamily,
-            fontName: originalFontName,
-            text: editorTextValue
-        });
-        const useInferredStyle = Boolean(resolvedFont.replaced);
-        // Apply bold/italic only when we fall back to a safe font to avoid synthetic styling
-        // on the PDF.js text layer, while still preserving emphasis from the source PDF.
-        const bold = useInferredStyle ? inferredStyle.bold : false;
-        const italic = useInferredStyle ? inferredStyle.italic : false;
-        let fontFamily = resolvedFont.fontFamily;
-        if (!Array.isArray(textPart.coverRects) || textPart.coverRects.length === 0) {
-            const refined = this.#refineLineBoundsByCanvas(bounds, bgColor, fontSize);
-            if (refined) {
-                bounds = refined;
-                textPart.bounds = refined;
-                textPart.width = refined.width;
-            }
-        }
-        const coverBounds = coverBoundsBase || bounds;
-        const coverWidth = coverBounds.width;
-        const coverHeight = coverBounds.height;
-        const extraCoverRightPx = isItalicFont ? Math.max(2, Math.ceil(fontSize * 0.35)) : 0;
-        const boxWidth = Number.isFinite(bounds.width) && this.scale ? bounds.width / this.scale : null;
-        const boxHeight = Number.isFinite(bounds.height) && this.scale ? bounds.height / this.scale : null;
-
-        // Store a stable "cover box" in PDF units for export-time redaction.
-        // This avoids relying on edited text metrics (which shrink when deleting text),
-        // and ensures we can still cover the original glyphs when the user clears text.
-        const contentRect = this.content.getBoundingClientRect();
-        const pdfWidth = this.pageProxy?.view?.[2] || 0;
-        const pdfHeight = this.pageProxy?.view?.[3] || 0;
-        const fallbackPdfScale = this.scale ? 1 / this.scale : 0;
-        const pxToPdfX = contentRect.width ? pdfWidth / contentRect.width : fallbackPdfScale;
-        const pxToPdfY = contentRect.height ? pdfHeight / contentRect.height : fallbackPdfScale;
-        const coverPaddingX = Math.max(2, Math.ceil(fontSize * 0.2));
-        const coverPaddingY = Math.max(2, Math.ceil(fontSize * 0.2));
-        // Use tighter padding for export-time cover boxes to avoid masking table borders.
-        const exportPaddingX = Math.min(1, coverPaddingX);
-        const exportPaddingY = Math.min(1, coverPaddingY);
-        const exportExtraRightPx = isItalicFont ? Math.min(3, extraCoverRightPx) : 0;
-        const coverOffsetX = pxToPdfX ? -exportPaddingX * pxToPdfX : 0;
-        const coverOffsetY = pxToPdfY ? -exportPaddingY * pxToPdfY : 0;
-        const coverWidthPdf = pxToPdfX ? (coverWidth + exportPaddingX * 2 + exportExtraRightPx) * pxToPdfX : 0;
-        const coverHeightPdf = pxToPdfY ? (coverHeight + exportPaddingY * 2) * pxToPdfY : 0;
-        const hasCoverRects = Boolean(coverRectsPx && coverRectsPx.length > 1);
-        const coverRectsPdf = hasCoverRects && pxToPdfX && pxToPdfY
-            ? coverRectsPx.map((rect, idx) => {
-                if (!rect) return null;
-                const padLeft = exportPaddingX;
-                const padRight = exportPaddingX + (idx === coverRectsPx.length - 1 ? exportExtraRightPx : 0);
-                const padY = exportPaddingY;
-                const leftPx = rect.left - padLeft;
-                const topPx = rect.top - padY;
-                const widthPx = rect.width + padLeft + padRight;
-                const heightPx = rect.height + padY * 2;
-                if (!Number.isFinite(leftPx) || !Number.isFinite(topPx)
-                    || !Number.isFinite(widthPx) || !Number.isFinite(heightPx)) {
-                    return null;
-                }
-                return {
-                    left: leftPx * pxToPdfX,
-                    top: topPx * pxToPdfY,
-                    width: widthPx * pxToPdfX,
-                    height: heightPx * pxToPdfY
-                };
-            }).filter(Boolean)
-            : null;
-        const coverBackground = hasCoverRects ? bgColor : null;
-        const displayBackground = hasCoverRects ? null : bgColor;
+        let fontSize = parseFloat(elDiv.getAttribute('data-fontsize'));
+        let color = elDiv.getAttribute('data-fontcolor');
+        let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), x * this.outputScale, y * this.outputScale);
+        let fontFamily = elDiv.getAttribute('data-loadedname') || 'Helvetica';
 
         PDFEvent.dispatch(Events.CONVERT_TO_ELEMENT, {
             elDiv,
@@ -456,34 +259,14 @@ export class PDFPage extends PDFPageBase {
                 // size: fontSize / this.scale / this.outputScale,
                 size: fontSize / this.scale,
                 color: color,
-                text: editorTextValue,
-                textOriginal: displayTextValue ? textValue : null,
-                useOriginalText: Boolean(displayTextValue),
+                text: textPart.text,
                 lineHeight: null,
-                lineHeightMeasured: false,
-                lineOffsets: null,
-                boxWidth: boxWidth,
-                boxHeight: boxHeight,
-                textIndent: null,
-                textPaddingLeft: null,
-                textMode: 'line',
                 fontFamily: fontFamily,
-                fontFile: resolvedFont.fontFile,
-                fontName: originalFontName,
-                showName: resolvedFont.showName,
-                displayFontFamily: originalFontFamily,
+                fontFile: fontFamily,
+                fontName: elDiv.getAttribute('data-fontname'),
                 opacity: 1,
                 underline: null,
-                // Cover the original glyphs when exporting without relying on PDF.js worker patches.
-                background: displayBackground,
-                coverBackground: coverBackground,
-                backgroundWidth: coverWidth,
-                coverOriginal: true,
-                coverOffsetX: coverOffsetX,
-                coverOffsetY: coverOffsetY,
-                coverWidth: coverWidthPdf,
-                coverHeight: coverHeightPdf,
-                coverRects: coverRectsPdf,
+                background: null,
                 bold: bold,
                 italic: italic,
                 rotate: null
@@ -495,52 +278,17 @@ export class PDFPage extends PDFPageBase {
             },
             pageNum: this.pageNum
         }, () => {
-            this.isConvertWidget.push(convertKey);
-            baseElement.style.cursor = 'default';
-            const coverBounds = coverBoundsBase || textPart.bounds;
-            const coverRects = Array.isArray(textPart.coverRects)
-                ? textPart.coverRects
-                : null;
-            const coverElements = Array.isArray(textPart.coverElements)
-                ? textPart.coverElements.filter(el => el && el.isConnected)
-                : null;
-            const useMultiCover = coverRects && coverElements
-                && coverRects.length === coverElements.length
-                && coverRects.length > 1;
-
-            const applyCover = (element, rect, extraRightPad = 0) => {
+            this.isConvertWidget.push(idx);
+            elDiv.style.cursor = 'default';
+            textPart.elements.forEach(async (element, i) => {
                 element.classList.remove('text-border');
                 element.classList.add('text-hide');
                 element.style.backgroundColor = bgColor;
                 element.style.userSelect = 'none';
-                if (rect) {
-                    const padLeft = coverPaddingX;
-                    const padRight = coverPaddingX + extraRightPad;
-                    const padY = coverPaddingY;
-                    element.style.boxSizing = 'border-box';
-                    element.style.padding = '0';
-                    element.style.left = (rect.left - padLeft) + 'px';
-                    element.style.top = (rect.top - padY) + 'px';
-                    element.style.width = (rect.width + padLeft + padRight) + 'px';
-                    element.style.height = (rect.height + padY * 2) + 'px';
-                } else if (coverBounds) {
-                    const coverPadLeft = coverPaddingX;
-                    const coverPadRight = coverPaddingX + extraCoverRightPx;
-                    const coverPadY = coverPaddingY;
-                    element.style.boxSizing = 'border-box';
-                    element.style.padding = '0';
-                    element.style.left = (coverBounds.left - coverPadLeft) + 'px';
-                    element.style.top = (coverBounds.top - coverPadY) + 'px';
-                    element.style.width = (coverBounds.width + coverPadLeft + coverPadRight) + 'px';
-                    element.style.height = (coverBounds.height + coverPadY * 2) + 'px';
-                } else {
-                    element.style.padding = `${coverPaddingY}px 0 ${coverPaddingY}px 0`;
-                    const elementTop = this.#parsePx(element.style.top);
-                    const elementLeft = this.#parsePx(element.style.left);
-                    element.style.top = (elementTop - coverPaddingY) + 'px';
-                    element.style.left = (elementLeft - coverPaddingX) + 'px';
-                }
-
+                element.style.padding = '3px 0 3px 0';
+                element.style.top = (y - 2) + 'px';
+                element.style.left = (x - 2) + 'px';
+    
                 let textItemIdx = element.getAttribute('data-idx');
                 if (this.hideOriginElements.findIndex(data => data.idx == textItemIdx) === -1) {
                     this.hideOriginElements.push({
@@ -551,295 +299,34 @@ export class PDFPage extends PDFPageBase {
                     });
                 }
                 this.clearTexts.push(this.textContentItems[parseInt(element.getAttribute('data-idx'))]);
-            };
-
-            if (useMultiCover) {
-                coverElements.forEach((element, idx) => {
-                    const rect = coverRects[idx];
-                    const extraRight = idx === coverRects.length - 1 ? extraCoverRightPx : 0;
-                    applyCover(element, rect, extraRight);
-                });
-            } else {
-                textPart.elements.forEach(async (element) => {
-                    applyCover(element, null, extraCoverRightPx);
-                });
-            }
+            });
         });
         return true;
     }
 
-    #filterDiv(n, options = {}) {
+    #filterDiv(n) {
         const textParts = this.textParts[n];
         if (!textParts || !Array.isArray(textParts.elements)) return;
-        if (!Number.isFinite(textParts.rawWidth) && Number.isFinite(textParts.width)) {
-            textParts.rawWidth = textParts.width;
-        }
-        const allowSplit = options?.allowSplit === true;
-        const elements = textParts.elements.filter(el => el && el.isConnected);
-        if (!elements.length) return;
-
-        const fontSizeForSort = elements.reduce((acc, el) => {
-            if (Number.isFinite(acc)) return acc;
-            const size = this.#parsePx(el.getAttribute('data-fontsize')) || this.#parsePx(el.style.fontSize);
-            return Number.isFinite(size) && size > 0 ? size : acc;
-        }, NaN);
-        const topTolerance = Number.isFinite(fontSizeForSort)
-            ? Math.max(fontSizeForSort * 0.4, 1)
-            : 0.5;
-        const sorted = [...elements].sort((a, b) => {
-            const topDiff = this.#parsePx(a.style.top) - this.#parsePx(b.style.top);
-            if (Math.abs(topDiff) > topTolerance) return topDiff;
-            return this.#parsePx(a.style.left) - this.#parsePx(b.style.left);
-        });
-
-        const layerRect = this.elTextLayer ? this.elTextLayer.getBoundingClientRect() : null;
-        const layerLeft = layerRect ? layerRect.left : 0;
-        const layerTop = layerRect ? layerRect.top : 0;
-        const nonEmptySorted = sorted.filter(el => trimSpace(el.textContent || '') !== '');
-        const anchorElement = nonEmptySorted[0] || sorted[0];
-        const baseFontSize = this.#parsePx(anchorElement.getAttribute('data-fontsize'))
-            || this.#parsePx(anchorElement.style.fontSize)
-            || fontSizeForSort;
-        const spaceThreshold = Math.max(baseFontSize * 0.25, 1);
-        let lineText = '';
-        let prevRight = null;
-        let minLeft = Infinity;
-        let maxRight = -Infinity;
-        let minTop = Infinity;
-        let maxBottom = -Infinity;
-        const metricsViewport = this.#getMetricsViewport();
-        const itemBoxes = [];
-        sorted.forEach(el => {
-            const text = el.textContent || '';
-            const itemBox = metricsViewport ? this.#getTextItemBox(el, metricsViewport) : null;
-            let left = itemBox ? itemBox.left : null;
-            let right = itemBox ? itemBox.right : null;
-            let top = itemBox ? itemBox.top : null;
-            let bottom = itemBox ? itemBox.bottom : null;
-            let rect = null;
-            if (!itemBox) {
-                rect = el.getBoundingClientRect();
-                if (text === '' && rect.width === 0 && rect.height === 0) {
-                    return;
-                }
-                left = rect.left - layerLeft;
-                right = rect.right - layerLeft;
-                top = rect.top - layerTop;
-                bottom = rect.bottom - layerTop;
-            }
-            const width = Number.isFinite(left) && Number.isFinite(right) ? Math.max(0, right - left) : null;
-            const height = Number.isFinite(top) && Number.isFinite(bottom) ? Math.max(0, bottom - top) : null;
-            if (text === '' && itemBox && width === 0 && height === 0) {
-                return;
-            }
-            if (!Number.isFinite(left) || !Number.isFinite(right)) {
-                const styleLeft = this.#parsePx(el.style.left);
-                const styleWidth = this.#parsePx(el.style.width) || rect?.width;
-                left = styleLeft;
-                right = styleLeft + (Number.isFinite(styleWidth) ? styleWidth : 0);
-            }
-            if (!Number.isFinite(top) || !Number.isFinite(bottom)) {
-                const styleTop = this.#parsePx(el.style.top);
-                const styleHeight = this.#parsePx(el.style.height) || rect?.height;
-                top = styleTop;
-                bottom = styleTop + (Number.isFinite(styleHeight) ? styleHeight : 0);
-            }
-            itemBoxes.push({
-                element: el,
-                left,
-                right,
-                top,
-                bottom
-            });
-            const isWhitespace = trimSpace(text) === '';
-            if (prevRight !== null && !isWhitespace) {
-                const gap = left - prevRight;
-                if (gap > spaceThreshold && !lineText.endsWith(' ')) {
-                    lineText += ' ';
-                }
-            }
-            if (isWhitespace) {
-                if (text && text.length > 0) {
-                    lineText += text;
-                } else if (!lineText.endsWith(' ')) {
-                    lineText += ' ';
+        let firstElement = null;
+        textParts.elements.forEach((el, i) => {
+            let isEmptyStr = trimSpace(el.textContent) == '';
+            if (!firstElement) {
+                if (!isEmptyStr) {
+                    firstElement = el;
+                    firstElement.style.transform = 'none';
+                    firstElement.style.left = el.style.left;
+                    firstElement.style.top = el.style.top;
+                } else {
+                    el.remove();
                 }
             } else {
-                lineText += text;
-            }
-            prevRight = right;
-            if (Number.isFinite(left)) minLeft = Math.min(minLeft, left);
-            if (Number.isFinite(right)) maxRight = Math.max(maxRight, right);
-            if (Number.isFinite(top)) minTop = Math.min(minTop, top);
-            if (Number.isFinite(bottom)) maxBottom = Math.max(maxBottom, bottom);
-        });
-
-        const coverData = this.#buildCoverRects(itemBoxes, baseFontSize, spaceThreshold);
-        if (allowSplit && coverData && Array.isArray(coverData.elements) && coverData.elements.length > 1) {
-            const layerWidth = layerRect ? layerRect.width : null;
-            const shouldSplit = this.#shouldSplitByGap(coverData, baseFontSize, layerWidth);
-            if (!shouldSplit) {
-                // Keep a single editable box when the gap is too small to be a real column.
-            } else {
-                const clusters = this.#splitElementsByAnchors(sorted, coverData.elements);
-                if (Array.isArray(clusters) && clusters.length > 1) {
-                    const boxByElement = new Map(itemBoxes.map(box => [box.element, box]));
-                    const outputScale = this.outputScale || 1;
-                    const nextParts = clusters.map(clusterEls => {
-                        const clusterIndices = Array.from(new Set(clusterEls.map(el => {
-                            const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
-                            return Number.isFinite(idx) ? idx : null;
-                        }).filter(idx => idx !== null)));
-                        let clusterWidthPx = 0;
-                        clusterEls.forEach(el => {
-                            const box = boxByElement.get(el);
-                            if (box && Number.isFinite(box.left) && Number.isFinite(box.right)) {
-                                clusterWidthPx += Math.max(0, box.right - box.left);
-                            } else {
-                                const rect = el.getBoundingClientRect();
-                                if (Number.isFinite(rect.width)) {
-                                    clusterWidthPx += rect.width;
-                                }
-                            }
-                        });
-                        const rawWidth = outputScale ? clusterWidthPx / outputScale : clusterWidthPx;
-                        return {
-                            text: '',
-                            elements: clusterEls,
-                            width: rawWidth,
-                            rawWidth: rawWidth,
-                            itemIndices: clusterIndices
-                        };
-                    });
-                    this.textParts.splice(n, 1, ...nextParts);
-                    for (let i = 0; i < nextParts.length; i++) {
-                        this.#filterDiv(n + i, { allowSplit: false });
-                    }
-                    return nextParts.length;
-                }
-            }
-        }
-
-        const mergedText = trimSpace(lineText);
-        textParts.text = mergedText;
-
-        const firstElement = anchorElement;
-        firstElement.textContent = mergedText;
-        firstElement.style.transform = 'none';
-        if (coverData) {
-            textParts.coverRects = coverData.rects;
-            textParts.coverElements = coverData.elements;
-        } else {
-            textParts.coverRects = null;
-            textParts.coverElements = null;
-        }
-        if (Number.isFinite(minLeft) && Number.isFinite(maxRight) && Number.isFinite(minTop) && Number.isFinite(maxBottom)) {
-            let bounds = {
-                left: minLeft,
-                top: minTop,
-                right: maxRight,
-                bottom: maxBottom,
-                width: maxRight - minLeft,
-                height: maxBottom - minTop
-            };
-            bounds = this.#applyPdfLineWidth(bounds, sorted, textParts.itemIndices) || bounds;
-            let lineWidth = Math.max(0, bounds.right - bounds.left);
-            // Use the original span width as a safety net when bounds are too tight.
-            if (!coverData && Number.isFinite(textParts.rawWidth)) {
-                const scaledRawWidth = textParts.rawWidth * this.outputScale;
-                if (Number.isFinite(scaledRawWidth) && scaledRawWidth > lineWidth) {
-                    bounds.right = bounds.left + scaledRawWidth;
-                    lineWidth = scaledRawWidth;
-                }
-            }
-            // Clamp overly wide boxes (often caused by large column gaps) so the editor
-            // doesn't cover adjacent text. Prefer the measured glyph width.
-            if (Number.isFinite(textParts.rawWidth) && textParts.rawWidth > 0) {
-                const clampPadding = Math.max(2, baseFontSize * 0.2);
-                const scaledRawWidth = textParts.rawWidth * (this.outputScale || 1);
-                const clampTarget = scaledRawWidth + clampPadding;
-                const shouldClamp = !coverData && lineWidth > clampTarget * 1.2;
-                if (shouldClamp && clampTarget < lineWidth) {
-                    lineWidth = clampTarget;
-                    bounds.right = bounds.left + lineWidth;
-                }
-            }
-            bounds.width = lineWidth;
-            const lineHeight = Math.max(0, bounds.bottom - bounds.top);
-            firstElement.style.left = bounds.left + 'px';
-            firstElement.style.top = bounds.top + 'px';
-            firstElement.style.width = lineWidth + 'px';
-            firstElement.style.height = lineHeight + 'px';
-            textParts.width = lineWidth;
-            textParts.bounds = {
-                left: bounds.left,
-                top: bounds.top,
-                right: bounds.right,
-                bottom: bounds.bottom,
-                width: lineWidth,
-                height: lineHeight
-            };
-        } else {
-            const fallbackLeft = this.#parsePx(firstElement.style.left);
-            const fallbackTop = this.#parsePx(firstElement.style.top);
-            const rect = firstElement.getBoundingClientRect();
-            const rectWidth = rect?.width;
-            const rectHeight = rect?.height;
-            let fallbackWidth = Number.isFinite(textParts.rawWidth)
-                ? textParts.rawWidth
-                : this.#parsePx(firstElement.style.width);
-            if (Number.isFinite(rectWidth)) {
-                if (!Number.isFinite(fallbackWidth) || rectWidth > fallbackWidth) {
-                    fallbackWidth = rectWidth;
-                }
-            }
-            let fallbackHeight = Number.isFinite(rectHeight)
-                ? rectHeight
-                : this.#parsePx(firstElement.style.height);
-            if (!Number.isFinite(fallbackHeight) && Number.isFinite(baseFontSize)) {
-                fallbackHeight = baseFontSize;
-            }
-            if (Number.isFinite(fallbackLeft)
-                && Number.isFinite(fallbackTop)
-                && Number.isFinite(fallbackWidth)
-                && fallbackWidth > 0) {
-                firstElement.style.left = fallbackLeft + 'px';
-                firstElement.style.top = fallbackTop + 'px';
-                firstElement.style.width = fallbackWidth + 'px';
-                if (Number.isFinite(fallbackHeight) && fallbackHeight > 0) {
-                    firstElement.style.height = fallbackHeight + 'px';
-                }
-                textParts.width = fallbackWidth;
-                textParts.bounds = {
-                    left: fallbackLeft,
-                    top: fallbackTop,
-                    right: fallbackLeft + fallbackWidth,
-                    bottom: fallbackTop + (Number.isFinite(fallbackHeight) ? fallbackHeight : 0),
-                    width: fallbackWidth,
-                    height: Number.isFinite(fallbackHeight) ? fallbackHeight : 0
-                };
-            }
-        }
-
-        const keepElements = new Set([firstElement]);
-        if (coverData && Array.isArray(coverData.elements)) {
-            coverData.elements.forEach(el => keepElements.add(el));
-            coverData.elements.forEach(el => {
-                if (el === firstElement) return;
-                el.textContent = '';
-                el.classList.remove('text-border');
-                el.classList.add('text-cover-anchor');
-                el.style.pointerEvents = 'none';
-            });
-        }
-        sorted.slice(1).forEach(el => {
-            if (!keepElements.has(el)) {
+                firstElement.textContent += el.textContent;
                 el.remove();
             }
         });
-        textParts.elements = Array.from(keepElements);
-        this.#syncPartElementIds(textParts, n);
-        return 1;
+        if (firstElement) {
+            firstElement.style.width = (textParts.width * this.outputScale) + 'px';
+        }
     }
 
     #splitElementsByAnchors(sorted, anchors) {
@@ -1268,37 +755,15 @@ export class PDFPage extends PDFPageBase {
         return /^[.\u00b7\u2022\u2219\u2024]+$/.test(value);
     }
 
-    #isBreak(currentIdx, nextIdx, lineHasLeader = false, hasEOL = false) {
-        const nextTextItem = this.textContentItems[nextIdx];
+    #isBreak(textItem, nextIdx) {
+        let nextTextItem = this.textContentItems[nextIdx];
         if (!nextTextItem) return true;
-        const nextIsLeader = this.#isLeaderText(nextTextItem.str);
-        if (nextIsLeader) {
-            return false;
+        if (nextTextItem.height == 0) {
+            // return nextTextItem.width >= 2.5;
+            return nextTextItem.width > 8;
+        } else {
+            return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
         }
-
-        const suppressVisual = lineHasLeader;
-        const visualBreak = suppressVisual ? null : this.#isVisualLineBreak(currentIdx, nextIdx);
-        if (visualBreak === true) return true;
-        if (visualBreak === false) return false;
-
-        const currentTextItem = this.textContentItems[currentIdx];
-        const currentTransform = Array.isArray(currentTextItem?.transform) ? currentTextItem.transform : null;
-        const nextTransform = Array.isArray(nextTextItem?.transform) ? nextTextItem.transform : null;
-        if (currentTransform && nextTransform) {
-            const currentY = currentTransform[5];
-            const nextY = nextTransform[5];
-            if (Number.isFinite(currentY) && Number.isFinite(nextY)) {
-                const currentHeight = Number.isFinite(currentTextItem?.height) ? currentTextItem.height : 0;
-                const nextHeight = Number.isFinite(nextTextItem.height) ? nextTextItem.height : 0;
-                const height = Math.max(currentHeight, nextHeight, 1);
-                const yDiff = Math.abs(nextY - currentY);
-                if (yDiff > height * 0.85) {
-                    return true;
-                }
-            }
-        }
-
-        return Boolean(hasEOL);
     }
 
     #mergeTextPartsByLine() {
