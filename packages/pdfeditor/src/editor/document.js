@@ -39,23 +39,15 @@ export class PDFDocument {
             for (let id in page.elements.items) {
                 let item = page.elements.items[id];
                 if (['text', 'textbox'].indexOf(item.dataType) < 0) continue;
-                if (!trimSpace(item.attrs?.text || '')) continue;
-                const lines = String(item.attrs.text || '').split(/[\n\f\r\u000B]/);
-                for (const line of lines) {
-                    const runs = Font.splitTextByFont(line, item.attrs.fontFile);
-                    for (const run of runs) {
-                        if (!trimSpace(run.text || '')) continue;
-                        if (!texts[page.id]) {
-                            texts[page.id] = Object.create(null);
-                        }
-                        if (!texts[page.id][run.fontFile]) {
-                            texts[page.id][run.fontFile] = run.text;
-                        } else {
-                            texts[page.id][run.fontFile] += run.text;
-                        }
-                        this.embedFonts[page.id][run.fontFile] = null;
-                    }
+                if (!texts[page.id]) {
+                    texts[page.id] = Object.create(null);
                 }
+                if (!texts[page.id][item.attrs.fontFile]) {
+                    texts[page.id][item.attrs.fontFile] = item.attrs.text;
+                } else {
+                    texts[page.id][item.attrs.fontFile] += item.attrs.text;
+                }
+                this.embedFonts[page.id][item.attrs.fontFile] = null;
             }
         }
         
@@ -69,7 +61,7 @@ export class PDFDocument {
                 } catch(e) {
                     console.log('error');
                     console.log(e);
-                    await this.setFont(pageId, fontFile, null);
+                    await this.setFont(pageId, fontFile, StandardFonts.Helvetica);
                 }
             }
         }
@@ -78,14 +70,6 @@ export class PDFDocument {
 
     async getFont(pageId, text, fontFile) {
         // return this.documentProxy.embedFont(StandardFonts.Helvetica);
-        const resolved = Font.resolveSafeFont({
-            fontFamily: null,
-            fontFile,
-            fontName: fontFile,
-            text
-        });
-        fontFile = resolved.fontFile;
-
         if (!this.embedFonts[pageId]) {
             this.embedFonts[pageId] = Object.create(null);
         }
@@ -96,116 +80,75 @@ export class PDFDocument {
 
         //从pdf文件中提取字体数据
         let arrayBuffer = Font.getCache(pageId, fontFile);
-        if (arrayBuffer) {
-            return this.setFont(pageId, fontFile, arrayBuffer);
-        }
-
-        const page = this.getPageForId(pageId);
-        const commonObjs = page?.readerPage?.pageProxy?.commonObjs;
-        if (commonObjs?.has?.(fontFile)) {
-            let fontFace = commonObjs.get(fontFile);
-            arrayBuffer = fontFace.data.buffer;
-            let newFont = null;
-            try {
-                newFont = opentype.parse(arrayBuffer);
-            } catch (e) {
-                arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
-                return this.setFont(pageId, fontFile, arrayBuffer);
-            }
-
-            text = text.split('').filter((value, index, self) => self.indexOf(value) === index);
-            let isFetchFont = text.some(val => (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) == -1));
-            let _text = text.map(val => {
-                if (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) > -1) {
-                    return val;
-                }
-                return '';
-            }).join('');
-
-            //如果包含CJK并需要补字体
-            let isIncludeCJK = new RegExp(Font.CJK_RANGE);
-            if (isIncludeCJK.test(text) && _text) {
-                arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFileForText(text.join('')));
-                return this.setFont(pageId, fontFile, arrayBuffer);
-            } else {
-                if (!isFetchFont) {
-                    if (_text) {
-                        try {
-                            Font.fetchFallbackFont().then(fallbackBuffer => {
-                                const fontBufferForWorker = arrayBuffer.slice(0);
-                                const fallbackBufferForWorker = fallbackBuffer.slice(0);
-                                this.editor.fontWorker.postMessage({
-                                    type: 'font_subset',
-                                    text: _text,
-                                    pageId: pageId,
-                                    fontFile: fontFile,
-                                    arrayBuffer: fontBufferForWorker,
-                                    fallbackBuffer: fallbackBufferForWorker
-                                }, [
-                                    fontBufferForWorker,
-                                    fallbackBufferForWorker
-                                ]);
-                            }).catch(() => {
-                                this.setFont(pageId, fontFile, StandardFonts.Helvetica);
-                                PDFEvent.dispatch(Events.DOWNLOAD);
-                            });
-                        } catch (e) {
-                            this.setFont(pageId, fontFile, StandardFonts.Helvetica);
-                            PDFEvent.dispatch(Events.DOWNLOAD);
-                        }
-                        return null;
-                    } else {
-                        return this.setFont(pageId, fontFile, arrayBuffer);
+        if (!arrayBuffer) {
+            const page = this.getPageForId(pageId);
+            let commonObjs = page.readerPage.pageProxy.commonObjs;
+            if (commonObjs.has(fontFile)) {
+                let fontFace = commonObjs.get(fontFile);
+                arrayBuffer = fontFace.data.buffer;
+                let newFont = opentype.parse(arrayBuffer);
+                text = text.split('').filter((value, index, self) => self.indexOf(value) === index);
+                let isFetchFont = text.some(val => (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) == -1));
+                let _text = text.map(val => {
+                    if (!newFont.charToGlyph(val).unicode && Font.CHARS.indexOf(val) > -1) {
+                        return val;
                     }
+                    return '';
+                }).join('');
+
+                //如果包含CJK并需要补字体
+                let isIncludeCJK = new RegExp(Font.CJK_RANGE);
+                if (isIncludeCJK.test(text) && _text) {
+                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
+                    this.setFont(pageId, fontFile, arrayBuffer);
                 } else {
-                    arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.getCjkFontFileForText(text.join('')));
-                    return this.setFont(pageId, fontFile, arrayBuffer);
+                    if (!isFetchFont) {
+                        if (_text) {
+                            try {
+                                Font.fetchFallbackFont().then(fallbackBuffer => {
+                                    this.editor.fontWorker.postMessage({
+                                        type: 'font_subset',
+                                        text: _text,
+                                        pageId: pageId,
+                                        fontFile: fontFile,
+                                        arrayBuffer: arrayBuffer,
+                                        fallbackBuffer: fallbackBuffer
+                                    }, [
+                                        arrayBuffer,
+                                        fallbackBuffer
+                                    ]);
+                                }).catch(e => {
+                                    this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                                });
+                            } catch (e) {
+                                this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                            }
+                        } else {
+                            this.setFont(pageId, fontFile, arrayBuffer);
+                        }
+                    } else {
+                        arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
+                        this.setFont(pageId, fontFile, arrayBuffer);
+                    }
                 }
+            } else {
+                //从服务器拉取字体数据
+                arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
+                this.setFont(pageId, fontFile, arrayBuffer);
             }
-        } else {
-            //从服务器拉取字体数据
-            arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
-            return this.setFont(pageId, fontFile, arrayBuffer);
+            // if (!arrayBuffer) {
+            //     arrayBuffer = this.documentProxy.embedFont(StandardFonts.Helvetica);
+            // }
         }
     }
 
     async setFont(pageId, fontFile, arrayBuffer) {
-        if (!this.embedFonts[pageId]) {
-            this.embedFonts[pageId] = Object.create(null);
-        }
-
-        const embedUnicodeFallback = async () => {
-            const fallbackBuffer = await Font.fetchFont(pageId, 'A', Font.getCjkFontFile());
-            if (fallbackBuffer) {
-                Font.setCache(pageId, fontFile, fallbackBuffer);
-                return this.documentProxy
-                    .embedFont(fallbackBuffer, { subset: true })
-                    .catch(() => this.documentProxy.embedFont(fallbackBuffer));
-            }
-            Font.setCache(pageId, fontFile, StandardFonts.Helvetica);
-            return this.documentProxy.embedFont(StandardFonts.Helvetica);
-        };
-
-        // When font bytes are missing/invalid, fall back to a Unicode-capable font
-        // to avoid WinAnsi encoding errors (e.g. CJK/Hangul/Kana).
+        //当获取字体数据错误时，使用默认字体
         if (!arrayBuffer) {
-            this.embedFonts[pageId][fontFile] = embedUnicodeFallback();
-            return this.embedFonts[pageId][fontFile];
+            arrayBuffer = StandardFonts.Helvetica;
         }
-
         Font.setCache(pageId, fontFile, arrayBuffer);
-        if (typeof arrayBuffer === 'string') {
-            this.embedFonts[pageId][fontFile] = this.documentProxy.embedFont(arrayBuffer);
-            return this.embedFonts[pageId][fontFile];
-        }
-
-        this.embedFonts[pageId][fontFile] = this.documentProxy
-            .embedFont(arrayBuffer, { subset: true })
-            .catch(() => this.documentProxy.embedFont(arrayBuffer))
-            .catch(embedUnicodeFallback)
-            .catch(() => this.documentProxy.embedFont(StandardFonts.Helvetica));
-
-        return this.embedFonts[pageId][fontFile];
+        this.embedFonts[pageId][fontFile] = this.documentProxy.embedFont(arrayBuffer);
     }
 
     checkFonts() {

@@ -45,9 +45,7 @@ const TOOLS = [
     'textArt',
     'stamp'
 ];
-// Offline font assets base (same-origin). `Font.fetchFont()` loads from this base.
-// Example: "/pdfeditor/assets/".
-Font.fontUrl = ASSETS_URL;
+Font.fontUrl = 'https://genfont.qwerpdf.com/';
 const EDITOR_READY_MESSAGE = 'pdf-editor-ready';
 const DOWNLOAD_TIMEOUT_MS = 45000;
 // let fileUrl = 'http://localhost/files/150kb.pdf';

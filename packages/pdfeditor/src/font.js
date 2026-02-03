@@ -7,6 +7,7 @@ const DEFAULT_LATIN_FONT_FILE = 'fonts/Lato-Regular.ttf';
 const DEFAULT_LATIN_FONT_FAMILY = 'Lato';
 const DEFAULT_SERIF_FONT_FILE = 'fonts/NotoSerif-Regular.ttf';
 const DEFAULT_SERIF_FONT_FAMILY = 'NotoSerif';
+const UNICODE_FONT = 'unicode.ttf';
 const CJK_FONT_FILES = Object.freeze({
     sc: 'fonts/NotoSansCJKsc-Regular.otf',
     tc: 'fonts/NotoSansCJKtc-Regular.otf',
@@ -203,27 +204,17 @@ export class Font {
     static FONT_DISPLAY_NAMES = FONT_DISPLAY_NAMES;
 
     static get UNICODE_FONT() {
-        return Font.getCjkFontFile();
+        return UNICODE_FONT;
     }
 
     static async fetchFallbackFont() {
         if (Font.#fallbackFont) {
             return Font.#fallbackFont;
         }
-        const fallbackFile = Font.getFallbackSubsetFontFile();
-        let url = ASSETS_URL + fallbackFile;
-        Font.#fallbackFont = fetchArrayBufferWithTimeout(url)
-            .then(buffer => {
-                if (!buffer) {
-                    Font.#fallbackFont = null;
-                    return false;
-                }
-                return buffer;
-            })
-            .catch(() => {
-                Font.#fallbackFont = null;
-                return false;
-            });
+        let url = ASSETS_URL + 'temp.otf';
+        Font.#fallbackFont = fetch(url)
+            .then(res => res.arrayBuffer())
+            .catch(() => false);
         return Font.#fallbackFont;
     }
 
@@ -539,40 +530,33 @@ export class Font {
      */
     static async fetchFont(pageId, text, fontFile) {
         if (!trimSpace(text)) return null;
-
-        const cached = Font.getCache(pageId, fontFile);
-        if (cached) return cached;
-
-        // Cross-page cache for static asset fonts (avoid re-downloading huge fonts per page).
-        if (Font.#assetCache[fontFile]) {
-            Font.setCache(pageId, fontFile, Font.#assetCache[fontFile]);
-            return Font.#assetCache[fontFile];
+        //当文本在CJK范围内时 向服务器取字体改为unicode
+        let isIncludeCJK = new RegExp(CJK_RANGE);
+        if (isIncludeCJK.test(text)) {
+            fontFile = UNICODE_FONT;
         }
 
-        // Offline mode: load the font file from same-origin assets.
-        // `Font.fontUrl` is expected to be `ASSETS_URL` (e.g. "/pdfeditor/assets/").
-        const baseUrl = this.fontUrl || (typeof ASSETS_URL !== 'undefined' ? ASSETS_URL : '');
-        if (!baseUrl) return false;
-
-        const url = baseUrl.endsWith('/') ? baseUrl + fontFile : baseUrl + '/' + fontFile;
-
-        if (!Font.#assetFetch[fontFile]) {
-            Font.#assetFetch[fontFile] = fetchArrayBufferWithTimeout(
-                url,
-                FONT_FETCH_TIMEOUT_MS,
-                buffer => {
-                    Font.#assetCache[fontFile] = buffer;
-                }
-            )
-                .catch(() => false)
-                .finally(() => {
-                    delete Font.#assetFetch[fontFile];
-                });
+        const url = this.fontUrl;
+        const postData = new URLSearchParams({
+            text: this.text2point(text),
+            fontFile: fontFile
+        });
+        let res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: postData
+        }).catch(() => {
+            return {
+                status: 500
+            };
+        });
+        if (res.status != 200 || !res.ok) {
+            return false;
         }
 
-        const buffer = await Font.#assetFetch[fontFile];
-        if (!buffer) return false;
-
+        const buffer = await res.arrayBuffer();
         Font.setCache(pageId, fontFile, buffer);
         return buffer;
     }
