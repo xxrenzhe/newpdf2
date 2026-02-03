@@ -42,3 +42,22 @@ export function shouldSplitByGapWithGuardrails({
   if (Number.isFinite(lineWidth) && maxGap / lineWidth < 0.12) return false;
   return true;
 }
+
+export function splitCoverRectsByLines(rects, lineMap) {
+  if (!Array.isArray(rects) || !lineMap?.horizontal?.length) return rects;
+  const output = [];
+  rects.forEach(rect => {
+    let splits = [rect];
+    lineMap.horizontal.forEach(line => {
+      splits = splits.flatMap(r => {
+        if (line.y <= r.top || line.y >= r.bottom) return [r];
+        return [
+          { ...r, bottom: line.y, height: line.y - r.top },
+          { ...r, top: line.y, height: r.bottom - line.y }
+        ];
+      });
+    });
+    output.push(...splits);
+  });
+  return output;
+}
