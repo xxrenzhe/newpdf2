@@ -319,15 +319,9 @@ export default function PdfEditorTool({
   }, [getEditorSnapshot]);
 
   const injectMobileOverrides = useCallback(() => {
-    document.documentElement.classList.add("embed");
-    if (!document.getElementById("pdfeditor-mobile-overrides")) {
-      const link = document.createElement("link");
-      link.id = "pdfeditor-mobile-overrides";
-      link.rel = "stylesheet";
-      link.href = "/pdfeditor-mobile.css";
-      link.setAttribute("data-pdfeditor-asset", "embedded");
-      document.head?.appendChild(link);
-    }
+    const root = editorContainerRef.current;
+    if (!root) return;
+    root.classList.add("embed");
   }, []);
 
   useEffect(() => {

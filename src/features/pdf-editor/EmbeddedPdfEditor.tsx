@@ -3,6 +3,7 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 
 const ASSET_ATTR = "data-pdfeditor-asset";
+const ROOT_ID = "pdf-editor-root";
 
 type EditorAssets = {
   templateHtml: string;
@@ -17,6 +18,18 @@ type EmbeddedPdfEditorProps = {
   buildId?: string | null;
   onReady?: () => void;
   onError?: (message: string) => void;
+};
+
+type ListenerRecord = {
+  target: EventTarget;
+  type: string;
+  listener: EventListenerOrEventListenerObject;
+  options?: boolean | AddEventListenerOptions;
+};
+
+type GlobalTracker = {
+  restore: () => void;
+  cleanup: () => void;
 };
 
 function parseEditorHtml(html: string): EditorAssets {
@@ -93,6 +106,104 @@ function loadScripts(scripts: string[]) {
   }, Promise.resolve());
 }
 
+function createGlobalTracker(): GlobalTracker {
+  const listeners: ListenerRecord[] = [];
+  const timeouts: number[] = [];
+  const intervals: number[] = [];
+  const rafs: number[] = [];
+
+  const originalWindowAdd = window.addEventListener;
+  const originalDocumentAdd = document.addEventListener.bind(document);
+  const originalSetTimeout = window.setTimeout.bind(window);
+  const originalSetInterval = window.setInterval.bind(window);
+  const originalRequestAnimationFrame = window.requestAnimationFrame?.bind(window);
+  const originalCancelAnimationFrame = window.cancelAnimationFrame?.bind(window);
+
+  window.addEventListener = function (type, listener, options) {
+    listeners.push({ target: window, type, listener, options });
+    return originalWindowAdd.call(window, type, listener, options);
+  };
+
+  document.addEventListener = function (type, listener, options) {
+    listeners.push({ target: document, type, listener, options });
+    return originalDocumentAdd(type, listener, options);
+  };
+
+  window.setTimeout = ((handler, timeout, ...args) => {
+    const id = originalSetTimeout(handler, timeout, ...args);
+    timeouts.push(id);
+    return id;
+  }) as typeof window.setTimeout;
+
+  window.setInterval = ((handler, timeout, ...args) => {
+    const id = originalSetInterval(handler, timeout, ...args);
+    intervals.push(id);
+    return id;
+  }) as typeof window.setInterval;
+
+  if (originalRequestAnimationFrame && originalCancelAnimationFrame) {
+    window.requestAnimationFrame = ((callback) => {
+      const id = originalRequestAnimationFrame(callback);
+      rafs.push(id);
+      return id;
+    }) as typeof window.requestAnimationFrame;
+  }
+
+  const restore = () => {
+    window.addEventListener = originalWindowAdd;
+    document.addEventListener = originalDocumentAdd;
+    window.setTimeout = originalSetTimeout;
+    window.setInterval = originalSetInterval;
+    if (originalRequestAnimationFrame && originalCancelAnimationFrame) {
+      window.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  };
+
+  const cleanup = () => {
+    listeners.forEach(({ target, type, listener, options }) => {
+      target.removeEventListener(type, listener, options);
+    });
+    timeouts.forEach((id) => window.clearTimeout(id));
+    intervals.forEach((id) => window.clearInterval(id));
+    if (originalCancelAnimationFrame) {
+      rafs.forEach((id) => originalCancelAnimationFrame(id));
+    }
+  };
+
+  return { restore, cleanup };
+}
+
+function mirrorBodyAttributes(root: HTMLElement) {
+  const attributes = ["data-pdfjsprinting"];
+  const sync = () => {
+    attributes.forEach((attr) => {
+      const value = document.body.getAttribute(attr);
+      if (value === null) {
+        root.removeAttribute(attr);
+      } else {
+        root.setAttribute(attr, value);
+      }
+    });
+  };
+
+  sync();
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === "attributes") {
+        sync();
+        break;
+      }
+    }
+  });
+  observer.observe(document.body, { attributes: true, attributeFilter: attributes });
+
+  return () => {
+    observer.disconnect();
+    attributes.forEach((attr) => root.removeAttribute(attr));
+  };
+}
+
 export default function EmbeddedPdfEditor({
   containerRef,
   lang,
@@ -103,6 +214,7 @@ export default function EmbeddedPdfEditor({
   const [assets, setAssets] = useState<EditorAssets | null>(null);
   const [templateHtml, setTemplateHtml] = useState<string>("");
   const readyRef = useRef(false);
+  const trackerRef = useRef<GlobalTracker | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -131,6 +243,8 @@ export default function EmbeddedPdfEditor({
 
   useEffect(() => {
     if (!assets) return;
+    const root = containerRef.current;
+    if (!root) return;
     const embedParams = (window as typeof window & { __PDFEDITOR_EMBED_PARAMS__?: Record<string, string> })
       .__PDFEDITOR_EMBED_PARAMS__;
 
@@ -142,21 +256,27 @@ export default function EmbeddedPdfEditor({
       };
     }
 
-    document.documentElement.classList.add("embed");
+    root.classList.add("embed");
     loadStyles(assets.styleLinks, assets.inlineStyles);
+
+    const mirrorCleanup = mirrorBodyAttributes(root);
+    const tracker = createGlobalTracker();
+    trackerRef.current = tracker;
 
     loadScripts(assets.scripts)
       .then(() => {
+        tracker.restore();
         if (readyRef.current) return;
         readyRef.current = true;
         onReady?.();
       })
       .catch((err: Error) => {
+        tracker.restore();
         onError?.(err.message);
       });
 
     return () => {
-      document.documentElement.classList.remove("embed");
+      root.classList.remove("embed");
       if (lang) {
         const nextParams = { ...(window as typeof window & { __PDFEDITOR_EMBED_PARAMS__?: Record<string, string> })
           .__PDFEDITOR_EMBED_PARAMS__ };
@@ -171,15 +291,20 @@ export default function EmbeddedPdfEditor({
           }
         }
       }
+      mirrorCleanup();
+      trackerRef.current?.restore();
+      trackerRef.current?.cleanup();
+      trackerRef.current = null;
       removeInjectedAssets();
       readyRef.current = false;
     };
-  }, [assets, lang, onReady, onError]);
+  }, [assets, containerRef, lang, onReady, onError]);
 
   return (
     <div
       ref={containerRef}
       className="w-full h-full"
+      id={ROOT_ID}
       data-pdfeditor-embedded
       dangerouslySetInnerHTML={{ __html: templateHtml }}
     />
