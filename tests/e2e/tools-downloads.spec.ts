@@ -278,8 +278,8 @@ test("password protect + unlock roundtrip works", async ({ page }) => {
     mimeType: "application/pdf",
     buffer: Buffer.from(pdf),
   });
-  await page.getByPlaceholder("Enter password...").fill("Abc123!!");
-  await page.getByPlaceholder("Confirm password...").fill("Abc123!!");
+  await page.getByRole("textbox", { name: /^Password$/ }).fill("Abc123!!");
+  await page.getByRole("textbox", { name: /^Confirm Password$/ }).fill("Abc123!!");
 
   const protectedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Protect & Download" }).click();
@@ -295,7 +295,7 @@ test("password protect + unlock roundtrip works", async ({ page }) => {
     mimeType: "application/pdf",
     buffer: Buffer.from(protectedBytes),
   });
-  await page.getByPlaceholder("Enter PDF password...").fill("Abc123!!");
+  await page.getByRole("textbox", { name: /^Password/ }).fill("Abc123!!");
   await expect(page.getByRole("button", { name: "Unlock & Download" })).toBeEnabled();
 
   const unlockedDownloadPromise = page.waitForEvent("download");
@@ -318,6 +318,16 @@ test("redact exports a rasterized PDF", async ({ page }) => {
     mimeType: "application/pdf",
     buffer: Buffer.from(pdf),
   });
+
+  const redactCanvas = page.locator("canvas.pointer-events-auto").first();
+  await expect(redactCanvas).toBeVisible();
+  const canvasBox = await redactCanvas.boundingBox();
+  if (!canvasBox) throw new Error("Redaction canvas not visible");
+
+  await page.mouse.move(canvasBox.x + 20, canvasBox.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(canvasBox.x + 120, canvasBox.y + 120);
+  await page.mouse.up();
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export redacted PDF" }).click();

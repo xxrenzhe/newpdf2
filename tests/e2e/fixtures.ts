@@ -11,6 +11,10 @@ type PageErrorEntry = {
   stack?: string;
 };
 
+const IGNORED_CONSOLE_ERRORS = [
+  "Unrecognized Content-Security-Policy directive 'navigate-to'.",
+];
+
 function formatConsoleMessage(msg: ConsoleMessage): ConsoleEntry {
   const loc = msg.location();
   const location = loc.url ? `${loc.url}:${loc.lineNumber ?? 0}:${loc.columnNumber ?? 0}` : undefined;
@@ -24,6 +28,7 @@ function attachConsoleAndPageErrorListeners(
 ) {
   const onConsole = (msg: ConsoleMessage) => {
     if (msg.type() !== "error") return;
+    if (IGNORED_CONSOLE_ERRORS.some((pattern) => msg.text().includes(pattern))) return;
     consoleErrors.push(formatConsoleMessage(msg));
   };
   const onPageError = (err: Error) => {

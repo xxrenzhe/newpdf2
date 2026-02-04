@@ -160,8 +160,8 @@ for (const tool of TOOLS) {
     }
 
     if (tool.key === "password") {
-      await page.getByPlaceholder("Enter password...").fill("Abc123!!");
-      await page.getByPlaceholder("Confirm password...").fill("Abc123!!");
+      await page.getByRole("textbox", { name: /^Password$/ }).fill("Abc123!!");
+      await page.getByRole("textbox", { name: /^Confirm Password$/ }).fill("Abc123!!");
     }
 
     if (tool.key === "annotate" || tool.key === "edit") {
