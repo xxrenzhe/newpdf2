@@ -4,6 +4,7 @@ import { PDFLinkService } from 'pdfjs-dist/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base';
 import { getPixelColor, trimSpace } from '../misc';
 import { Locale } from '../locale';
+import { collectTextIndicesInRect } from './text_selection';
 
 const textContentOptions = {
     disableCombineTextItems: false,
@@ -299,6 +300,57 @@ export class PDFPage extends PDFPageBase {
             });
         });
         return true;
+    }
+
+    markClearTextsInRect(rect) {
+        if (!rect || !this.elWrapper || !this.textDivs || !this.textContentItems) {
+            return;
+        }
+        const containerRect = this.elWrapper.getBoundingClientRect();
+        const indices = collectTextIndicesInRect({
+            rect,
+            textDivs: this.textDivs,
+            containerRect
+        });
+        if (indices.length === 0) {
+            return;
+        }
+        const partIndices = new Set();
+        for (const idx of indices) {
+            const div = this.textDivs[idx];
+            if (!div || typeof div.getAttribute !== 'function') {
+                continue;
+            }
+            const partIdx = Number.parseInt(div.getAttribute('data-parts'), 10);
+            if (!Number.isNaN(partIdx)) {
+                partIndices.add(partIdx);
+            }
+        }
+        if (partIndices.size === 0) {
+            return;
+        }
+        for (const partIdx of partIndices) {
+            const part = this.textParts[partIdx];
+            if (!part || !part.elements) {
+                continue;
+            }
+            for (const element of part.elements) {
+                if (!element || typeof element.getAttribute !== 'function') {
+                    continue;
+                }
+                const elementIdx = Number.parseInt(element.getAttribute('data-idx'), 10);
+                if (Number.isNaN(elementIdx)) {
+                    continue;
+                }
+                const item = this.textContentItems[elementIdx];
+                if (!item) {
+                    continue;
+                }
+                if (this.clearTexts.indexOf(item) === -1) {
+                    this.clearTexts.push(item);
+                }
+            }
+        }
     }
 
     #filterDiv(n) {

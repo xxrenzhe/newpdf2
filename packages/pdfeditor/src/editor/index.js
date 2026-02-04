@@ -233,18 +233,47 @@ export class PDFEditor {
             }
         }
 
+        if (this.options.debug) {
+            const pageIndices = Object.keys(chars).map(key => Number.parseInt(key, 10)).filter(Number.isFinite);
+            const totalChars = Object.values(chars).reduce((sum, items) => sum + items.length, 0);
+            console.info('[pdfeditor] AssemblePDF', isUpdateStream ? 'enabled' : 'skipped', {
+                pagesWithClearTexts: pageIndices,
+                totalChars
+            });
+        }
+
         // return this.reader.pdfDocument.documentProxy._transport.messageHandler.sendWithPromise('AssemblePDF', {
         //     outType: 'Uint8Array',
         //     chars: chars
         // }).then(stream => this.setDocumentProxy(stream));
 
         if (!isUpdateStream) {
-            return this.reader.getData().then(int8Array => this.setDocumentProxy(int8Array));
+            return this.reader.getData().then(int8Array => {
+                if (this.options.debug) {
+                    const size = int8Array?.byteLength ?? int8Array?.length ?? 0;
+                    console.info('[pdfeditor] AssemblePDF skipped, using original data', { size });
+                }
+                return this.setDocumentProxy(int8Array);
+            });
         } else {
+            if (this.options.debug) {
+                console.info('[pdfeditor] AssemblePDF sendWithPromise', { pages: Object.keys(chars) });
+            }
             return this.reader.pdfDocument.documentProxy._transport.messageHandler.sendWithPromise('AssemblePDF', {
                 outType: 'Uint8Array',
                 chars: chars
-            }).then(stream => this.setDocumentProxy(stream));
+            }).then(stream => {
+                if (this.options.debug) {
+                    const size = stream?.byteLength ?? stream?.length ?? 0;
+                    console.info('[pdfeditor] AssemblePDF done', { size });
+                }
+                return this.setDocumentProxy(stream);
+            }).catch(err => {
+                if (this.options.debug) {
+                    console.error('[pdfeditor] AssemblePDF failed', err);
+                }
+                throw err;
+            });
         }
     }
 
