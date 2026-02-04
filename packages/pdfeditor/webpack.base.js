@@ -129,7 +129,16 @@ const configs = {
                             url: false
                         }
                     },
-                    'postcss-loader'
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            postcssOptions: {
+                                plugins: [
+                                    require('./postcss-scope-root')
+                                ]
+                            }
+                        }
+                    }
                 ]
             },
             // {

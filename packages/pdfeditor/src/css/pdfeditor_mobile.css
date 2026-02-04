@@ -1,0 +1,223 @@
+:root {
+  --brand-line: #e5e7eb;
+  --brand-ink: #1f2937;
+  --brand-muted: #6b7280;
+}
+
+.pdf-header .file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --toolbar-height: 56px;
+    --tool-btn-height: 44px;
+    --tool-btn-min-width: 44px;
+    --tool-btn-icon-size: 20px;
+    --tool-btn-font-size: 10px;
+    --tool-btn-gap: 2px;
+    --toolbar-divider-height: 24px;
+    --toolbar-divider-margin: 6px;
+  }
+
+  html,
+  body {
+    height: 100dvh;
+  }
+
+  .pdf-main {
+    height: 100dvh;
+  }
+
+  .pdf-header {
+    padding: 4px 10px;
+  }
+
+  .pdf-header .logo img {
+    height: 22px;
+  }
+
+  .pdf-header .file-name {
+    font-size: 12px;
+  }
+
+  #pdf-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 4px 8px;
+    scroll-padding-left: 8px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  #pdf-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  #pdf-toolbar .line {
+    margin: 0 6px;
+  }
+
+  #pdf-toolbar .tools-box,
+  #pdf-toolbar .tool-items,
+  #pdf-toolbar .line {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  #pdf-toolbar .utility-tools {
+    align-items: center;
+    flex-direction: row;
+    gap: 4px;
+    height: auto;
+    padding: 0 4px;
+  }
+
+  #pdf-toolbar .utility-tools .tool-row {
+    height: auto;
+  }
+
+  #pdf-toolbar .utility-tools .tool-item {
+    height: var(--tool-btn-height);
+    min-width: var(--tool-btn-min-width);
+  }
+
+  #pdf-toolbar .tool-item {
+    padding: 4px 6px;
+  }
+
+  #pdf-toolbar .tool-item span {
+    line-height: 1.1;
+  }
+
+  .pdf-wrapper {
+    position: relative;
+  }
+
+  .pdf-main-wrapper {
+    padding-bottom: 72px;
+  }
+
+  .pdf-main-box {
+    padding: 16px 12px 90px;
+  }
+
+  .pdf-footer {
+    left: 8px;
+    right: 8px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    transform: none;
+    width: auto;
+    padding: 6px 8px;
+    border-radius: 14px;
+  }
+
+  .pdf-footer-left {
+    gap: 4px;
+  }
+
+  .pdf-footer-right,
+  .pdf-footer-center {
+    display: none;
+  }
+
+  .pdf-page-number {
+    width: 52px;
+    font-size: 12px;
+  }
+
+  .pdf-left-slider,
+  .pdf-right-slider {
+    position: fixed;
+    top: auto;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    height: auto;
+    width: auto;
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--brand-line);
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
+    z-index: 40;
+  }
+
+  .pdf-left-slider {
+    left: 8px;
+  }
+
+  .pdf-right-slider {
+    right: 8px;
+  }
+
+  .pdf-left-slider .slide-item,
+  .pdf-right-slider .slide-item {
+    padding: 6px;
+  }
+
+  .pdf-thumbs-wrapper {
+    position: fixed;
+    top: calc(var(--toolbar-height) + env(safe-area-inset-top));
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    left: 8px;
+    width: 82vw;
+    max-width: 320px;
+    height: auto;
+    border-radius: 16px;
+    box-shadow: 0 12px 24px rgba(17, 24, 39, 0.16);
+    transform: translateX(calc(-100% - 12px));
+    z-index: 60;
+  }
+
+  .pdf-thumbs-wrapper.show {
+    transform: translateX(0);
+  }
+
+  .history-wrapper {
+    position: fixed;
+    top: calc(var(--toolbar-height) + env(safe-area-inset-top));
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    right: 8px;
+    width: 82vw;
+    max-width: 320px;
+    height: auto;
+    border-radius: 16px;
+    box-shadow: 0 12px 24px rgba(17, 24, 39, 0.16);
+    transform: translateX(calc(100% + 12px));
+    z-index: 60;
+  }
+
+  .history-wrapper.show {
+    transform: translateX(0);
+  }
+
+  #pdf-toolbar .more-dropdown {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    top: auto;
+    transform: none;
+    max-height: 60vh;
+    overflow-y: auto;
+    border-radius: 16px;
+  }
+
+  #pdf-toolbar .more-dropdown-item {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  #pdf-toolbar .more-dropdown-divider {
+    margin: 6px 0;
+  }
+}

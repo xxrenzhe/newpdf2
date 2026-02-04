@@ -2,6 +2,7 @@ import '../../src/css/pdf_viewer.css';
 import '../../src/css/reader.css';
 import '../../src/css/editor.css';
 import '../../src/css/toolbar.css';
+import '../../src/css/pdfeditor_mobile.css';
 import '../../src/assets/fonts.css';
 import '@simonwep/pickr/dist/themes/classic.min.css';
 import { PDFReader } from '../../src/reader';
