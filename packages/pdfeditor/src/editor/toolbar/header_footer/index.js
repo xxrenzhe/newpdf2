@@ -1,6 +1,5 @@
 import { ToolbarItemBase } from '../ToolbarItemBase';
 import Dialog from '../../../components/dialog';
-import { Font } from '../../../font';
 import { Locale } from '../../../locale';
 
 
@@ -22,18 +21,13 @@ class HeaderFooter extends ToolbarItemBase {
         this.headerText = Locale.get('header_footer_demo_text');
         this.footerText = Locale.get('header_footer_demo_text');
         this.textSize = 12;
-        const defaultFont = Font.getDefaultFont();
-        const uiFonts = Font.getUiFontList();
-        const fallbackFont = uiFonts.find(font => font.fontFamily === defaultFont.fontFamily) || uiFonts[0] || defaultFont;
-        this.fontFamily = fallbackFont.fontFamily;
-        this.fontFile = fallbackFont.fontFile;
+        this.fontFamily = fontList[0].fontFamily;
+        this.fontFile = fontList[0].fontFile;
         this.mode = 'text';
         this.headerAlign = 'left';
         this.footerAlign = 'left';
         this.headerArrayBuffer = null;
         this.footerArrayBuffer = null;
-        this.headerImageType = null;
-        this.footerImageType = null;
 
 
         this.dialog = new Dialog({
@@ -77,7 +71,7 @@ class HeaderFooter extends ToolbarItemBase {
 
 
         const elFontList = elBody.querySelector('.font_family');
-        uiFonts.forEach(font => {
+        fontList.forEach(font => {
             let elOption = document.createElement('option');
             elOption.text = font.showName;
             elOption.fontFamily = font.fontFamily;
@@ -143,8 +137,8 @@ class HeaderFooter extends ToolbarItemBase {
         elHeaderUpload.addEventListener('change', e => {
             let file = e.target.files[0];
             if (file) {
-                this.headerImageType = file.type || 'image/png';
                 elHeaderImg.addEventListener('load', () => {
+                    URL.revokeObjectURL(file);
                     const fileReader = new FileReader();
                     fileReader.readAsArrayBuffer(file);
                     fileReader.addEventListener('loadend', async e => {
@@ -163,8 +157,8 @@ class HeaderFooter extends ToolbarItemBase {
         elFooterUpload.addEventListener('change', e => {
             let file = e.target.files[0];
             if (file) {
-                this.footerImageType = file.type || 'image/png';
                 elFooterImg.addEventListener('load', () => {
+                    URL.revokeObjectURL(file);
                     const fileReader = new FileReader();
                     fileReader.readAsArrayBuffer(file);
                     fileReader.addEventListener('loadend', async e => {
@@ -215,135 +209,8 @@ class HeaderFooter extends ToolbarItemBase {
 
 
         const elBtnOk = elBody.querySelector('.btn_ok');
-        elBtnOk.addEventListener('click', async () => {
-            try {
-                const start = Math.max(1, parseInt(elPageStart.value || '1'));
-                const end = Math.min(this.reader.pageCount, parseInt(elPageEnd.value || String(this.reader.pageCount)));
-                if (start > end) return;
-
-                const margin = 10;
-
-                for (let pageNum = start; pageNum <= end; pageNum++) {
-                    const page = this.editor.pdfDocument.getPage(pageNum);
-                    await page.getReaderPageProxy();
-
-                    const readerPage = page.readerPage;
-                    if (!readerPage.content && readerPage.pageProxy) {
-                        const viewport = readerPage.pageProxy.getViewport({ scale: readerPage.scale });
-                        readerPage.elWrapper.style.width = viewport.width + 'px';
-                        readerPage.elWrapper.style.height = viewport.height + 'px';
-                        readerPage.elDrawLayer.style.width = viewport.width + 'px';
-                        readerPage.elDrawLayer.style.height = viewport.height + 'px';
-                        readerPage.content = readerPage.elWrapper;
-                    }
-
-                    const container = readerPage.content ?? readerPage.elWrapper;
-                    const containerW = container.offsetWidth;
-                    const containerH = container.offsetHeight;
-
-                    const place = (element, align, top) => {
-                        const rect = element.el.getBoundingClientRect();
-                        let left = margin;
-                        if (align === 'center') left = Math.max(margin, containerW / 2 - rect.width / 2);
-                        if (align === 'right') left = Math.max(margin, containerW - rect.width - margin);
-
-                        element.el.style.left = left + 'px';
-                        element.el.style.top = top + 'px';
-                        element.setActualRect();
-                        element.zoom(element.scale);
-                        element.disableDrag = true;
-                        element.disableResize = true;
-                        element.el.classList.remove('__resizable', '__resizable-border');
-                    };
-
-                    if (this.mode === 'text') {
-                        if (this.headerText) {
-                            const headerEl = page.elements.add(
-                                'textCanvas',
-                                {
-                                    size: this.textSize,
-                                    color: this.textColor,
-                                    text: this.headerText,
-                                    opacity: 1,
-                                    rotate: 0,
-                                    fontFamily: this.fontFamily,
-                                    fontFile: this.fontFile,
-                                },
-                                { pos: { x: margin, y: margin } },
-                                true
-                            );
-                            place(headerEl, this.headerAlign, margin);
-                        }
-                        if (this.footerText) {
-                            const footerEl = page.elements.add(
-                                'textCanvas',
-                                {
-                                    size: this.textSize,
-                                    color: this.textColor,
-                                    text: this.footerText,
-                                    opacity: 1,
-                                    rotate: 0,
-                                    fontFamily: this.fontFamily,
-                                    fontFile: this.fontFile,
-                                },
-                                { pos: { x: margin, y: Math.max(margin, containerH - 40) } },
-                                true
-                            );
-                            const rect = footerEl.el.getBoundingClientRect();
-                            place(footerEl, this.footerAlign, Math.max(margin, containerH - rect.height - margin));
-                        }
-                    } else {
-                        const loadImage = async (arrayBuffer, imageType) => {
-                            const blob = new Blob([arrayBuffer], { type: imageType || 'image/png' });
-                            const url = URL.createObjectURL(blob);
-                            const img = new Image();
-                            img.src = url;
-                            await new Promise(resolve => {
-                                img.addEventListener('load', resolve, { once: true });
-                                img.addEventListener('error', resolve, { once: true });
-                            });
-                            URL.revokeObjectURL(url);
-                            return img;
-                        };
-
-                        if (this.headerArrayBuffer) {
-                            const img = await loadImage(this.headerArrayBuffer, this.headerImageType);
-                            const headerImgEl = page.elements.add(
-                                'image',
-                                {
-                                    image: img,
-                                    imageType: this.headerImageType || 'image/png',
-                                    opacity: 1,
-                                    arrayBuffer: this.headerArrayBuffer,
-                                    rotate: 0,
-                                },
-                                { pos: { x: margin, y: margin } },
-                                true
-                            );
-                            place(headerImgEl, this.headerAlign, margin);
-                        }
-                        if (this.footerArrayBuffer) {
-                            const img = await loadImage(this.footerArrayBuffer, this.footerImageType);
-                            const footerImgEl = page.elements.add(
-                                'image',
-                                {
-                                    image: img,
-                                    imageType: this.footerImageType || 'image/png',
-                                    opacity: 1,
-                                    arrayBuffer: this.footerArrayBuffer,
-                                    rotate: 0,
-                                },
-                                { pos: { x: margin, y: Math.max(margin, containerH - 80) } },
-                                true
-                            );
-                            const rect = footerImgEl.el.getBoundingClientRect();
-                            place(footerImgEl, this.footerAlign, Math.max(margin, containerH - rect.height - margin));
-                        }
-                    }
-                }
-            } finally {
-                this.dialog.close();
-            }
+        elBtnOk.addEventListener('click', () => {
+            this.dialog.close();
         });
 
 

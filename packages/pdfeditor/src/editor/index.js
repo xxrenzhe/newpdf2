@@ -1,7 +1,6 @@
 import { Events, PDFEvent } from '../event';
 import { elSliderHide, elSliderShow, elSliderToggle, mergeDeep } from '../misc';
 import * as PDFLib from 'pdf-lib';
-import regeneratorRuntime from '@babel/runtime/regenerator';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument } from './document';
 import { Font } from '../font';
@@ -9,10 +8,6 @@ import { saveAs } from 'file-saver';
 import { Toolbar } from './toolbar';
 import { History } from './history';
 import { Locale } from '../locale';
-
-if (!globalThis.regeneratorRuntime) {
-    globalThis.regeneratorRuntime = regeneratorRuntime;
-}
 
 const DISABLED_CLASS = 'disabled';
 const DRAW_ICON_COLOR_CLASS = 'draw_icon_color';
@@ -56,8 +51,6 @@ const btnForms = 'tool_forms';
 const btnTextArt = 'tool_textArt';
 const btnSeal = 'tool_seal';
 
-const DOWNLOAD_RETRY_DELAY_MS = 500;
-const DOWNLOAD_FONT_WAIT_MS = 10000;
 
 
 export class PDFEditor {
@@ -67,9 +60,7 @@ export class PDFEditor {
         producer: null,
         creator: null,
         debug: false,
-        history: false,
-        // "auto": detect AssemblePDF support in worker; true/false force behavior.
-        assemblePDF: 'auto'
+        history: false
     };
     reader = null;
     toolbar = null;
@@ -78,15 +69,6 @@ export class PDFEditor {
     PDFLib = null;
     history = null;
     fontWorker = new Worker(new URL('./font_worker.js', import.meta.url));
-    fontWarningBanner = null;
-    actionsBarReady = false;
-    actionsBarInitAttempts = 0;
-    downloadActive = false;
-    downloadInProgress = false;
-    downloadWaitTimer = null;
-    downloadWaitStartedAt = 0;
-    assembleWorkerSupport = null;
-    assembleWorkerSupportPromise = null;
 
     constructor(options, pdfData, reader) {
         if (typeof(options) == 'object') {
@@ -101,42 +83,29 @@ export class PDFEditor {
         }
 
         PDFEvent.on(Events.CONVERT_TO_ELEMENT, (e, sendResponse) => {
-            if (!this.toolbar) return;
-            if (!this.pdfDocument) return;
-            const textTool = this.toolbar.get('text');
-            if (!textTool) return;
-
-            // When user clicks original PDF text, switch to Text mode automatically.
-            if (!this.toolbar.toolActive || this.toolbar.toolActive.name !== 'text') {
-                this.toolbar.setActive(textTool);
-                textTool.setActive(true);
-            }
+            if (!this.toolbar.toolActive || this.toolbar.toolActive.name != 'text') return;
+            sendResponse(true);
             const page = this.pdfDocument.getPage(e.data.pageNum);
-            if (!page) return;
             e.data.options.oriText = e.data.attrs.text;
             const element = page.elements.add(
                 e.data.type,
                 e.data.attrs,
                 e.data.options
             );
-            textTool.setActions(element);
-            sendResponse(true);
+            this.toolbar.tools.text.setActions(element);
             
-            const elFontList = element?.elActions ? element.elActions.querySelector('.font-dropdown') : null;
-            if (elFontList) {
-                const elOption = document.createElement('div');
-                elOption.classList.add('font-item');
-                elOption.textContent = element.attrs.showName;
-                elOption.fontFamily = element.attrs.fontFamily;
-                elOption.fontFile = element.attrs.fontFile;
-                elOption.selected = true;
-                elFontList.insertBefore(elOption, elFontList.firstElementChild);
-            }
+            const elFontList = element.elActions.querySelector('.font-dropdown');
+            let elOption = document.createElement('div');
+            elOption.classList.add('font-item');
+            elOption.textContent = element.attrs.showName;
+            elOption.fontFamily = element.attrs.fontFamily;
+            elOption.fontFile = element.attrs.fontFile;
+            elOption.selected = true;
+            elFontList.insertBefore(elOption, elFontList.firstElementChild);
+            // elFontList.selectedIndex = 0;
 
-            const elSpan = document.querySelector('#history_slider span');
-            if (elSpan) {
-                elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
-            }
+            let elSpan = document.querySelector('#history_slider span');
+            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
         });
 
         let timeout = null;
@@ -159,99 +128,51 @@ export class PDFEditor {
 
         PDFEvent.on(Events.READER_INIT, () => {
             this.initToolbar();
-            // Match common PDF editor UX: default to selection tool, not edit mode.
-            this.toolbar.get('mouse').click();
+            this.toolbar.get('text').click();
             PDFEvent.dispatch(Events.TOOLBAR_INIT);
         });
 
-        PDFEvent.on(Events.FONT_WARNING, e => {
-            this.#showFontWarningBanner(e.data?.message);
-        });
-
         PDFEvent.on(Events.SAVE, () => {
-            Promise.resolve(this.pdfDocument.fixFontData()).catch(err => {
-                console.log(err);
-                PDFEvent.dispatch(Events.ERROR, err);
-            });
+            this.pdfDocument.fixFontData();
         });
 
-        PDFEvent.on(Events.DOWNLOAD, () => {
-            if (!this.downloadActive || this.downloadInProgress) return;
-
+        PDFEvent.on(Event.DOWNLOAD, () => {
             //检查字体是否加载完成
-            let fontsReady = this.pdfDocument.checkFonts();
-            if (!fontsReady) {
-                if (!this.downloadWaitStartedAt) {
-                    this.downloadWaitStartedAt = Date.now();
-                }
-                const elapsed = Date.now() - this.downloadWaitStartedAt;
-                if (elapsed >= DOWNLOAD_FONT_WAIT_MS) {
-                    this.pdfDocument.ensureFallbackFonts();
-                    fontsReady = this.pdfDocument.checkFonts();
-                }
-                if (!fontsReady) {
-                    this.#scheduleDownloadRetry();
-                    return;
-                }
-            }
+            if (!this.pdfDocument.checkFonts()) return;
+            this.pdfDocument.save(true).then(async blob => {
+                // if (this.options.debug) {
+                //     // window.open(URL.createObjectURL(blob));
+                //     location = URL.createObjectURL(blob);
+                // } else {
+                //     saveAs(blob, 'edited.pdf');
+                // }
 
-            this.downloadInProgress = true;
-            this.pdfDocument
-                .save(true)
-                .then(async blob => {
-                    // if (this.options.debug) {
-                    //     // window.open(URL.createObjectURL(blob));
-                    //     location = URL.createObjectURL(blob);
-                    // } else {
-                    //     saveAs(blob, 'edited.pdf');
-                    // }
-
-                    parent.postMessage({ type: 'pdf-download', blob }, '*');
-                    await this.reset();
-                })
-                .catch(err => {
-                    console.log(err);
-                    PDFEvent.dispatch(Events.ERROR, err);
-                })
-                .finally(() => {
-                    this.downloadInProgress = false;
-                    this.#resetDownloadState();
-                    PDFEvent.dispatch(Events.DOWNLOAD_AFTER);
-                });
+                parent.postMessage({
+                    type: 'pdf-download',
+                    blob: blob
+                }, '*');
+                this.reset();
+            });
         });
 
         this.fontWorker.addEventListener('message', e => {
             let data = e.data;
             if (data.type == 'font_subset_after') {
                 this.pdfDocument.setFont(data.pageId, data.fontFile, data.newBuffer);
-                PDFEvent.dispatch(Events.DOWNLOAD);
+                PDFEvent.dispatch(Event.DOWNLOAD);
             }
-            if (data.type == 'font_subset_error') {
-                console.warn('font_subset failed, falling back to Helvetica:', data.message);
-                this.pdfDocument.setFont(data.pageId, data.fontFile, null);
-                PDFEvent.dispatch(Events.DOWNLOAD);
-            }
-        });
-
-        PDFEvent.on(Events.ERROR, () => {
-            this.#resetDownloadState();
         });
 
         window.addEventListener('mousedown', e => {
-            const target = e.target;
-            if (!target || typeof target.getAttribute !== 'function') {
+            if (e.target.getAttribute('role') == 'presentation' 
+                || e.target.getAttribute('contenteditable')
+                || e.target.parentElement.getAttribute('contenteditable')) {
                 return;
             }
-            const parent = target.parentElement;
-            if (target.getAttribute('role') == 'presentation' 
-                || target.getAttribute('contenteditable')
-                || parent?.getAttribute('contenteditable')) {
-                return;
-            }
-            const page = this.pdfDocument?.getPageActive?.();
+            const page = this.pdfDocument.getPageActive();
             if (page && page.elements.activeId) {
                 const element = page.elements.get(page.elements.activeId);
-                if (element?.el?.classList?.contains('active')) {
+                if (element.el.classList.contains('active')) {
                     element.el.classList.remove('active');
                     PDFEvent.dispatch(Events.ELEMENT_BLUR, {
                         page,
@@ -312,96 +233,26 @@ export class PDFEditor {
             }
         }
 
-        const fallbackToReaderData = () =>
-            this.reader.getData().then(int8Array => this.setDocumentProxy(int8Array));
+        // return this.reader.pdfDocument.documentProxy._transport.messageHandler.sendWithPromise('AssemblePDF', {
+        //     outType: 'Uint8Array',
+        //     chars: chars
+        // }).then(stream => this.setDocumentProxy(stream));
 
         if (!isUpdateStream) {
-            return fallbackToReaderData();
-        }
-
-        const handler = this.reader?.pdfDocument?.documentProxy?._transport?.messageHandler;
-        if (!handler?.sendWithPromise) {
-            return fallbackToReaderData();
-        }
-        const supportsAssemble = await this.#supportsAssemblePDF();
-        if (!supportsAssemble) {
-            console.warn('AssemblePDF unavailable, falling back to reader data.');
-            return fallbackToReaderData();
-        }
-
-        const ASSEMBLE_TIMEOUT_MS = 4000;
-        const assembleSafe = handler
-            .sendWithPromise('AssemblePDF', {
+            return this.reader.getData().then(int8Array => this.setDocumentProxy(int8Array));
+        } else {
+            return this.reader.pdfDocument.documentProxy._transport.messageHandler.sendWithPromise('AssemblePDF', {
                 outType: 'Uint8Array',
                 chars: chars
-            })
-            .then(stream => ({ ok: true, stream }))
-            .catch(error => ({ ok: false, error }));
-
-        let timeoutId = null;
-        const timeoutSafe = new Promise(resolve => {
-            timeoutId = setTimeout(() => resolve({ ok: false, timeout: true }), ASSEMBLE_TIMEOUT_MS);
-        });
-
-        const result = await Promise.race([assembleSafe, timeoutSafe]).finally(() => {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
-        });
-
-        if (result?.ok) {
-            return this.setDocumentProxy(result.stream);
+            }).then(stream => this.setDocumentProxy(stream));
         }
-
-        console.warn('AssemblePDF unavailable, falling back to reader data.', result?.error || result?.timeout);
-        return fallbackToReaderData();
-    }
-
-    async #supportsAssemblePDF() {
-        const mode = this.options?.assemblePDF;
-        if (mode === true) return true;
-        if (mode === false) return false;
-        if (this.assembleWorkerSupport !== null) return this.assembleWorkerSupport;
-        if (this.assembleWorkerSupportPromise) return this.assembleWorkerSupportPromise;
-
-        const workerSrc = this.reader?.pdfjsLib?.GlobalWorkerOptions?.workerSrc;
-        if (!workerSrc || typeof workerSrc !== 'string' || workerSrc.startsWith('blob:')) {
-            this.assembleWorkerSupport = false;
-            return false;
-        }
-
-        this.assembleWorkerSupportPromise = fetch(workerSrc, { cache: 'force-cache' })
-            .then(res => (res.ok ? res.text() : ''))
-            .then(text => {
-                const supported = text.includes('AssemblePDF');
-                this.assembleWorkerSupport = supported;
-                return supported;
-            })
-            .catch(() => {
-                this.assembleWorkerSupport = false;
-                return false;
-            })
-            .finally(() => {
-                this.assembleWorkerSupportPromise = null;
-            });
-
-        return this.assembleWorkerSupportPromise;
     }
 
     async reset() {
-        if (this.pdfDocument) {
-            this.pdfDocument.embedFonts = {};
-        }
-        this.history?.clear();
-        if (this.elHistoryWrapper) {
-            const historyBox = this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS);
-            if (historyBox) {
-                historyBox.innerHTML = '';
-            }
-        }
-        if (this.elHistoryBtn) {
-            this.elHistoryBtn.style.display = 'none';
-        }
+        this.pdfDocument.embedFonts = {};
+        this.history.clear();
+        this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS).innerHTML = '';
+        this.elHistoryBtn.style.display = 'none';
         // this.reader.pdfjsLib.getDocument(this.pdfData).promise.then(documentProxy => {
         //     this.reader.pdfDocument.documentProxy = documentProxy;
         // })
@@ -411,45 +262,20 @@ export class PDFEditor {
 
     async download(fileName) {
         try {
-            if (this.downloadActive) return;
-            this.downloadActive = true;
-            this.downloadWaitStartedAt = Date.now();
-            if (this.downloadWaitTimer) {
-                clearTimeout(this.downloadWaitTimer);
-                this.downloadWaitTimer = null;
-            }
-            await this.flushData();
-            PDFEvent.dispatch(Events.SAVE);
-            // this.pdfDocument.save(true).then(async blob => {
-            //     if (this.options.debug) {
-            //         window.open(URL.createObjectURL(blob));
-            //     } else {
-            //         saveAs(blob, fileName);
-            //     }
-            //     this.reset();
-            // });
+            this.flushData().then(() => {
+                PDFEvent.dispatch(Events.SAVE);
+                // this.pdfDocument.save(true).then(async blob => {
+                //     if (this.options.debug) {
+                //         window.open(URL.createObjectURL(blob));
+                //     } else {
+                //         saveAs(blob, fileName);
+                //     }
+                //     this.reset();
+                // });
+            });
         } catch (e) {
             console.log(e);
-            this.#resetDownloadState();
             PDFEvent.dispatch(Events.ERROR, e);
-        }
-    }
-
-    #scheduleDownloadRetry() {
-        if (this.downloadWaitTimer) return;
-        this.downloadWaitTimer = setTimeout(() => {
-            this.downloadWaitTimer = null;
-            PDFEvent.dispatch(Events.DOWNLOAD);
-        }, DOWNLOAD_RETRY_DELAY_MS);
-    }
-
-    #resetDownloadState() {
-        this.downloadActive = false;
-        this.downloadInProgress = false;
-        this.downloadWaitStartedAt = 0;
-        if (this.downloadWaitTimer) {
-            clearTimeout(this.downloadWaitTimer);
-            this.downloadWaitTimer = null;
         }
     }
 
@@ -635,57 +461,6 @@ export class PDFEditor {
             });
         }
 
-        // More dropdown menu (pdf.net style)
-        this.btnMore = document.getElementById('tool_more');
-        this.moreDropdown = document.getElementById('more_dropdown');
-        if (this.btnMore && this.moreDropdown) {
-            // Toggle dropdown on click
-            this.btnMore.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const toolMore = this.btnMore.closest('.tool_more');
-                toolMore.classList.toggle('open');
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                const toolMore = this.btnMore.closest('.tool_more');
-                if (!toolMore.contains(e.target)) {
-                    toolMore.classList.remove('open');
-                }
-            });
-
-            // Handle dropdown item clicks
-            this.moreDropdown.querySelectorAll('.more-dropdown-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const tool = item.getAttribute('data-tool');
-                    const toolMore = this.btnMore.closest('.tool_more');
-                    toolMore.classList.remove('open');
-
-	                    // Trigger the corresponding tool
-	                    if (tool === 'convert') {
-	                        parent.postMessage({ type: 'open-tool', tool: 'convert' }, '*');
-	                    } else if (tool === 'compress') {
-	                        parent.postMessage({ type: 'open-tool', tool: 'compress' }, '*');
-	                    } else if (tool === 'merge') {
-	                        parent.postMessage({ type: 'open-tool', tool: 'merge' }, '*');
-	                    } else if (tool === 'redact') {
-	                        parent.postMessage({ type: 'open-tool', tool: 'redact' }, '*');
-	                    } else if (tool === 'watermark' && this.options.tools.indexOf('watermark') >= 0) {
-	                        this.toolbar.get('watermark').click();
-                    } else if (tool === 'page_number' && this.options.tools.indexOf('page_number') >= 0) {
-                        this.toolbar.get('page_number').click();
-                    } else if (tool === 'header_footer' && this.options.tools.indexOf('header_footer') >= 0) {
-                        this.toolbar.get('header_footer').click();
-	                    } else if (tool === 'seal' && this.options.tools.indexOf('stamp') >= 0) {
-                        this.toolbar.get('stamp').click();
-                    } else if (tool === 'textArt' && this.options.tools.indexOf('textArt') >= 0) {
-                        this.toolbar.get('textArt').click();
-                    }
-                });
-            });
-        }
-
 
         //顶部工具栏设置
         this.#initActionsBar();
@@ -713,9 +488,6 @@ export class PDFEditor {
 
         PDFEvent.on(Events.HISTORY_CHANGE, e => {
             const { step, maxStep } = e.data;
-            if (!this.btnUndo || !this.btnRedo) {
-                return;
-            }
             if (step < 1) {
                 this.btnUndo.classList.add(DISABLED_CLASS);
             } else {
@@ -736,10 +508,7 @@ export class PDFEditor {
         this.btnHistorySlider = document.getElementById(btnHistorySlider);
         this.elHistoryWrapper = document.getElementById(historyWrapper);
         const toggleHistory = () => {
-            if (!this.btnHistorySlider || !this.elHistoryWrapper) {
-                return;
-            }
-            if (this.btnFormsSlider?.classList.contains('active')) {
+            if (this.btnFormsSlider.classList.contains('active')) {
                 this.btnFormsSlider.click();
             }
             
@@ -750,7 +519,7 @@ export class PDFEditor {
             }
             elSliderToggle(this.elHistoryWrapper, 'show', 'flex');
         }
-        if (this.btnHistorySlider && this.elHistoryWrapper) {
+        if (this.btnHistorySlider) {
             this.btnHistorySlider.addEventListener('click', toggleHistory);
         }
 
@@ -783,28 +552,23 @@ export class PDFEditor {
         };
         
 
-        this.elHistoryBtn = this.elHistoryWrapper?.querySelector('.' + HISTORY_BTN_CLASS);
-        if (this.elHistoryBtn && this.elHistoryWrapper) {
-            this.elHistoryBtn.addEventListener('click', e => {
-                let elPageBox = this.elHistoryWrapper.querySelectorAll('.'+ HISTORY_PAGE_CLASS);
-                elPageBox.forEach(elPage => {
-                    const page = this.pdfDocument.getPageForId(elPage.getAttribute('data-pageid'));
-                    page.elements.removeAll();
-                    elPage.querySelectorAll('.history-item').forEach(elItem => {
-                        elItem.remove();
-                    });
+        this.elHistoryBtn = this.elHistoryWrapper.querySelector('.' + HISTORY_BTN_CLASS);
+        this.elHistoryBtn.addEventListener('click', e => {
+            let elPageBox = this.elHistoryWrapper.querySelectorAll('.'+ HISTORY_PAGE_CLASS);
+            elPageBox.forEach(elPage => {
+                const page = this.pdfDocument.getPageForId(elPage.getAttribute('data-pageid'));
+                page.elements.removeAll();
+                elPage.querySelectorAll('.history-item').forEach(elItem => {
+                    elItem.remove();
                 });
             });
-        }
+        });
 
 
         this.btnFormsSlider = document.getElementById(btnFormsSlider);
         this.elFormsWrapper = document.getElementById(formsWrapper);
         const toggleForms = () => {
-            if (!this.btnFormsSlider || !this.elFormsWrapper) {
-                return;
-            }
-            if (this.btnHistorySlider?.classList.contains('active')) {
+            if (this.btnHistorySlider.classList.contains('active')) {
                 this.btnHistorySlider.click();
             }
 
@@ -812,33 +576,19 @@ export class PDFEditor {
                 this.btnFormsSlider.classList.remove('active');
             } else {
                 this.btnFormsSlider.classList.add('active');
-                this.toolbar.get('forms')?.click();
+                this.toolbar.get('forms').click();
             }
             elSliderToggle(this.elFormsWrapper, 'show', 'flex');
         }
-        if (this.btnFormsSlider && this.elFormsWrapper) {
+        if (this.btnFormsSlider) {
             this.btnFormsSlider.addEventListener('click', toggleForms);
         }
 
-        const scheduleThumbRefresh = (page, opts = {}) => {
-            const readerPage = page?.readerPage;
-            if (!readerPage || typeof readerPage.scheduleThumbRefresh !== 'function') {
-                return;
-            }
-            readerPage.scheduleThumbRefresh(opts);
-        };
-
         
         PDFEvent.on(Events.ELEMENT_CREATE, e => {
-            if (!this.elHistoryWrapper || !this.elHistoryBtn) {
-                return;
-            }
             this.elHistoryBtn.style.display = 'block';
             const element = e.data.element;
             const page = e.data.page;
-            if (!page) {
-                return;
-            }
             let elHistoryBox = this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS);
             let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
             if (!elHistoryPage) {
@@ -900,143 +650,66 @@ export class PDFEditor {
                 elItem.style.fontFamily = element.attrs.fontFamily;
                 elTextInput.style.fontFamily = element.attrs.fontFamily;
             }
-
-            scheduleThumbRefresh(page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_UPDATE_AFTER, e => {
-            const element = e.data?.element;
-            if (!element) return;
-            if (element.dataType == 'text' && element.elHistory) {
-                element.elHistory.style.fontFamily = element.attrs?.fontFamily;
-                const elHistoryText = element.elHistory.querySelector('.history-item-text');
-                if (elHistoryText) {
-                    elHistoryText.textContent = element.attrs?.text ?? '';
-                }
+            const element = e.data.element;
+            if (element.dataType == 'text') {
+                element.elHistory.style.fontFamily = element.attrs.fontFamily;
             }
-            scheduleThumbRefresh(e.data.page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_ACTIVE, e => {
-            const element = e.data?.element;
-            if (!element?.el) return;
-            const currentZ = Number.parseInt(element.el.style.zIndex || '0', 10);
-            const nextZ = Number.isFinite(currentZ) ? currentZ + 1 : 1;
-            element.el.style.zIndex = String(nextZ);
+            const element = e.data.element;
+            element.el.style.zIndex = parseInt(element.el.style.zIndex) + 1;
             // console.log(e);
         });
 
         PDFEvent.on(Events.ELEMENT_REMOVE, e => {
             const element = e.data.element;
             const page = e.data.page;
-            if (!page) {
-                return;
-            }
-            if (this.elHistoryWrapper) {
-                let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
-                elHistoryPage?.querySelector('[data-id="'+ element.id +'"]')?.remove();
-            }
+            let elHistoryBox = this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS);
+            let elHistoryPage = this.elHistoryWrapper.querySelector('.'+ HISTORY_PAGE_CLASS +'[data-pageid="'+ page.id +'"]');
+            elHistoryPage.querySelector('[data-id="'+ element.id +'"]')?.remove();
             // this.hideElActions();
-            scheduleThumbRefresh(page, { refreshImage: false });
         });
 
         PDFEvent.on(Events.ELEMENT_BLUR, e => {
-            const element = e.data?.element;
-            if (!element?.el) return;
+            const element = e.data.element;
             element.el.classList.remove('active');
-            const currentZ = Number.parseInt(element.el.style.zIndex || '1', 10);
-            const nextZ = Number.isFinite(currentZ) ? currentZ - 1 : 1;
-            element.el.style.zIndex = String(Math.max(1, nextZ));
-            if (element.elHistory && element.dataType == 'text') {
-                const elText = element.elHistory.querySelector('.history-item-text');
-                if (elText) {
-                    elText.textContent = element.attrs?.text ?? '';
+            element.el.style.zIndex = Math.max(1, parseInt(element.el.style.zIndex) - 1);
+            if (!element.elHistory) return;
+            if (element.dataType == 'text') {
+                let elText = element.elHistory.querySelector('.history-item-text');
+                elText.textContent = element.attrs.text;
+            }
+        });
+
+
+        document.querySelectorAll('.' + TAB_ITEM_CLASS).forEach(tabItem => {
+            tabItem.addEventListener('click', () => {
+                let oldActive = document.querySelector('.' + TAB_ITEM_CLASS + '.active');
+                if (oldActive) {
+                    oldActive.classList.remove('active');
+                    document.querySelector('.' + TOOLS_BOX_CLASS + '.active').classList.remove('active');
                 }
-            }
-            scheduleThumbRefresh(e.data.page, { refreshImage: false });
+                tabItem.classList.add('active');
+                let id = tabItem.getAttribute('data-for');
+                document.querySelector('#' + id).classList.add('active');
+            });
         });
-
-        PDFEvent.on(Events.ELEMENT_MOVE, e => {
-            scheduleThumbRefresh(e.data.page, { refreshImage: false, delay: 140 });
-        });
-
-        PDFEvent.on(Events.ELEMENT_RESIZE_END, e => {
-            scheduleThumbRefresh(e.data.page, { refreshImage: false });
-        });
-
-        PDFEvent.on(Events.HISTORY_PUSH, () => {
-            const page = this.pdfDocument?.getPageActive();
-            if (page) {
-                scheduleThumbRefresh(page, { refreshImage: false, delay: 260 });
-            }
-        });
-
-        // Tab switching logic removed - unified toolbar now used
-    }
-
-    #showFontWarningBanner(message) {
-        if (this.fontWarningBanner) return;
-        const container = document.querySelector('.pdf-main');
-        if (!container) return;
-        const banner = document.createElement('div');
-        banner.classList.add('font-compliance-banner');
-        const text = document.createElement('span');
-        text.classList.add('font-compliance-text');
-        text.textContent = message || '';
-        const close = document.createElement('button');
-        close.classList.add('font-compliance-close');
-        close.setAttribute('type', 'button');
-        close.textContent = 'x';
-        close.addEventListener('click', () => {
-            banner.remove();
-            this.fontWarningBanner = null;
-        });
-        banner.appendChild(text);
-        banner.appendChild(close);
-
-        const header = container.querySelector('.pdf-header');
-        if (header && header.parentNode) {
-            header.parentNode.insertBefore(banner, header.nextSibling);
-        } else {
-            container.prepend(banner);
-        }
-        this.fontWarningBanner = banner;
-    }
-
-    #retryInitActionsBar() {
-        if (this.actionsBarReady) return;
-        if (this.actionsBarInitAttempts >= 10) return;
-        this.actionsBarInitAttempts += 1;
-        setTimeout(() => this.#initActionsBar(), 50);
     }
 
     #initActionsBar() {
-        if (this.actionsBarReady) return;
         this.pdfElActionsWrapper = document.getElementById(pdfElActionsWrapper);
-        if (!this.pdfElActionsWrapper) {
-            this.#retryInitActionsBar();
-            return;
-        }
         this.pdfElActions = this.pdfElActionsWrapper.querySelector('#' + pdfElActions);
-        if (!this.pdfElActions) {
-            this.#retryInitActionsBar();
-            return;
-        }
-        this.actionsBarReady = true;
-
-        const updateActionsWidth = () => {
-            if (!this.reader?.mainBox || !this.reader?.parentElement) {
-                this.pdfElActionsWrapper.style.width = '100%';
-                return;
-            }
-            const mainBoxRect = this.reader.mainBox.getBoundingClientRect();
-            const scrollWidth = this.reader.parentElement.offsetWidth - this.reader.parentElement.clientWidth;
-            const width = Math.max(0, Math.round(mainBoxRect.width - scrollWidth));
-            this.pdfElActionsWrapper.style.width = width > 0 ? width + 'px' : '100%';
-        };
-        updateActionsWidth();
-        requestAnimationFrame(updateActionsWidth);
-        window.addEventListener('resize', updateActionsWidth);
+        let mainBoxRect = this.reader.mainBox.getBoundingClientRect();
+        const scrollWidth = this.reader.parentElement.offsetWidth - this.reader.parentElement.clientWidth;
+        this.pdfElActionsWrapper.style.width = (mainBoxRect.width - scrollWidth) + 'px';
+        window.addEventListener('resize', () => {
+            mainBoxRect = this.reader.mainBox.getBoundingClientRect();
+            this.pdfElActionsWrapper.style.width = (mainBoxRect.width - scrollWidth) + 'px';
+        });
         let bindedLang = {};
 
         const showActions = e => {
@@ -1082,10 +755,10 @@ export class PDFEditor {
         PDFEvent.on(Events.TOOLBAR_ITEM_ACTIVE, e => {
             showActions(e);
             if (e.data.name == 'forms') {
-                if (this.btnHistorySlider?.classList.contains('active')) {
+                if (this.btnHistorySlider.classList.contains('active')) {
                     this.btnHistorySlider.click();
                 }
-                if (this.btnFormsSlider && !this.btnFormsSlider.classList.contains('active')) {
+                if (!this.btnFormsSlider.classList.contains('active')) {
                     this.btnFormsSlider.click();
                 }
             }
@@ -1107,7 +780,7 @@ export class PDFEditor {
             toolActive = null;
             // elSliderHide(this.pdfElActionsWrapper, 'show');
             if (e.data.name == 'forms') {
-                if (this.btnFormsSlider?.classList.contains('active')) {
+                if (this.btnFormsSlider.classList.contains('active')) {
                     this.btnFormsSlider.click();
                 }
             }

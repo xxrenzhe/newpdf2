@@ -1,11 +1,10 @@
 import { ToolbarItemBase } from '../ToolbarItemBase';
-import { Font } from '../../../font';
 import { sibling,CSSActive } from '../../../misc';
 import Pickr from '@simonwep/pickr';
 import { COLOR_ITEMS } from '../../../defines';
 const textArt = 'text_art';
 const textArtFont = 'text_art_font';
-const fontUrl = ASSETS_URL;
+const fontUrl = "https://fonts.qwerpdf.com/";
 const loadDom = document.querySelector('.loading_box');
 const fontListBox = [];
 
@@ -13,7 +12,6 @@ class TextArt extends ToolbarItemBase {
     init() {
         this.name = 'textArt';
         this.textArtSelect = 'text';
-        const defaultFont = Font.getDefaultFont();
         let attrs = {
             size: 30,
             color: '#4283AE',
@@ -25,10 +23,9 @@ class TextArt extends ToolbarItemBase {
             bold: false,
             italic: false,
             rotate: undefined,
-            fontFamily: defaultFont.fontFamily,
+            fontFamily: 'Helvetica', 
             textArtType:'one',
-            fontFile: defaultFont.fontFile,
-            showName: defaultFont.showName,
+            fontFile: 'NotoSansCJKsc-Regular.otf',
             isGradient:'false',
             gradientType:null,
             gradientColor:null,
@@ -49,28 +46,21 @@ class TextArt extends ToolbarItemBase {
         this.dropdown.classList.add('dropdown_box');
         this.dropdown.innerHTML = require('./popup.html')();
         var toolSignature = document.querySelector(".tool_textArt");
-        if (!toolSignature) {
-            return;
-        }
         toolSignature.appendChild(this.dropdown);
         const elBody = this.dropdown;
         const textArtAll = elBody.querySelectorAll("."+textArt);
         const textArtFontDom = elBody.querySelectorAll("."+textArtFont);
         const pdfMainWrapper = document.querySelector(".pdf-wrapper");
-        if (pdfMainWrapper) {
-            pdfMainWrapper.addEventListener('click',()=>{
-                this.dropdown.style.display = 'none';
-            })
-        }
+        pdfMainWrapper.addEventListener('click',()=>{
+            this.dropdown.style.display = 'none';
+        })
         textArtAll.forEach(el=>{
             el.addEventListener('click',()=>{
                 el.classList.add('active');
                 this.textArtSelect = 'text';
                 this.isAdd = true;
-                const safeFont = Font.getDefaultFont();
-                this.attrs.fontFamily = safeFont.fontFamily;
-                this.attrs.fontFile = safeFont.fontFile;
-                this.attrs.showName = safeFont.showName;
+                this.attrs.fontFamily='Helvetica', 
+                this.attrs.fontFile='NotoSansCJKsc-Regular.otf',
                 this.attrs.isGradient = el.getAttribute('data-gradient');
                 if(this.attrs.isGradient == 'true'){
                     this.attrs.gradientColor = el.getAttribute('data-gradientColor');
@@ -107,9 +97,7 @@ class TextArt extends ToolbarItemBase {
                 this.attrs.fontFamily = el.getAttribute('data-fontFamily');
                 this.attrs.fontFile = 'art_font/'+el.getAttribute('data-fontFile');
                 if(fontListBox.indexOf(fontUrl+this.attrs.fontFile) == -1){
-                    if (loadDom) {
-                        loadDom.style.display = 'block';
-                    }
+                    loadDom.style.display = 'block';
                 }
                 this.initFont(fontUrl+this.attrs.fontFile,this.attrs.fontFamily);
                 var siblingDemo = sibling(el);
@@ -282,7 +270,6 @@ class TextArt extends ToolbarItemBase {
         this.floatElement = element;
         this.floatElement.style.position = 'fixed';
         this.floatElement.style.zIndex = 1;
-        this.floatElement.style.pointerEvents = 'none';
         document.body.appendChild(this.floatElement);
 
         this.evtMousemove = e => {
@@ -340,9 +327,7 @@ class TextArt extends ToolbarItemBase {
             if (window.FontFace) {
                 var newfontFile = new FontFace(fontFamily, 'url('+fontFile+')');
                 newfontFile.load().then( ()=> {
-                    if (loadDom) {
-                        loadDom.style.display = 'none';
-                    }
+                    loadDom.style.display = 'none';
                     setTimeout(()=>{
                             
                             let scale = window.devicePixelRatio || 1;
@@ -356,15 +341,12 @@ class TextArt extends ToolbarItemBase {
                             this.dropdown.style.display = 'none';
                     },100)
                 },  (err)=>{
-                if (loadDom) {
                     loadDom.style.display = 'none';
-                }
-                this.attrs.fontFamily = defaultFont.fontFamily;
-                this.attrs.fontFile = defaultFont.fontFile;
-                this.attrs.showName = defaultFont.showName;
-                let _element = document.createElement('div');
-                let readerScale = this.editor.reader.scale;
-                let scale = window.devicePixelRatio || 1;
+                    this.attrs.fontFamily= 'Helvetica';
+                    this.attrs.fontFile='NotoSansCJKsc-Regular.otf';
+                    let _element = document.createElement('div');
+                    let readerScale = this.editor.reader.scale;
+                    let scale = window.devicePixelRatio || 1;
                     _element.innerHTML = this.attrs.text;
                     _element.style.fontSize = this.attrs.size*readerScale*scale + 'px';
                     _element.style.fontFamily = this.attrs.fontFamily;

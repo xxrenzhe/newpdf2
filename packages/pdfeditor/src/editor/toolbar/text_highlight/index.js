@@ -4,7 +4,6 @@ import Pickr from '@simonwep/pickr';
 import 'rangy/lib/rangy-classapplier';
 import 'rangy/lib/rangy-highlighter';
 import { Events, PDFEvent } from '../../../event';
-import { createId } from '../../../misc';
 
 const HIGHLIGHT_CLASS = 'text_highlight';
 const REMOVED_CLASS = '__removed';
@@ -40,34 +39,20 @@ class TextHighLight extends ToolbarItemBase {
                     const mainRect = page.elWrapper.getBoundingClientRect();
                     rect.x -= mainRect.x;
                     rect.y -= mainRect.y;
-
+                    
                     el.setAttribute('data-x', rect.x);
                     el.setAttribute('data-y', rect.y);
                     el.setAttribute('data-w', rect.width);
                     el.setAttribute('data-h', rect.height);
 
-                    const scale = page.scale || 1;
-                    const markupId = createId('tm_');
-                    page.addTextMarkup({
-                        id: markupId,
-                        type: 'highlight',
-                        x: rect.x / scale,
-                        y: rect.y / scale,
-                        width: rect.width / scale,
-                        height: rect.height / scale,
-                        background: this.attrs.background,
-                        opacity: this.attrs.opacity
-                    });
-                    el.setAttribute('data-markup-id', markupId);
-                    el.classList.add(REMOVED_CLASS);
-                    el.style.display = 'none';
-
                     PDFEvent.dispatch(Events.HISTORY_PUSH, {
                         undo: () => {
-                            page.setTextMarkupVisible(markupId, false);
+                            el.classList.add(REMOVED_CLASS);
+                            el.style.display = 'none';
                         },
                         redo: () => {
-                            page.setTextMarkupVisible(markupId, true);
+                            el.classList.remove(REMOVED_CLASS);
+                            el.style.display = 'inline';
                         }
                     });
 
@@ -98,33 +83,30 @@ class TextHighLight extends ToolbarItemBase {
             }
         });
 
-        PDFEvent.on(Events.SAVE_BEFORE, () => {
-            const pages = this.reader.pdfDocument?.pages || [];
-            pages.forEach(readerPage => {
-                if (!readerPage || typeof readerPage.getTextMarkups !== 'function') {
+        PDFEvent.on(Events.SAVE_BEFORE, e => {
+            this.reader.mainBox.querySelectorAll('.' + HIGHLIGHT_CLASS).forEach(el => {
+                if (el.classList.contains(REMOVED_CLASS)) {
                     return;
                 }
-                const markups = readerPage.getTextMarkups().filter(item => item.type === 'highlight' && !item.hidden);
-                if (!markups.length) {
-                    return;
-                }
-                const page = this.editor.pdfDocument.getPageForId(readerPage.id);
-                if (!page) {
-                    return;
-                }
-                const scale = readerPage.scale || 1;
-                markups.forEach(markup => {
-                    page.elements.add('rect', {
-                        width: (markup.width || 0) * scale,
-                        height: (markup.height || 0) * scale,
-                        opacity: markup.opacity,
-                        background: markup.background
-                    }, {
-                        pos: {
-                            x: (markup.x || 0) * scale,
-                            y: (markup.y || 0) * scale
-                        }
-                    });
+                const rect = {
+                    x: parseFloat(el.getAttribute('data-x')),
+                    y: parseFloat(el.getAttribute('data-y')),
+                    width: parseFloat(el.getAttribute('data-w')),
+                    height: parseFloat(el.getAttribute('data-h'))
+                };
+
+                const pageId = el.getAttribute('data-pageid');
+                const page = this.editor.pdfDocument.getPageForId(pageId);
+                page.elements.add('rect', {
+                    width: rect.width,
+                    height: rect.height,
+                    opacity: this.attrs.opacity,
+                    background: this.attrs.background
+                }, {
+                    pos: {
+                        x: rect.x,
+                        y: rect.y
+                    }
                 });
             });
         });
@@ -149,27 +131,14 @@ class TextHighLight extends ToolbarItemBase {
             elPreview.remove();
         }
 
-        // Color selection with active state (pdf.net style)
         const elColors = temp.querySelector('.__act_colors');
-        const colorItems = elColors.querySelectorAll('.color-item');
-
-        const updateActiveColor = (color) => {
-            colorItems.forEach(item => {
-                const itemColor = item.getAttribute('data-color');
-                if (itemColor && itemColor.toLowerCase() === color.toLowerCase()) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        };
-        updateActiveColor(this.attrs.background);
-
-        colorItems.forEach(elColor => {
+        elColors.querySelectorAll('.color-item').forEach(elColor => {
             elColor.addEventListener('click', e => {
                 let background = elColor.getAttribute('data-color');
-                this.updateAttrs({ background }, objElement);
-                updateActiveColor(background);
+                this.updateAttrs({
+                    background
+                }, objElement);
+
                 this.__setPreview(elPreview);
             });
         });
@@ -202,12 +171,14 @@ class TextHighLight extends ToolbarItemBase {
         });
         colorPickr.on('change', color => {
             let background = color.toHEXA().toString().toLocaleLowerCase();
-            this.updateAttrs({ background }, objElement);
-            updateActiveColor(background);
+            this.updateAttrs({
+                background
+            }, objElement);
+
             this.__setPreview(elPreview);
         });
 
-        // Opacity slider
+
         const elBGOpacityText = temp.querySelector('.__act_bg_opacity_text');
         elBGOpacityText.textContent = (this.attrs.opacity * 100) + '%';
         const elBGOpacity = temp.querySelector('.__act_bg_opacity');
@@ -216,10 +187,25 @@ class TextHighLight extends ToolbarItemBase {
         const opacityChange = () => {
             elBGOpacityText.textContent = (elBGOpacity.value * 10) + '%';
             let opacity = elBGOpacity.value / 10;
-            this.updateAttrs({ opacity }, objElement);
+            this.updateAttrs({
+                opacity
+            }, objElement);
+
             this.__setPreview(elPreview);
         };
         elBGOpacity.addEventListener('input', opacityChange);
+
+        const elBGOpacityReduce = temp.querySelector('.__act_range_reduce');
+        elBGOpacityReduce.addEventListener('click', () => {
+            elBGOpacity.stepDown();
+            opacityChange();
+        });
+
+        const elBGOpacityPlus = temp.querySelector('.__act_range_plus');
+        elBGOpacityPlus.addEventListener('click', () => {
+            elBGOpacity.stepUp();
+            opacityChange();
+        });
 
         let elActions = [];
         for (let elChild of temp.children) {

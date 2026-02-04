@@ -1,13 +1,11 @@
 import { Events, PDFEvent } from '../event';
 import { Font } from '../font';
-import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
+import { PDFLinkService } from 'pdfjs-dist/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base';
 import { getPixelColor, trimSpace } from '../misc';
 import { Locale } from '../locale';
-import { shouldBreakLine, splitCoverRectsByLines } from './text_detection.mjs';
 
 const textContentOptions = {
-    // Match old editor behavior so PDF.js marks line endings correctly.
     disableCombineTextItems: false,
     includeMarkedContent: false
 };
@@ -17,7 +15,6 @@ const REMOVE_BTN = 'remove_page';
 
 export class PDFPage extends PDFPageBase {
     textParts = [];
-    textPartsReady = null;
     clearTexts = [];
     //要隐藏的元素
     hideOriginElements = [];
@@ -36,6 +33,7 @@ export class PDFPage extends PDFPageBase {
         this.elInsertPage.textContent = Locale.get('insert_page');
         let elBox = document.createElement('div');
         elBox.classList.add(INSERT_PAGE_CLASS);
+        elBox.style.display = 'none';
         let elBg = document.createElement('div');
         elBg.classList.add('insert_page_bg');
         elBox.appendChild(elBg);
@@ -46,6 +44,7 @@ export class PDFPage extends PDFPageBase {
         let elRemoveBtn = document.createElement('img');
         elRemoveBtn.src = ASSETS_URL + 'img/deletepage.svg';
         elRemoveBtn.classList.add(REMOVE_BTN);
+        elRemoveBtn.style.display = 'none';
         elRemoveBtn.addEventListener('click', e => {
             e.stopPropagation();
             PDFEvent.dispatch(Events.PAGE_REMOVE, {
@@ -57,6 +56,10 @@ export class PDFPage extends PDFPageBase {
             e.stopPropagation();
         });
         this.elWrapper.appendChild(elRemoveBtn);
+        setTimeout(()=>{
+            elBox.style.display = 'flex';
+            elRemoveBtn.style.display = 'block';
+        },1000)
     }
 
     /**
@@ -69,9 +72,6 @@ export class PDFPage extends PDFPageBase {
             this.elTextLayer = document.createElement('div');
             this.elTextLayer.classList.add('textLayer');
             this.elWrapper.appendChild(this.elTextLayer);
-            this.elTextLayer.addEventListener('click', (e) => {
-                this.#handleTextLayerClick(e);
-            });
         }
         this.elTextLayer.style.width = canvas.style.width;
         this.elTextLayer.style.height = canvas.style.height;
@@ -103,7 +103,7 @@ export class PDFPage extends PDFPageBase {
             //     Font.subset(id, this.pageProxy.commonObjs, fontName);
             // });
 
-            const textLayerReady = taskTextLayer.promise.then(() => {
+            taskTextLayer.promise.then(() => {
                 this.hideOriginElements.forEach(data => {
                     let textDiv = this.textDivs[data.idx];
                     textDiv.style.userSelect = data.userSelect;
@@ -112,83 +112,26 @@ export class PDFPage extends PDFPageBase {
                     textDiv.style.backgroundColor = data.backgroundColor;
                 });
 
-                this.textParts = [];
                 let text = '';
                 let textWidth = 0;
                 let elements = [];
                 let n = 0;
-                let prevTextIndex = null;
-                let lineHasLeader = false;
+                let prevTextItem = null;
                 // console.log(this.textContentItems);
                 
-                const finalizeLine = (shouldTrim = true) => {
-                    const lineText = shouldTrim ? trimSpace(text) : text;
-                    if (!elements.length && !trimSpace(lineText)) {
-                        text = '';
-                        textWidth = 0;
-                        elements = [];
-                        return false;
-                    }
-                    const itemIndices = Array.from(new Set(elements.map(el => {
-                        const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
-                        return Number.isFinite(idx) ? idx : null;
-                    }).filter(idx => idx !== null)));
-                    this.textParts[n] = {
-                        text: lineText,
-                        elements: elements.slice(),
-                        width: textWidth,
-                        rawWidth: textWidth,
-                        itemIndices: itemIndices
-                    };
-                    text = '';
-                    textWidth = 0;
-                    elements = [];
-                    n += 1;
-                    return true;
-                };
-
                 for (let i = 0; i < this.textContentItems.length; i++) {
                     let textItem = this.textContentItems[i];
-                    const rawText = typeof textItem?.str === 'string' ? textItem.str : '';
-                    const isEmptyText = trimSpace(rawText) === '';
-                    const isLineBreakMarker = Boolean(
-                        textItem?.hasEOL
-                        && isEmptyText
-                        && (!Number.isFinite(textItem.width) || textItem.width === 0)
-                        && (!Number.isFinite(textItem.height) || textItem.height === 0)
-                    );
-                    if (isLineBreakMarker) {
-                        finalizeLine(true);
-                        prevTextIndex = null;
-                        lineHasLeader = false;
-                        continue;
-                    }
-
-                    text += rawText;
-                    if (this.#isLeaderText(rawText)) {
-                        lineHasLeader = true;
-                    }
-                    const itemWidth = this.#getTextItemWidth(textItem, viewport);
-                    if (Number.isFinite(itemWidth) && itemWidth > 0) {
-                        textWidth += itemWidth;
-                    } else if (this.textDivs[i]) {
-                        textWidth += this.textDivs[i].getBoundingClientRect().width;
-                    }
+                    text += textItem.str;
+                    textWidth += this.textDivs[i].getBoundingClientRect().width;
 
                     let elDiv = this.textDivs[i];
                     if (this.hideOriginElements.findIndex(data => data.idx == i) === -1) {
                         elDiv.classList.add('text-border');
                     }
                     let offsetX = 2;
-                    const rawLeft = parseFloat(elDiv.style.left);
-                    const rawTop = parseFloat(elDiv.style.top);
-                    const rawFontSize = parseFloat(elDiv.style.fontSize);
-                    const leftPx = Number.isFinite(rawLeft) ? rawLeft : 0;
-                    const topPx = Number.isFinite(rawTop) ? rawTop : 0;
-                    const fontSizePx = Number.isFinite(rawFontSize) ? rawFontSize : 0;
-                    let styleLeft  = (leftPx * this.outputScale) + offsetX + 'px';
-                    let styleTop = (topPx * this.outputScale) + 'px';
-                    let styleFontSize = (fontSizePx * this.outputScale) + 'px';
+                    let styleLeft  = (parseInt(elDiv.style.left) * this.outputScale) + offsetX + 'px';
+                    let styleTop = (parseInt(elDiv.style.top) * this.outputScale) + 'px';
+                    let styleFontSize = (parseInt(elDiv.style.fontSize) * this.outputScale) + 'px';
                     elDiv.style.left = styleLeft;
                     elDiv.style.top = styleTop;
                     elDiv.style.fontSize = styleFontSize;
@@ -205,49 +148,46 @@ export class PDFPage extends PDFPageBase {
                     elDiv.setAttribute('data-fallbackname', style.fontFamily);
                     elDiv.setAttribute('data-ascent', style.ascent || 0);
                     elDiv.setAttribute('data-descent', style.descent || 0);
-                    if (textItem.color !== undefined && textItem.color !== null) {
-                        const colorValue = Array.isArray(textItem.color)
-                            ? textItem.color.join(',')
-                            : String(textItem.color);
-                        elDiv.setAttribute('data-fontcolor', colorValue);
+                    if (textItem.color) {
+                        elDiv.setAttribute('data-fontcolor', textItem.color);
                     }
                     if (this.pageProxy.commonObjs.has(textItem.fontName)) {
                         let objs = this.pageProxy.commonObjs.get(textItem.fontName);
                         elDiv.setAttribute('data-fontname', objs.name);
                     }
                     elements.push(elDiv);
-                    elDiv.addEventListener('click', (e) => {
-                        e.stopPropagation();
+                    elDiv.addEventListener('click', () => {
                         this.convertWidget(elDiv);
                     });
 
                     if ((i+1) == this.textContentItems.length) {
-                        finalizeLine(false);
+                        this.textParts[n] = {
+                            text: text,
+                            elements: elements
+                        };
+                        this.#filterDiv(n);
                         break;
                     }
 
-                    if (Number.isFinite(textItem.height) && textItem.height > 0) {
-                        prevTextIndex = i;
+                    if (!prevTextItem && textItem.height > 0) {
+                        prevTextItem = textItem;
                     }
 
-                    const boundaryIdx = Number.isFinite(prevTextIndex) ? prevTextIndex : i;
-                    if (this.#isBreak(boundaryIdx, i + 1, lineHasLeader, Boolean(textItem.hasEOL))) {
-                        prevTextIndex = null;
-                        lineHasLeader = false;
-                        finalizeLine(true);
-                    }
-                }
-
-                this.#mergeTextPartsByLine();
-                for (let i = 0; i < this.textParts.length; i++) {
-                    const partsAdded = this.#filterDiv(i, { allowSplit: true });
-                    if (Number.isFinite(partsAdded) && partsAdded > 1) {
-                        i += partsAdded - 1;
+                    if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1))) {
+                        prevTextItem = null;
+                        this.textParts[n] = {
+                            text: trimSpace(text),
+                            elements: elements,
+                            width: textWidth
+                        };
+                        this.#filterDiv(n);
+                        text = '';
+                        textWidth = 0;
+                        elements = [];
+                        n++;
                     }
                 }
             });
-            this.textPartsReady = textLayerReady;
-            textLayerReady.catch(() => {});
         });
 
         if (!this.elAnnotationLayer) {
@@ -277,199 +217,36 @@ export class PDFPage extends PDFPageBase {
         return canvas;
     }
 
-    async ensureTextParts() {
-        if (this.textPartsReady) {
-            try {
-                await this.textPartsReady;
-            } catch (err) {
-                // Ignore text layer failures; fallback to whatever is available.
-            }
-        }
-        return this.textParts || [];
-    }
-
     async convertWidget(elDiv) {
-        const idx = Number.parseInt(elDiv.getAttribute('data-parts'), 10);
-        if (!Number.isFinite(idx)) {
-            return;
-        }
-        const textPart = this.textParts ? this.textParts[idx] : null;
-        if (!textPart) {
-            return;
-        }
-        const convertKey = String(idx);
-        if (this.isConvertWidget.indexOf(convertKey) > -1) {
+        let idx = elDiv.getAttribute('data-parts');
+        if (this.isConvertWidget.indexOf(idx) > -1) {
             return;
         }
 
-        let id = `${this.pageNum}_${idx}_${elDiv.getAttribute('data-l')}`;
-        const baseElement = this.#getTextPartElement(textPart, elDiv);
-        if (!baseElement) {
-            return;
-        }
-        const inferredStyle = this.#inferPdfFontStyle(baseElement);
-        const primaryIndex = Array.isArray(textPart.itemIndices) && textPart.itemIndices.length
-            ? textPart.itemIndices[0]
-            : null;
-        const primaryMetrics = Number.isFinite(primaryIndex)
-            ? this.#getTextItemLineMetrics(primaryIndex)
-            : null;
-        let rotate = null;
-        if (primaryMetrics) {
-            if (primaryMetrics.isVertical) {
-                rotate = 90;
-            } else if (Number.isFinite(primaryMetrics.rotationDeg)
-                && primaryMetrics.rotationDeg >= 80
-                && primaryMetrics.rotationDeg <= 100) {
-                rotate = primaryMetrics.rotationDeg;
-            }
+        let id = this.pageNum + '_' + idx + '_' + elDiv.getAttribute('data-l');
+        const textPart = this.textParts[idx];
+        let x = parseFloat(elDiv.style.left);
+        let y = parseFloat(elDiv.style.top);
+        let fontName = textPart.elements[0].getAttribute('data-fontname')?.toLocaleLowerCase();;
+        let bold = fontName && fontName.indexOf('bold') > -1 ? true : false;
+        let italic = fontName && (fontName.indexOf('oblique') > -1 || fontName.indexOf('italic') > -1);
+        if (italic) {
+            elDiv.style.width = (parseFloat(elDiv.style.width) + 3) + 'px';
         }
 
-        // Keep the historical width tweak for italic PDF fonts so the cover box doesn't clip.
-        const rawFontName = baseElement.getAttribute('data-fontname');
-        const fontName = typeof rawFontName === 'string' ? rawFontName.toLowerCase() : '';
-        const isItalicFont = fontName.includes('oblique') || fontName.includes('italic');
-        if (isItalicFont) {
-            this.#applyItalicWidthPadding(textPart);
-        }
-        let bounds = this.#getTextPartBounds(textPart, baseElement, isItalicFont);
-        if (!bounds) {
-            return;
-        }
-        const coverBoundsBase = bounds ? { ...bounds } : null;
-        let x = bounds.left;
-        let y = bounds.top;
-        const rawTextValue = typeof textPart.text === 'string' ? textPart.text : '';
-        let textValue = rawTextValue;
+        let fontSize = parseFloat(elDiv.getAttribute('data-fontsize'));
+        let color = elDiv.getAttribute('data-fontcolor');
+        let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), x * this.outputScale, y * this.outputScale);
+        let fontFamily = elDiv.getAttribute('data-loadedname') || 'Helvetica';
 
-        let fontSize = parseFloat(baseElement.getAttribute('data-fontsize'));
-        if (!Number.isFinite(fontSize)) {
-            const computed = window.getComputedStyle(baseElement);
-            fontSize = parseFloat(computed?.fontSize) || 12;
-        }
-        let color = this.#normalizeFontColor(baseElement.getAttribute('data-fontcolor'));
-        if (!color) {
-            const computed = window.getComputedStyle(baseElement);
-            color = this.#normalizeFontColor(computed?.color || baseElement.style.color);
-        }
-        let bgColor = baseElement.getAttribute('data-bgcolor');
-        if (!bgColor) {
-            bgColor = this.#getBackgroundColorByCanvas(bounds, color);
-        }
-        if (!bgColor) {
-            bgColor = getPixelColor(this.content.getContext('2d'), bounds.left * this.outputScale, bounds.top * this.outputScale);
-        }
-        if (!color) {
-            const inferredColor = this.#inferTextColorByCanvas(bounds, bgColor);
-            if (inferredColor) {
-                color = inferredColor;
-            }
-        }
-        if (!color) {
-            color = '#000000';
-        }
-        if (bgColor && color) {
-            const bgRgb = this.#parseColorToRgba(bgColor);
-            const textRgb = this.#parseColorToRgba(color);
-            if (bgRgb && textRgb && this.#isNearColor(bgRgb.r, bgRgb.g, bgRgb.b, textRgb, 18)) {
-                const fallbackBg = this.#getBackgroundColorByCanvas(bounds, color, true);
-                if (fallbackBg) {
-                    bgColor = fallbackBg;
-                } else {
-                    bgColor = '#ffffff';
-                }
-            }
-        }
-        const originalFontFamily = baseElement.getAttribute('data-loadedname') || 'Helvetica';
-        const originalFontName = baseElement.getAttribute('data-fontname') || originalFontFamily;
-        let displayTextValue = null;
-        let coverRectsPx = Array.isArray(textPart.coverRects) ? textPart.coverRects : null;
-        if (coverRectsPx && coverRectsPx.length) {
-            const tableLineMap = this.#buildTableLineMap(coverRectsPx);
-            if (tableLineMap) {
-                coverRectsPx = splitCoverRectsByLines(coverRectsPx, tableLineMap);
-            }
-        }
-        const leaderGapWidth = this.#getLeaderGapWidth(coverRectsPx);
-        if (this.#shouldInsertLeaderDots(textValue, leaderGapWidth, fontSize)) {
-            const leaderDots = this.#buildLeaderDots(leaderGapWidth, baseElement, fontSize);
-            const nextTextValue = this.#insertLeaderDots(textValue, leaderDots);
-            if (nextTextValue !== textValue) {
-                displayTextValue = nextTextValue;
-            }
-        }
-        const editorTextValue = displayTextValue || textValue;
-        const resolvedFont = Font.resolveSafeFont({
-            fontFamily: originalFontFamily,
-            fontFile: originalFontFamily,
-            fontName: originalFontName,
-            text: editorTextValue
-        });
-        const useInferredStyle = Boolean(resolvedFont.replaced);
-        // Apply bold/italic only when we fall back to a safe font to avoid synthetic styling
-        // on the PDF.js text layer, while still preserving emphasis from the source PDF.
-        const bold = useInferredStyle ? inferredStyle.bold : false;
-        const italic = useInferredStyle ? inferredStyle.italic : false;
-        let fontFamily = resolvedFont.fontFamily;
-        if (!Array.isArray(textPart.coverRects) || textPart.coverRects.length === 0) {
-            const refined = this.#refineLineBoundsByCanvas(bounds, bgColor, fontSize);
-            if (refined) {
-                bounds = refined;
-                textPart.bounds = refined;
-                textPart.width = refined.width;
-            }
-        }
-        const coverBounds = coverBoundsBase || bounds;
-        const coverWidth = coverBounds.width;
-        const coverHeight = coverBounds.height;
-        const extraCoverRightPx = isItalicFont ? Math.max(2, Math.ceil(fontSize * 0.35)) : 0;
-        const boxWidth = Number.isFinite(bounds.width) && this.scale ? bounds.width / this.scale : null;
-        const boxHeight = Number.isFinite(bounds.height) && this.scale ? bounds.height / this.scale : null;
-
-        // Store a stable "cover box" in PDF units for export-time redaction.
-        // This avoids relying on edited text metrics (which shrink when deleting text),
-        // and ensures we can still cover the original glyphs when the user clears text.
-        const contentRect = this.content.getBoundingClientRect();
-        const pdfWidth = this.pageProxy?.view?.[2] || 0;
-        const pdfHeight = this.pageProxy?.view?.[3] || 0;
-        const fallbackPdfScale = this.scale ? 1 / this.scale : 0;
-        const pxToPdfX = contentRect.width ? pdfWidth / contentRect.width : fallbackPdfScale;
-        const pxToPdfY = contentRect.height ? pdfHeight / contentRect.height : fallbackPdfScale;
-        const coverPaddingX = Math.max(2, Math.ceil(fontSize * 0.2));
-        const coverPaddingY = Math.max(2, Math.ceil(fontSize * 0.2));
-        // Use tighter padding for export-time cover boxes to avoid masking table borders.
-        const exportPaddingX = Math.min(1, coverPaddingX);
-        const exportPaddingY = Math.min(1, coverPaddingY);
-        const exportExtraRightPx = isItalicFont ? Math.min(3, extraCoverRightPx) : 0;
-        const coverOffsetX = pxToPdfX ? -exportPaddingX * pxToPdfX : 0;
-        const coverOffsetY = pxToPdfY ? -exportPaddingY * pxToPdfY : 0;
-        const coverWidthPdf = pxToPdfX ? (coverWidth + exportPaddingX * 2 + exportExtraRightPx) * pxToPdfX : 0;
-        const coverHeightPdf = pxToPdfY ? (coverHeight + exportPaddingY * 2) * pxToPdfY : 0;
-        const hasCoverRects = Boolean(coverRectsPx && coverRectsPx.length > 1);
-        const coverRectsPdf = hasCoverRects && pxToPdfX && pxToPdfY
-            ? coverRectsPx.map((rect, idx) => {
-                if (!rect) return null;
-                const padLeft = exportPaddingX;
-                const padRight = exportPaddingX + (idx === coverRectsPx.length - 1 ? exportExtraRightPx : 0);
-                const padY = exportPaddingY;
-                const leftPx = rect.left - padLeft;
-                const topPx = rect.top - padY;
-                const widthPx = rect.width + padLeft + padRight;
-                const heightPx = rect.height + padY * 2;
-                if (!Number.isFinite(leftPx) || !Number.isFinite(topPx)
-                    || !Number.isFinite(widthPx) || !Number.isFinite(heightPx)) {
-                    return null;
-                }
-                return {
-                    left: leftPx * pxToPdfX,
-                    top: topPx * pxToPdfY,
-                    width: widthPx * pxToPdfX,
-                    height: heightPx * pxToPdfY
-                };
-            }).filter(Boolean)
-            : null;
-        const coverBackground = hasCoverRects ? bgColor : null;
-        const displayBackground = hasCoverRects ? null : bgColor;
+        // textPart.elements.forEach(async (element, i) => {
+        //     if (fontSize == 0) {
+        //         fontSize = parseFloat(element.getAttribute('data-fontsize'));
+        //     }
+        //     if (!color && element.getAttribute('data-fontcolor')) {
+        //         color = element.getAttribute('data-fontcolor');
+        //     }
+        // });
 
         PDFEvent.dispatch(Events.CONVERT_TO_ELEMENT, {
             elDiv,
@@ -479,37 +256,17 @@ export class PDFPage extends PDFPageBase {
                 // size: fontSize / this.scale / this.outputScale,
                 size: fontSize / this.scale,
                 color: color,
-                text: editorTextValue,
-                textOriginal: displayTextValue ? textValue : null,
-                useOriginalText: Boolean(displayTextValue),
+                text: textPart.text,
                 lineHeight: null,
-                lineHeightMeasured: false,
-                lineOffsets: null,
-                boxWidth: boxWidth,
-                boxHeight: boxHeight,
-                textIndent: null,
-                textPaddingLeft: null,
-                textMode: 'line',
                 fontFamily: fontFamily,
-                fontFile: resolvedFont.fontFile,
-                fontName: originalFontName,
-                showName: resolvedFont.showName,
-                displayFontFamily: originalFontFamily,
+                fontFile: fontFamily,
+                fontName: elDiv.getAttribute('data-fontname'),
                 opacity: 1,
                 underline: null,
-                // Cover the original glyphs when exporting without relying on PDF.js worker patches.
-                background: displayBackground,
-                coverBackground: coverBackground,
-                backgroundWidth: coverWidth,
-                coverOriginal: true,
-                coverOffsetX: coverOffsetX,
-                coverOffsetY: coverOffsetY,
-                coverWidth: coverWidthPdf,
-                coverHeight: coverHeightPdf,
-                coverRects: coverRectsPdf,
+                background: null,
                 bold: bold,
                 italic: italic,
-                rotate: rotate
+                rotate: null
             },
             options: {
                 pos: {
@@ -518,52 +275,17 @@ export class PDFPage extends PDFPageBase {
             },
             pageNum: this.pageNum
         }, () => {
-            this.isConvertWidget.push(convertKey);
-            baseElement.style.cursor = 'default';
-            const coverBounds = coverBoundsBase || textPart.bounds;
-            const coverRects = Array.isArray(textPart.coverRects)
-                ? textPart.coverRects
-                : null;
-            const coverElements = Array.isArray(textPart.coverElements)
-                ? textPart.coverElements.filter(el => el && el.isConnected)
-                : null;
-            const useMultiCover = coverRects && coverElements
-                && coverRects.length === coverElements.length
-                && coverRects.length > 1;
-
-            const applyCover = (element, rect, extraRightPad = 0) => {
+            this.isConvertWidget.push(idx);
+            elDiv.style.cursor = 'default';
+            textPart.elements.forEach(async (element, i) => {
                 element.classList.remove('text-border');
                 element.classList.add('text-hide');
                 element.style.backgroundColor = bgColor;
                 element.style.userSelect = 'none';
-                if (rect) {
-                    const padLeft = coverPaddingX;
-                    const padRight = coverPaddingX + extraRightPad;
-                    const padY = coverPaddingY;
-                    element.style.boxSizing = 'border-box';
-                    element.style.padding = '0';
-                    element.style.left = (rect.left - padLeft) + 'px';
-                    element.style.top = (rect.top - padY) + 'px';
-                    element.style.width = (rect.width + padLeft + padRight) + 'px';
-                    element.style.height = (rect.height + padY * 2) + 'px';
-                } else if (coverBounds) {
-                    const coverPadLeft = coverPaddingX;
-                    const coverPadRight = coverPaddingX + extraCoverRightPx;
-                    const coverPadY = coverPaddingY;
-                    element.style.boxSizing = 'border-box';
-                    element.style.padding = '0';
-                    element.style.left = (coverBounds.left - coverPadLeft) + 'px';
-                    element.style.top = (coverBounds.top - coverPadY) + 'px';
-                    element.style.width = (coverBounds.width + coverPadLeft + coverPadRight) + 'px';
-                    element.style.height = (coverBounds.height + coverPadY * 2) + 'px';
-                } else {
-                    element.style.padding = `${coverPaddingY}px 0 ${coverPaddingY}px 0`;
-                    const elementTop = this.#parsePx(element.style.top);
-                    const elementLeft = this.#parsePx(element.style.left);
-                    element.style.top = (elementTop - coverPaddingY) + 'px';
-                    element.style.left = (elementLeft - coverPaddingX) + 'px';
-                }
-
+                element.style.padding = '3px 0 3px 0';
+                element.style.top = (y - 2) + 'px';
+                element.style.left = (x - 2) + 'px';
+    
                 let textItemIdx = element.getAttribute('data-idx');
                 if (this.hideOriginElements.findIndex(data => data.idx == textItemIdx) === -1) {
                     this.hideOriginElements.push({
@@ -574,1633 +296,42 @@ export class PDFPage extends PDFPageBase {
                     });
                 }
                 this.clearTexts.push(this.textContentItems[parseInt(element.getAttribute('data-idx'))]);
-            };
-
-            if (useMultiCover) {
-                coverElements.forEach((element, idx) => {
-                    const rect = coverRects[idx];
-                    const extraRight = idx === coverRects.length - 1 ? extraCoverRightPx : 0;
-                    applyCover(element, rect, extraRight);
-                });
-            } else {
-                textPart.elements.forEach(async (element) => {
-                    applyCover(element, null, extraCoverRightPx);
-                });
-            }
+            });
         });
         return true;
     }
 
-    #filterDiv(n, options = {}) {
+    #filterDiv(n) {
         const textParts = this.textParts[n];
-        if (!textParts || !Array.isArray(textParts.elements)) return;
-        if (!Number.isFinite(textParts.rawWidth) && Number.isFinite(textParts.width)) {
-            textParts.rawWidth = textParts.width;
-        }
-        const allowSplit = options?.allowSplit === true;
-        const elements = textParts.elements.filter(el => el && el.isConnected);
-        if (!elements.length) return;
-
-        const fontSizeForSort = elements.reduce((acc, el) => {
-            if (Number.isFinite(acc)) return acc;
-            const size = this.#parsePx(el.getAttribute('data-fontsize')) || this.#parsePx(el.style.fontSize);
-            return Number.isFinite(size) && size > 0 ? size : acc;
-        }, NaN);
-        const topTolerance = Number.isFinite(fontSizeForSort)
-            ? Math.max(fontSizeForSort * 0.4, 1)
-            : 0.5;
-        const sorted = [...elements].sort((a, b) => {
-            const topDiff = this.#parsePx(a.style.top) - this.#parsePx(b.style.top);
-            if (Math.abs(topDiff) > topTolerance) return topDiff;
-            return this.#parsePx(a.style.left) - this.#parsePx(b.style.left);
-        });
-
-        const layerRect = this.elTextLayer ? this.elTextLayer.getBoundingClientRect() : null;
-        const layerLeft = layerRect ? layerRect.left : 0;
-        const layerTop = layerRect ? layerRect.top : 0;
-        const nonEmptySorted = sorted.filter(el => trimSpace(el.textContent || '') !== '');
-        const anchorElement = nonEmptySorted[0] || sorted[0];
-        const baseFontSize = this.#parsePx(anchorElement.getAttribute('data-fontsize'))
-            || this.#parsePx(anchorElement.style.fontSize)
-            || fontSizeForSort;
-        const spaceThreshold = Math.max(baseFontSize * 0.25, 1);
-        let lineText = '';
-        let prevRight = null;
-        let minLeft = Infinity;
-        let maxRight = -Infinity;
-        let minTop = Infinity;
-        let maxBottom = -Infinity;
-        const metricsViewport = this.#getMetricsViewport();
-        const itemBoxes = [];
-        sorted.forEach(el => {
-            const text = el.textContent || '';
-            const itemBox = metricsViewport ? this.#getTextItemBox(el, metricsViewport) : null;
-            let left = itemBox ? itemBox.left : null;
-            let right = itemBox ? itemBox.right : null;
-            let top = itemBox ? itemBox.top : null;
-            let bottom = itemBox ? itemBox.bottom : null;
-            let rect = null;
-            if (!itemBox) {
-                rect = el.getBoundingClientRect();
-                if (text === '' && rect.width === 0 && rect.height === 0) {
-                    return;
-                }
-                left = rect.left - layerLeft;
-                right = rect.right - layerLeft;
-                top = rect.top - layerTop;
-                bottom = rect.bottom - layerTop;
-            }
-            const width = Number.isFinite(left) && Number.isFinite(right) ? Math.max(0, right - left) : null;
-            const height = Number.isFinite(top) && Number.isFinite(bottom) ? Math.max(0, bottom - top) : null;
-            if (text === '' && itemBox && width === 0 && height === 0) {
-                return;
-            }
-            if (!Number.isFinite(left) || !Number.isFinite(right)) {
-                const styleLeft = this.#parsePx(el.style.left);
-                const styleWidth = this.#parsePx(el.style.width) || rect?.width;
-                left = styleLeft;
-                right = styleLeft + (Number.isFinite(styleWidth) ? styleWidth : 0);
-            }
-            if (!Number.isFinite(top) || !Number.isFinite(bottom)) {
-                const styleTop = this.#parsePx(el.style.top);
-                const styleHeight = this.#parsePx(el.style.height) || rect?.height;
-                top = styleTop;
-                bottom = styleTop + (Number.isFinite(styleHeight) ? styleHeight : 0);
-            }
-            itemBoxes.push({
-                element: el,
-                left,
-                right,
-                top,
-                bottom
-            });
-            const isWhitespace = trimSpace(text) === '';
-            if (prevRight !== null && !isWhitespace) {
-                const gap = left - prevRight;
-                if (gap > spaceThreshold && !lineText.endsWith(' ')) {
-                    lineText += ' ';
-                }
-            }
-            if (isWhitespace) {
-                if (text && text.length > 0) {
-                    lineText += text;
-                } else if (!lineText.endsWith(' ')) {
-                    lineText += ' ';
+        let firstElement = null;
+        textParts.elements.forEach((el, i) => {
+            let isEmptyStr = trimSpace(el.textContent) == '';
+            if (!firstElement) {
+                if (!isEmptyStr) {
+                    firstElement = el;
+                    firstElement.style.transform = 'none';
+                    firstElement.style.left = el.style.left;
+                    firstElement.style.top = el.style.top;
+                } else {
+                    el.remove();
                 }
             } else {
-                lineText += text;
-            }
-            prevRight = right;
-            if (Number.isFinite(left)) minLeft = Math.min(minLeft, left);
-            if (Number.isFinite(right)) maxRight = Math.max(maxRight, right);
-            if (Number.isFinite(top)) minTop = Math.min(minTop, top);
-            if (Number.isFinite(bottom)) maxBottom = Math.max(maxBottom, bottom);
-        });
-
-        const coverData = this.#buildCoverRects(itemBoxes, baseFontSize, spaceThreshold);
-        if (allowSplit && coverData && Array.isArray(coverData.elements) && coverData.elements.length > 1) {
-            const layerWidth = layerRect ? layerRect.width : null;
-            const shouldSplit = this.#shouldSplitByGap(coverData, baseFontSize, layerWidth);
-            if (!shouldSplit) {
-                // Keep a single editable box when the gap is too small to be a real column.
-            } else {
-                const clusters = this.#splitElementsByAnchors(sorted, coverData.elements);
-                if (Array.isArray(clusters) && clusters.length > 1) {
-                    const boxByElement = new Map(itemBoxes.map(box => [box.element, box]));
-                    const outputScale = this.outputScale || 1;
-                    const nextParts = clusters.map(clusterEls => {
-                        const clusterIndices = Array.from(new Set(clusterEls.map(el => {
-                            const idx = Number.parseInt(el.getAttribute('data-idx'), 10);
-                            return Number.isFinite(idx) ? idx : null;
-                        }).filter(idx => idx !== null)));
-                        let clusterWidthPx = 0;
-                        clusterEls.forEach(el => {
-                            const box = boxByElement.get(el);
-                            if (box && Number.isFinite(box.left) && Number.isFinite(box.right)) {
-                                clusterWidthPx += Math.max(0, box.right - box.left);
-                            } else {
-                                const rect = el.getBoundingClientRect();
-                                if (Number.isFinite(rect.width)) {
-                                    clusterWidthPx += rect.width;
-                                }
-                            }
-                        });
-                        const rawWidth = outputScale ? clusterWidthPx / outputScale : clusterWidthPx;
-                        return {
-                            text: '',
-                            elements: clusterEls,
-                            width: rawWidth,
-                            rawWidth: rawWidth,
-                            itemIndices: clusterIndices
-                        };
-                    });
-                    this.textParts.splice(n, 1, ...nextParts);
-                    for (let i = 0; i < nextParts.length; i++) {
-                        this.#filterDiv(n + i, { allowSplit: false });
-                    }
-                    return nextParts.length;
-                }
-            }
-        }
-
-        const mergedText = trimSpace(lineText);
-        textParts.text = mergedText;
-
-        const firstElement = anchorElement;
-        firstElement.textContent = mergedText;
-        firstElement.style.transform = 'none';
-        if (coverData) {
-            textParts.coverRects = coverData.rects;
-            textParts.coverElements = coverData.elements;
-        } else {
-            textParts.coverRects = null;
-            textParts.coverElements = null;
-        }
-        if (Number.isFinite(minLeft) && Number.isFinite(maxRight) && Number.isFinite(minTop) && Number.isFinite(maxBottom)) {
-            let bounds = {
-                left: minLeft,
-                top: minTop,
-                right: maxRight,
-                bottom: maxBottom,
-                width: maxRight - minLeft,
-                height: maxBottom - minTop
-            };
-            bounds = this.#applyPdfLineWidth(bounds, sorted, textParts.itemIndices) || bounds;
-            let lineWidth = Math.max(0, bounds.right - bounds.left);
-            // Use the original span width as a safety net when bounds are too tight.
-            if (!coverData && Number.isFinite(textParts.rawWidth)) {
-                const scaledRawWidth = textParts.rawWidth * this.outputScale;
-                if (Number.isFinite(scaledRawWidth) && scaledRawWidth > lineWidth) {
-                    bounds.right = bounds.left + scaledRawWidth;
-                    lineWidth = scaledRawWidth;
-                }
-            }
-            // Clamp overly wide boxes (often caused by large column gaps) so the editor
-            // doesn't cover adjacent text. Prefer the measured glyph width.
-            if (Number.isFinite(textParts.rawWidth) && textParts.rawWidth > 0) {
-                const clampPadding = Math.max(2, baseFontSize * 0.2);
-                const scaledRawWidth = textParts.rawWidth * (this.outputScale || 1);
-                const clampTarget = scaledRawWidth + clampPadding;
-                const shouldClamp = !coverData && lineWidth > clampTarget * 1.2;
-                if (shouldClamp && clampTarget < lineWidth) {
-                    lineWidth = clampTarget;
-                    bounds.right = bounds.left + lineWidth;
-                }
-            }
-            bounds.width = lineWidth;
-            const lineHeight = Math.max(0, bounds.bottom - bounds.top);
-            firstElement.style.left = bounds.left + 'px';
-            firstElement.style.top = bounds.top + 'px';
-            firstElement.style.width = lineWidth + 'px';
-            firstElement.style.height = lineHeight + 'px';
-            textParts.width = lineWidth;
-            textParts.bounds = {
-                left: bounds.left,
-                top: bounds.top,
-                right: bounds.right,
-                bottom: bounds.bottom,
-                width: lineWidth,
-                height: lineHeight
-            };
-        } else {
-            const fallbackLeft = this.#parsePx(firstElement.style.left);
-            const fallbackTop = this.#parsePx(firstElement.style.top);
-            const rect = firstElement.getBoundingClientRect();
-            const rectWidth = rect?.width;
-            const rectHeight = rect?.height;
-            let fallbackWidth = Number.isFinite(textParts.rawWidth)
-                ? textParts.rawWidth
-                : this.#parsePx(firstElement.style.width);
-            if (Number.isFinite(rectWidth)) {
-                if (!Number.isFinite(fallbackWidth) || rectWidth > fallbackWidth) {
-                    fallbackWidth = rectWidth;
-                }
-            }
-            let fallbackHeight = Number.isFinite(rectHeight)
-                ? rectHeight
-                : this.#parsePx(firstElement.style.height);
-            if (!Number.isFinite(fallbackHeight) && Number.isFinite(baseFontSize)) {
-                fallbackHeight = baseFontSize;
-            }
-            if (Number.isFinite(fallbackLeft)
-                && Number.isFinite(fallbackTop)
-                && Number.isFinite(fallbackWidth)
-                && fallbackWidth > 0) {
-                firstElement.style.left = fallbackLeft + 'px';
-                firstElement.style.top = fallbackTop + 'px';
-                firstElement.style.width = fallbackWidth + 'px';
-                if (Number.isFinite(fallbackHeight) && fallbackHeight > 0) {
-                    firstElement.style.height = fallbackHeight + 'px';
-                }
-                textParts.width = fallbackWidth;
-                textParts.bounds = {
-                    left: fallbackLeft,
-                    top: fallbackTop,
-                    right: fallbackLeft + fallbackWidth,
-                    bottom: fallbackTop + (Number.isFinite(fallbackHeight) ? fallbackHeight : 0),
-                    width: fallbackWidth,
-                    height: Number.isFinite(fallbackHeight) ? fallbackHeight : 0
-                };
-            }
-        }
-
-        const keepElements = new Set([firstElement]);
-        if (coverData && Array.isArray(coverData.elements)) {
-            coverData.elements.forEach(el => keepElements.add(el));
-            coverData.elements.forEach(el => {
-                if (el === firstElement) return;
-                el.textContent = '';
-                el.classList.remove('text-border');
-                el.classList.add('text-cover-anchor');
-                el.style.pointerEvents = 'none';
-            });
-        }
-        sorted.slice(1).forEach(el => {
-            if (!keepElements.has(el)) {
+                firstElement.textContent += el.textContent;
                 el.remove();
             }
         });
-        textParts.elements = Array.from(keepElements);
-        this.#syncPartElementIds(textParts, n);
-        return 1;
+        if (firstElement) {
+            firstElement.style.width = (textParts.width * this.outputScale) + 'px';
+        }
     }
 
-    #splitElementsByAnchors(sorted, anchors) {
-        if (!Array.isArray(sorted) || !sorted.length) return null;
-        if (!Array.isArray(anchors) || anchors.length < 2) return null;
-        const indices = anchors.map(el => sorted.indexOf(el)).filter(idx => idx >= 0);
-        if (indices.length < 2) return null;
-        indices.sort((a, b) => a - b);
-        const clusters = [];
-        for (let i = 0; i < indices.length; i++) {
-            const start = indices[i];
-            const end = i + 1 < indices.length ? indices[i + 1] : sorted.length;
-            const slice = sorted.slice(start, end);
-            if (slice.length) {
-                clusters.push(slice);
-            }
-        }
-        return clusters.length > 1 ? clusters : null;
-    }
-
-    #syncPartElementIds(textPart, partIndex) {
-        if (!textPart || !Array.isArray(textPart.elements)) return;
-        const baseId = this.pageNum + '_' + partIndex + '_';
-        textPart.elements.forEach((el, idx) => {
-            if (!el) return;
-            el.setAttribute('data-parts', partIndex);
-            el.setAttribute('data-l', idx);
-            el.setAttribute('data-id', baseId + idx);
-        });
-    }
-
-    #buildCoverRects(itemBoxes, baseFontSize, spaceThreshold) {
-        if (!Array.isArray(itemBoxes) || itemBoxes.length < 2) return null;
-        const gaps = [];
-        const wordGaps = [];
-        let prevBox = null;
-        let prevWordBox = null;
-        let lineLeft = Infinity;
-        let lineRight = -Infinity;
-        let maxGap = 0;
-        for (let i = 0; i < itemBoxes.length; i++) {
-            const box = itemBoxes[i];
-            if (!box) continue;
-            const left = box.left;
-            const right = box.right;
-            const hasPos = Number.isFinite(left) && Number.isFinite(right);
-            if (hasPos) {
-                lineLeft = Math.min(lineLeft, left);
-                lineRight = Math.max(lineRight, right);
-            }
-            if (prevBox && hasPos && Number.isFinite(prevBox.right)) {
-                const gap = left - prevBox.right;
-                if (Number.isFinite(gap) && gap > 0) {
-                    gaps.push(gap);
-                }
-            }
-            const text = box.element?.textContent || '';
-            const isWhitespace = trimSpace(text) === '';
-            if (!isWhitespace && hasPos) {
-                if (prevWordBox && Number.isFinite(prevWordBox.right)) {
-                    const wordGap = left - prevWordBox.right;
-                    if (Number.isFinite(wordGap) && wordGap > 0) {
-                        wordGaps.push(wordGap);
-                    }
-                }
-                prevWordBox = box;
-            }
-            if (hasPos) {
-                prevBox = box;
-            }
-        }
-        if (!gaps.length) return null;
-        const sortedGaps = [...gaps].sort((a, b) => a - b);
-        const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)] || 0;
-        const sortedWordGaps = wordGaps.length ? [...wordGaps].sort((a, b) => a - b) : [];
-        const medianWordGap = sortedWordGaps.length
-            ? sortedWordGaps[Math.floor(sortedWordGaps.length / 2)] || 0
-            : 0;
-        const sortedGapSizes = [...gaps].sort((a, b) => b - a);
-        const maxGapValue = sortedGapSizes[0] || 0;
-        const secondGapValue = sortedGapSizes[1] || 0;
-        const safeFontSize = Number.isFinite(baseFontSize) ? baseFontSize : 0;
-        const safeSpace = Number.isFinite(spaceThreshold) ? spaceThreshold : 0;
-        const baseThreshold = Math.max(safeFontSize * 0.75, safeSpace * 3, 6);
-        const typicalGap = medianWordGap || medianGap || 0;
-        let leaderGapThreshold = baseThreshold;
-        if (medianWordGap > 0) {
-            leaderGapThreshold = Math.max(baseThreshold, medianWordGap * 2.2);
-        } else if (gaps.length > 1) {
-            leaderGapThreshold = Math.max(baseThreshold, typicalGap * 2.2);
-        } else if (gaps.length === 1) {
-            leaderGapThreshold = Math.max(baseThreshold * 2, safeFontSize * 3, 20);
-        }
-        const maxReasonableThreshold = Math.max(baseThreshold * 6, safeFontSize * 6, 36);
-        if (leaderGapThreshold > maxReasonableThreshold) {
-            leaderGapThreshold = maxReasonableThreshold;
-        }
-        const largeGapTrigger = Math.max(baseThreshold * 4, safeFontSize * 5, 60);
-        if (maxGapValue >= largeGapTrigger) {
-            const capTarget = secondGapValue >= largeGapTrigger ? secondGapValue : maxGapValue;
-            const cappedThreshold = Math.max(baseThreshold, capTarget * 0.9);
-            if (leaderGapThreshold > cappedThreshold) {
-                leaderGapThreshold = cappedThreshold;
-            }
-        }
-        let hasLargeGap = false;
-
-        const rects = [];
-        const elements = [];
-        let clusterStart = 0;
-        let clusterLeft = itemBoxes[0].left;
-        let clusterRight = itemBoxes[0].right;
-        let clusterTop = itemBoxes[0].top;
-        let clusterBottom = itemBoxes[0].bottom;
-
-        const pushCluster = (endIndex) => {
-            const width = clusterRight - clusterLeft;
-            const height = clusterBottom - clusterTop;
-            if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
-                rects.push({
-                    left: clusterLeft,
-                    top: clusterTop,
-                    right: clusterRight,
-                    bottom: clusterBottom,
-                    width,
-                    height
-                });
-                elements.push(itemBoxes[clusterStart].element);
-            }
-            clusterStart = endIndex;
-            clusterLeft = itemBoxes[endIndex].left;
-            clusterRight = itemBoxes[endIndex].right;
-            clusterTop = itemBoxes[endIndex].top;
-            clusterBottom = itemBoxes[endIndex].bottom;
-        };
-
-        for (let i = 1; i < itemBoxes.length; i++) {
-            const gap = itemBoxes[i].left - itemBoxes[i - 1].right;
-            if (Number.isFinite(gap) && gap > leaderGapThreshold) {
-                hasLargeGap = true;
-                if (gap > maxGap) {
-                    maxGap = gap;
-                }
-                pushCluster(i);
-                continue;
-            }
-            clusterLeft = Math.min(clusterLeft, itemBoxes[i].left);
-            clusterRight = Math.max(clusterRight, itemBoxes[i].right);
-            clusterTop = Math.min(clusterTop, itemBoxes[i].top);
-            clusterBottom = Math.max(clusterBottom, itemBoxes[i].bottom);
-        }
-        pushCluster(itemBoxes.length - 1);
-
-        if (!hasLargeGap || rects.length < 2 || rects.length !== elements.length) {
-            return null;
-        }
-        const lineWidth = Number.isFinite(lineLeft) && Number.isFinite(lineRight)
-            ? Math.max(0, lineRight - lineLeft)
-            : 0;
-        return { rects, elements, maxGap, lineWidth };
-    }
-
-    #shouldSplitByGap(coverData, baseFontSize, layerWidth) {
-        if (!coverData) return true;
-        const maxGap = coverData.maxGap;
-        const lineWidth = coverData.lineWidth;
-        if (!Number.isFinite(maxGap) || !Number.isFinite(lineWidth) || lineWidth <= 0) {
-            return true;
-        }
-        const gapRatio = maxGap / lineWidth;
-        const safeFontSize = Number.isFinite(baseFontSize) ? baseFontSize : 0;
-        const isColumnGap = this.#isLikelyColumnGap(coverData, layerWidth);
-        const minGapPx = Math.max(safeFontSize * 6, 60);
-        // Only split when the gap is clearly a column break.
-        if (!isColumnGap && gapRatio < 0.12 && maxGap < minGapPx) {
-            return false;
-        }
-        const tinyGap = Math.max(safeFontSize * 3, 12);
-        if (!isColumnGap && maxGap < tinyGap) {
-            return false;
-        }
-        return true;
-    }
-
-    #isLikelyColumnGap(coverData, layerWidth) {
-        if (!coverData || !Array.isArray(coverData.rects) || coverData.rects.length < 2) {
-            return false;
-        }
-        if (!Number.isFinite(layerWidth) || layerWidth <= 0) {
-            return false;
-        }
-        const columnThreshold = layerWidth * 0.45;
-        return coverData.rects.slice(1).some(rect => Number.isFinite(rect.left) && rect.left >= columnThreshold);
-    }
-
-    #buildTableLineMap(coverRectsPx) {
-        if (!Array.isArray(coverRectsPx) || coverRectsPx.length === 0) return null;
-        const canvas = this.content;
-        if (!canvas || typeof canvas.getContext !== 'function') return null;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-
-        const scale = Number.isFinite(this.outputScale) && this.outputScale > 0 ? this.outputScale : 1;
-        const minCoverage = 0.85;
-        const minWidthPx = Math.max(60 * scale, 1);
-        const maxAreaPx = 1_000_000;
-        const rowStep = Math.max(1, Math.round(scale));
-        const colStep = Math.max(1, Math.round(scale * 2));
-        const maxBandPx = Math.max(1, Math.round(scale * 2));
-
-        const horizontal = [];
-
-        coverRectsPx.forEach(rect => {
-            if (!rect) return;
-            const rectLeft = Number.isFinite(rect.left) ? rect.left : 0;
-            const rectTop = Number.isFinite(rect.top) ? rect.top : 0;
-            const rectRight = Number.isFinite(rect.right)
-                ? rect.right
-                : (Number.isFinite(rect.width) ? rectLeft + rect.width : rectLeft);
-            const rectBottom = Number.isFinite(rect.bottom)
-                ? rect.bottom
-                : (Number.isFinite(rect.height) ? rectTop + rect.height : rectTop);
-            const rectWidth = rectRight - rectLeft;
-            const rectHeight = rectBottom - rectTop;
-            if (!Number.isFinite(rectWidth) || !Number.isFinite(rectHeight)) return;
-
-            const widthPx = Math.max(0, Math.round(rectWidth * scale));
-            const heightPx = Math.max(0, Math.round(rectHeight * scale));
-            if (widthPx < minWidthPx || heightPx < rowStep * 2) return;
-            if (widthPx * heightPx > maxAreaPx) return;
-
-            const xPx = Math.max(0, Math.round(rectLeft * scale));
-            const yPx = Math.max(0, Math.round(rectTop * scale));
-            let image;
-            try {
-                image = ctx.getImageData(xPx, yPx, widthPx, heightPx);
-            } catch (err) {
-                return;
-            }
-            const data = image.data;
-            const rowHits = [];
-            for (let row = 0; row < heightPx; row += rowStep) {
-                let darkCount = 0;
-                let total = 0;
-                const rowOffset = row * widthPx * 4;
-                for (let col = 0; col < widthPx; col += colStep) {
-                    const idx = rowOffset + col * 4;
-                    const alpha = data[idx + 3];
-                    if (alpha < 200) {
-                        total += 1;
-                        continue;
-                    }
-                    const r = data[idx];
-                    const g = data[idx + 1];
-                    const b = data[idx + 2];
-                    const brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                    if (brightness < 80) {
-                        darkCount += 1;
-                    }
-                    total += 1;
-                }
-                if (total > 0 && darkCount / total >= minCoverage) {
-                    rowHits.push(row);
-                }
-            }
-            if (!rowHits.length) return;
-
-            let bandStart = rowHits[0];
-            let bandEnd = rowHits[0];
-            const flush = () => {
-                const bandHeight = bandEnd - bandStart + rowStep;
-                if (bandHeight <= maxBandPx) {
-                    const mid = (bandStart + bandEnd) / 2;
-                    horizontal.push({
-                        y: (yPx + mid) / scale,
-                        x1: rectLeft,
-                        x2: rectRight
-                    });
-                }
-            };
-            for (let i = 1; i < rowHits.length; i++) {
-                if (rowHits[i] - bandEnd <= rowStep) {
-                    bandEnd = rowHits[i];
-                    continue;
-                }
-                flush();
-                bandStart = rowHits[i];
-                bandEnd = rowHits[i];
-            }
-            flush();
-        });
-
-        if (!horizontal.length) return null;
-        const seen = new Set();
-        const unique = [];
-        horizontal.forEach(line => {
-            const key = Math.round(line.y * 2) / 2;
-            if (seen.has(key)) return;
-            seen.add(key);
-            unique.push({ ...line, y: key });
-        });
-        return unique.length ? { horizontal: unique } : null;
-    }
-
-    #getTextItemBox(element, viewport) {
-        if (!element) return null;
-        const util = this.reader?.pdfjsLib?.Util;
-        if (!util || typeof util.transform !== 'function') return null;
-        if (!viewport || !viewport.transform) return null;
-        const idx = Number.parseInt(element.getAttribute('data-idx'), 10);
-        if (!Number.isFinite(idx)) return null;
-        const item = this.textContentItems ? this.textContentItems[idx] : null;
-        if (!item || !Array.isArray(item.transform)) return null;
-        const style = this.textContentStyles ? this.textContentStyles[item.fontName] : null;
-        const tx = util.transform(viewport.transform, item.transform);
-        if (!tx || tx.length < 6) return null;
-        let angle = Math.atan2(tx[1], tx[0]);
-        if (style?.vertical) {
-            angle += Math.PI / 2;
-        }
-        const fontHeight = Math.hypot(tx[2], tx[3]);
-        if (!Number.isFinite(fontHeight) || fontHeight <= 0) return null;
-        const ascentRatioRaw = Number.isFinite(style?.ascent) ? style.ascent : 0.8;
-        const ascentRatio = Math.min(Math.max(ascentRatioRaw, 0), 1.2);
-        const fontAscent = fontHeight * ascentRatio;
-        let left;
-        let top;
-        if (angle === 0) {
-            left = tx[4];
-            top = tx[5] - fontAscent;
+    #isBreak(textItem, nextIdx) {
+        let nextTextItem = this.textContentItems[nextIdx];
+        if (nextTextItem.height == 0) {
+            // return nextTextItem.width >= 2.5;
+            return nextTextItem.width > 8;
         } else {
-            left = tx[4] + fontAscent * Math.sin(angle);
-            top = tx[5] - fontAscent * Math.cos(angle);
+            return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
         }
-        const divWidth = (style?.vertical ? item.height : item.width) * viewport.scale;
-        const divHeight = fontHeight;
-        if (!Number.isFinite(divWidth) || !Number.isFinite(divHeight)) return null;
-        const offsetX = 2;
-        const originX = left + offsetX;
-        const originY = top;
-        if (angle === 0) {
-            return {
-                left: originX,
-                right: originX + Math.max(0, divWidth),
-                top: originY,
-                bottom: originY + Math.max(0, divHeight)
-            };
-        }
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        const corners = [
-            { x: originX, y: originY },
-            { x: originX + divWidth * cos, y: originY + divWidth * sin },
-            { x: originX - divHeight * sin, y: originY + divHeight * cos },
-            { x: originX + divWidth * cos - divHeight * sin, y: originY + divWidth * sin + divHeight * cos }
-        ];
-        let minLeft = Infinity;
-        let maxRight = -Infinity;
-        let minTop = Infinity;
-        let maxBottom = -Infinity;
-        corners.forEach(pt => {
-            if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
-            minLeft = Math.min(minLeft, pt.x);
-            maxRight = Math.max(maxRight, pt.x);
-            minTop = Math.min(minTop, pt.y);
-            maxBottom = Math.max(maxBottom, pt.y);
-        });
-        if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)
-            || !Number.isFinite(minTop) || !Number.isFinite(maxBottom)) {
-            return null;
-        }
-        return {
-            left: minLeft,
-            right: maxRight,
-            top: minTop,
-            bottom: maxBottom
-        };
-    }
-
-    #getMetricsViewport() {
-        if (!this.pageProxy) return null;
-        const scale = this.scale || 1;
-        if (this._metricsViewport && this._metricsViewportScale === scale) {
-            return this._metricsViewport;
-        }
-        const viewport = this.pageProxy.getViewport({ scale });
-        this._metricsViewport = viewport;
-        this._metricsViewportScale = scale;
-        return viewport;
-    }
-
-    #getTextItemWidth(textItem, viewport) {
-        if (!textItem) return null;
-        const scale = viewport && Number.isFinite(viewport.scale) ? viewport.scale : null;
-        const style = this.textContentStyles ? this.textContentStyles[textItem.fontName] : null;
-        const isVertical = Boolean(style?.vertical);
-        const baseWidth = isVertical ? textItem.height : textItem.width;
-        if (!Number.isFinite(baseWidth)) return null;
-        if (scale === null) return baseWidth;
-        return baseWidth * scale;
-    }
-
-    #getPdfLineWidth(elements, itemIndices) {
-        if (!this.pageProxy || !this.textContentItems) return null;
-        const util = this.reader?.pdfjsLib?.Util;
-        if (!util || typeof util.transform !== 'function') return null;
-        const viewport = this.pageProxy.getViewport({ scale: this.scale });
-
-        let indices = Array.isArray(itemIndices) ? itemIndices : null;
-        if (!indices || !indices.length) {
-            if (!elements || !elements.length) return null;
-            indices = [];
-            elements.forEach(element => {
-                if (!element) return;
-                const idx = Number.parseInt(element.getAttribute('data-idx'), 10);
-                if (Number.isFinite(idx)) {
-                    indices.push(idx);
-                }
-            });
-        }
-        if (!indices.length) return null;
-        indices = Array.from(new Set(indices));
-
-        let minLeft = Infinity;
-        let maxRight = -Infinity;
-        for (const idx of indices) {
-            const item = this.textContentItems[idx];
-            if (!item || !Array.isArray(item.transform)) continue;
-
-            const tx = util.transform(viewport.transform, item.transform);
-            if (!tx || tx.length < 6) continue;
-            const style = this.textContentStyles ? this.textContentStyles[item.fontName] : null;
-            const isVertical = style?.vertical;
-            const itemWidth = (isVertical ? item.height : item.width) * viewport.scale;
-            if (!Number.isFinite(itemWidth)) continue;
-            const left = tx[4];
-            const right = left + itemWidth;
-            if (Number.isFinite(left)) minLeft = Math.min(minLeft, left);
-            if (Number.isFinite(right)) maxRight = Math.max(maxRight, right);
-        }
-
-        if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)) return null;
-        const width = maxRight - minLeft;
-        if (!Number.isFinite(width) || width <= 0) return null;
-        return { left: minLeft, right: maxRight, width };
-    }
-
-    #applyPdfLineWidth(bounds, elements, itemIndices) {
-        if (!bounds) return bounds;
-        const pdfLine = this.#getPdfLineWidth(elements, itemIndices);
-        if (!pdfLine) return bounds;
-        const left = Number.isFinite(bounds.left) ? bounds.left : pdfLine.left;
-        if (!Number.isFinite(left) || !Number.isFinite(pdfLine.width)) return bounds;
-        const pdfRightAligned = left + pdfLine.width;
-        if (Number.isFinite(pdfRightAligned)) {
-            if (!Number.isFinite(bounds.right) || pdfRightAligned > bounds.right) {
-                bounds.right = pdfRightAligned;
-            }
-            if (!Number.isFinite(bounds.left)) {
-                bounds.left = left;
-            }
-            bounds.width = bounds.right - bounds.left;
-        }
-        return bounds;
-    }
-
-    #getLeaderGapWidth(rects) {
-        if (!Array.isArray(rects) || rects.length < 2) return null;
-        const sorted = rects.filter(rect => rect
-            && Number.isFinite(rect.left)
-            && Number.isFinite(rect.right))
-            .sort((a, b) => a.left - b.left);
-        if (sorted.length < 2) return null;
-        let maxGap = 0;
-        for (let i = 1; i < sorted.length; i++) {
-            const gap = sorted[i].left - sorted[i - 1].right;
-            if (Number.isFinite(gap)) {
-                maxGap = Math.max(maxGap, gap);
-            }
-        }
-        return maxGap > 0 ? maxGap : null;
-    }
-
-    #hasLeaderSequence(text) {
-        if (typeof text !== 'string') return false;
-        return /[.\u00b7\u2022\u2219\u2024]{3,}/.test(text);
-    }
-
-    #shouldInsertLeaderDots(text, gapWidth, fontSize) {
-        if (!text || !Number.isFinite(gapWidth) || gapWidth <= 0) return false;
-        const trimmed = trimSpace(text);
-        if (!trimmed || this.#hasLeaderSequence(trimmed)) return false;
-        if (!Number.isFinite(fontSize) || gapWidth < Math.max(fontSize * 2, 12)) {
-            return false;
-        }
-        return /(\d{1,6}|[ivxlcdm]{1,8})$/i.test(trimmed);
-    }
-
-    #buildLeaderDots(gapWidth, baseElement, fontSize) {
-        if (!Number.isFinite(gapWidth) || gapWidth <= 0) return '....';
-        let dotWidth = Number.isFinite(fontSize) ? fontSize * 0.25 : 3;
-        const ctx = this.content?.getContext?.('2d');
-        if (ctx && baseElement) {
-            const computed = window.getComputedStyle(baseElement);
-            const fontStyle = computed?.fontStyle || 'normal';
-            const fontWeight = computed?.fontWeight || 'normal';
-            const fontFamily = computed?.fontFamily || baseElement.style.fontFamily || 'Helvetica';
-            const fontSizePx = Number.isFinite(fontSize)
-                ? fontSize
-                : (parseFloat(computed?.fontSize) || 12);
-            ctx.font = `${fontStyle} ${fontWeight} ${fontSizePx}px ${fontFamily}`;
-            const measured = ctx.measureText('.').width;
-            if (Number.isFinite(measured) && measured > 0) {
-                dotWidth = measured;
-            }
-        }
-        const count = Math.max(3, Math.min(Math.floor((gapWidth / dotWidth) - 2), 200));
-        return '.'.repeat(count);
-    }
-
-    #insertLeaderDots(text, leaderDots) {
-        if (!leaderDots) return text;
-        const trimmed = trimSpace(text);
-        const match = trimmed.match(/^(.*?)(\s*)(\d{1,6}|[ivxlcdm]{1,8})$/i);
-        if (!match) return text;
-        const left = match[1].trimEnd();
-        const right = match[3];
-        return `${left} ${leaderDots} ${right}`.trim();
-    }
-
-    #isLeaderText(text) {
-        if (typeof text !== 'string') return false;
-        const value = trimSpace(text);
-        if (!value) return false;
-        return /^[.\u00b7\u2022\u2219\u2024]+$/.test(value);
-    }
-
-    #isBreak(currentIdx, nextIdx, lineHasLeader = false, hasEOL = false) {
-        const nextTextItem = this.textContentItems[nextIdx];
-        if (!nextTextItem) return true;
-        const nextIsLeader = this.#isLeaderText(nextTextItem.str);
-        if (nextIsLeader) {
-            return false;
-        }
-
-        const suppressVisual = lineHasLeader;
-        const visualBreak = suppressVisual ? null : this.#isVisualLineBreak(currentIdx, nextIdx);
-        if (visualBreak === true) return true;
-        if (visualBreak === false) return false;
-
-        const currentMetrics = this.#getTextItemLineMetrics(currentIdx);
-        const nextMetrics = this.#getTextItemLineMetrics(nextIdx);
-        if (currentMetrics && nextMetrics) {
-            const decision = shouldBreakLine({
-                current: currentMetrics,
-                next: nextMetrics,
-                hasEOL,
-                lineHasLeader
-            });
-            if (decision?.reason === 'orientation' || decision?.reason === 'y-gap') {
-                return decision.shouldBreak;
-            }
-        }
-
-        return Boolean(hasEOL);
-    }
-
-    #mergeTextPartsByLine() {
-        if (!Array.isArray(this.textParts) || this.textParts.length < 2) return;
-        const metrics = [];
-        this.textParts.forEach(part => {
-            if (!part) return;
-            const indices = Array.isArray(part.itemIndices) && part.itemIndices.length
-                ? part.itemIndices
-                : Array.isArray(part.elements)
-                    ? part.elements.map(el => {
-                        const idx = Number.parseInt(el?.getAttribute?.('data-idx'), 10);
-                        return Number.isFinite(idx) ? idx : null;
-                    }).filter(idx => idx !== null)
-                    : [];
-            if (!indices.length) return;
-            const lineMetrics = indices.map(idx => this.#getTextItemLineMetrics(idx)).filter(Boolean);
-            if (!lineMetrics.length) return;
-            const ys = lineMetrics.map(entry => entry.y).filter(value => Number.isFinite(value));
-            if (!ys.length) return;
-            ys.sort((a, b) => a - b);
-            const medianY = ys[Math.floor(ys.length / 2)];
-            const maxHeight = lineMetrics.reduce((acc, entry) => {
-                const next = Number.isFinite(entry.height) ? entry.height : 0;
-                return Math.max(acc, next);
-            }, 0);
-            const minX = lineMetrics.reduce((acc, entry) => {
-                const next = Number.isFinite(entry.x) ? entry.x : acc;
-                return Math.min(acc, next);
-            }, Infinity);
-            const rotated = lineMetrics.some(entry => entry.rotated || entry.isVertical);
-            metrics.push({
-                part,
-                y: medianY,
-                height: maxHeight,
-                minX,
-                rotated
-            });
-        });
-
-        if (!metrics.length) return;
-        const clusters = [];
-        metrics.forEach(entry => {
-            if (!Number.isFinite(entry.y) || entry.rotated) {
-                clusters.push({
-                    y: entry.y,
-                    height: entry.height,
-                    minX: entry.minX,
-                    parts: [entry.part],
-                    rotated: true,
-                    count: 1
-                });
-                return;
-            }
-            let match = null;
-            for (const cluster of clusters) {
-                if (cluster.rotated) continue;
-                const baseHeight = Math.min(cluster.height || 0, entry.height || 0)
-                    || Math.max(cluster.height || 0, entry.height || 0)
-                    || 1;
-                const tolerance = Math.max(baseHeight * 0.8, 1);
-                if (Math.abs(entry.y - cluster.y) <= tolerance) {
-                    match = cluster;
-                    break;
-                }
-            }
-            if (!match) {
-                clusters.push({
-                    y: entry.y,
-                    height: entry.height,
-                    minX: entry.minX,
-                    parts: [entry.part],
-                    rotated: false,
-                    count: 1
-                });
-                return;
-            }
-            match.parts.push(entry.part);
-            match.count += 1;
-            match.y = (match.y * (match.count - 1) + entry.y) / match.count;
-            match.height = Math.max(match.height, entry.height);
-            match.minX = Math.min(match.minX, entry.minX);
-        });
-
-        const mergedParts = clusters
-            .sort((a, b) => {
-                const yDiff = (b.y ?? 0) - (a.y ?? 0);
-                if (Math.abs(yDiff) > 0.01) return yDiff;
-                return (a.minX ?? 0) - (b.minX ?? 0);
-            })
-            .map(cluster => {
-                if (!Array.isArray(cluster.parts) || cluster.parts.length === 0) {
-                    return null;
-                }
-                if (cluster.parts.length === 1) {
-                    return cluster.parts[0];
-                }
-                const merged = {
-                    text: '',
-                    elements: [],
-                    width: 0,
-                    rawWidth: 0,
-                    itemIndices: []
-                };
-                const elementSet = new Set();
-                cluster.parts.forEach(part => {
-                    if (Array.isArray(part.elements)) {
-                        part.elements.forEach(el => {
-                            if (!el || elementSet.has(el)) return;
-                            elementSet.add(el);
-                            merged.elements.push(el);
-                        });
-                    }
-                    if (Array.isArray(part.itemIndices)) {
-                        merged.itemIndices.push(...part.itemIndices);
-                    }
-                    const width = Number.isFinite(part.rawWidth) ? part.rawWidth : part.width;
-                    if (Number.isFinite(width)) {
-                        merged.rawWidth += width;
-                        merged.width += width;
-                    }
-                });
-                merged.itemIndices = Array.from(new Set(merged.itemIndices));
-                if (!Number.isFinite(merged.rawWidth) || merged.rawWidth <= 0) {
-                    const fallbackWidth = cluster.parts.reduce((sum, part) => {
-                        const width = Number.isFinite(part.width) ? part.width : 0;
-                        return sum + width;
-                    }, 0);
-                    if (fallbackWidth > 0) {
-                        merged.rawWidth = fallbackWidth;
-                        merged.width = fallbackWidth;
-                    }
-                } else {
-                    merged.width = merged.rawWidth;
-                }
-                return merged;
-            })
-            .filter(part => part && Array.isArray(part.elements) && part.elements.length);
-
-        if (mergedParts.length) {
-            this.textParts = mergedParts;
-        }
-    }
-
-    #normalizeTextItemColor(value) {
-        const normalizeString = (input) => {
-            if (typeof input !== 'string') return null;
-            const trimmed = input.trim();
-            if (!trimmed) return null;
-            return trimmed.replace(/\s+/g, '').toLowerCase();
-        };
-        if (value === undefined || value === null) return null;
-        if (typeof value === 'string') {
-            const normalized = this.#normalizeFontColor(value);
-            const normalizedString = normalizeString(normalized || value);
-            return normalizedString === 'transparent' ? null : normalizedString;
-        }
-        if (Array.isArray(value)) {
-            const parts = value
-                .map(part => {
-                    const num = typeof part === 'number' ? part : parseFloat(part);
-                    return Number.isFinite(num) ? num : null;
-                })
-                .filter(part => part !== null);
-            if (!parts.length) return null;
-            const serialized = parts.join(',');
-            const normalized = this.#normalizeFontColor(serialized) || serialized;
-            return normalizeString(normalized);
-        }
-        if (typeof value === 'number') {
-            if (!Number.isFinite(value)) return null;
-            const serialized = String(value);
-            const normalized = this.#normalizeFontColor(serialized) || serialized;
-            return normalizeString(normalized);
-        }
-        return null;
-    }
-
-    #isVisualLineBreak(currentIdx, nextIdx) {
-        if (!Array.isArray(this.textContentItems)) return null;
-        const current = this.#getTextItemLineMetrics(currentIdx);
-        const next = this.#getTextItemLineMetrics(nextIdx);
-        if (!current || !next) return null;
-        if (current.isVertical || next.isVertical || current.rotated || next.rotated) {
-            return null;
-        }
-
-        const sizeCandidates = [current.height, next.height].filter(value => Number.isFinite(value) && value > 0);
-        const minSize = sizeCandidates.length ? Math.min(...sizeCandidates) : 1;
-        const maxSize = sizeCandidates.length ? Math.max(...sizeCandidates) : minSize;
-        const baseSize = Math.max(minSize, maxSize);
-
-        const topDiff = Math.abs(next.y - current.y);
-        const leftReset = next.x < current.x - Math.max(maxSize * 0.5, 6);
-        const strongThreshold = Math.max(baseSize * 0.9, 3);
-        const weakThreshold = Math.max(baseSize * 0.55, 3);
-
-        if (topDiff > strongThreshold) {
-            return true;
-        }
-        if (leftReset && topDiff > weakThreshold) {
-            return true;
-        }
-        return false;
-    }
-
-    #getTextItemLineMetrics(idx) {
-        const item = Array.isArray(this.textContentItems) ? this.textContentItems[idx] : null;
-        if (!item || !Array.isArray(item.transform)) return null;
-        const style = this.textContentStyles ? this.textContentStyles[item.fontName] : null;
-        const tx = item.transform;
-        const x = tx[4];
-        const y = tx[5];
-        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-        const height = Number.isFinite(item.height)
-            ? item.height
-            : Math.hypot(tx[2], tx[3]);
-        const width = Number.isFinite(item.width)
-            ? item.width
-            : Math.hypot(tx[0], tx[1]);
-        const rotationDeg = Math.abs(Math.atan2(tx[1], tx[0]) * 180 / Math.PI);
-        return {
-            x,
-            y,
-            height,
-            width,
-            isVertical: Boolean(style?.vertical),
-            rotated: Math.abs(tx[1]) > 0.01 || Math.abs(tx[2]) > 0.01,
-            rotationDeg
-        };
-    }
-
-    #getTextPartBounds(textPart, baseElement, forceRefresh = false) {
-        if (!textPart) return null;
-        if (textPart.bounds && !forceRefresh) {
-            const adjusted = this.#applyPdfLineWidth({ ...textPart.bounds }, null, textPart.itemIndices);
-            if (adjusted) {
-                textPart.bounds = adjusted;
-                textPart.width = adjusted.width;
-            }
-            return textPart.bounds;
-        }
-        const elements = this.#getConnectedElements(textPart);
-        if (!elements.length && baseElement) {
-            elements.push(baseElement);
-        }
-        if (!elements.length) return null;
-
-        let left = Infinity;
-        let top = Infinity;
-        let right = -Infinity;
-        let bottom = -Infinity;
-        elements.forEach(el => {
-            const box = this.#getElementBox(el);
-            if (!box) return;
-            left = Math.min(left, box.left);
-            top = Math.min(top, box.top);
-            right = Math.max(right, box.right);
-            bottom = Math.max(bottom, box.bottom);
-        });
-        if (!Number.isFinite(left) || !Number.isFinite(top) || !Number.isFinite(right) || !Number.isFinite(bottom)) {
-            return null;
-        }
-        let bounds = {
-            left,
-            top,
-            right,
-            bottom,
-            width: right - left,
-            height: bottom - top
-        };
-        bounds = this.#applyPdfLineWidth(bounds, elements, textPart.itemIndices) || bounds;
-        bounds.width = bounds.right - bounds.left;
-        bounds.height = bounds.bottom - bounds.top;
-        if (textPart && Number.isFinite(textPart.rawWidth) && textPart.rawWidth > 0) {
-            const fontSource = baseElement || elements[0];
-            const baseFontSize = fontSource
-                ? (this.#parsePx(fontSource.getAttribute('data-fontsize')) || this.#parsePx(fontSource.style.fontSize))
-                : null;
-            const clampPadding = Number.isFinite(baseFontSize)
-                ? Math.max(2, baseFontSize * 0.2)
-                : 2;
-            const scaledRawWidth = textPart.rawWidth * (this.outputScale || 1);
-            const clampTarget = scaledRawWidth + clampPadding;
-            const hasCoverRects = Array.isArray(textPart.coverRects) && textPart.coverRects.length > 1;
-            if ((hasCoverRects || bounds.width > clampTarget * 1.2) && clampTarget < bounds.width) {
-                bounds.right = bounds.left + clampTarget;
-                bounds.width = clampTarget;
-            }
-        }
-        if (textPart) {
-            textPart.bounds = bounds;
-        }
-        return bounds;
-    }
-
-    #getElementBox(element) {
-        if (!element) return null;
-        const left = this.#parsePx(element.style.left);
-        const top = this.#parsePx(element.style.top);
-        const rect = element.getBoundingClientRect();
-        const width = this.#parsePx(element.style.width) || rect.width;
-        const height = this.#parsePx(element.style.height) || rect.height;
-        return {
-            left,
-            top,
-            right: left + width,
-            bottom: top + height
-        };
-    }
-
-    #getTextPartElement(textPart, fallback) {
-        const elements = this.#getConnectedElements(textPart);
-        return elements[0] || fallback;
-    }
-
-    #handleTextLayerClick(e) {
-        const target = e?.target;
-        if (target instanceof Element) {
-            const elDiv = target.closest('[data-id]');
-            if (elDiv && this.elTextLayer && this.elTextLayer.contains(elDiv)) {
-                this.convertWidget(elDiv);
-                return;
-            }
-        }
-        if (!this.elTextLayer) return;
-        const rect = this.elTextLayer.getBoundingClientRect();
-        const x = e?.clientX - rect.left;
-        const y = e?.clientY - rect.top;
-        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-        const hitPart = this.#findTextPartByPoint(x, y);
-        if (!hitPart) return;
-        if (!this.#shouldAutoConvertByBounds(hitPart, rect)) return;
-        const baseElement = this.#getTextPartElement(hitPart, null);
-        if (!baseElement) return;
-        this.convertWidget(baseElement);
-    }
-
-    #findTextPartByPoint(x, y) {
-        const parts = this.textParts;
-        if (!Array.isArray(parts) || !parts.length) return null;
-        const padding = 1;
-        for (const part of parts) {
-            if (!part) continue;
-            let bounds = part.bounds;
-            if (!bounds) {
-                bounds = this.#getTextPartBounds(part, this.#getTextPartElement(part, null));
-            }
-            if (!bounds) continue;
-            if (this.#pointInBounds(x, y, bounds, padding)) {
-                return part;
-            }
-        }
-        return null;
-    }
-
-    #shouldAutoConvertByBounds(textPart, layerRect) {
-        if (!textPart || !layerRect) return true;
-        let bounds = textPart.bounds;
-        if (!bounds) {
-            bounds = this.#getTextPartBounds(textPart, this.#getTextPartElement(textPart, null));
-        }
-        if (!bounds) return true;
-        const width = bounds.width;
-        const height = bounds.height;
-        if (!Number.isFinite(width) || !Number.isFinite(height)) return true;
-        const layerArea = layerRect.width * layerRect.height;
-        if (layerArea > 0) {
-            const areaRatio = (width * height) / layerArea;
-            if (areaRatio > 0.55) {
-                return false;
-            }
-        }
-        const baseElement = this.#getTextPartElement(textPart, null);
-        const fontSize = baseElement
-            ? (this.#parsePx(baseElement.getAttribute('data-fontsize')) || this.#parsePx(baseElement.style.fontSize))
-            : null;
-        if (Number.isFinite(fontSize) && height > fontSize * 3) {
-            return false;
-        }
-        return true;
-    }
-
-    #pointInBounds(x, y, bounds, padding = 0) {
-        const left = bounds.left - padding;
-        const right = bounds.right + padding;
-        const top = bounds.top - padding;
-        const bottom = bounds.bottom + padding;
-        return x >= left && x <= right && y >= top && y <= bottom;
-    }
-
-    #getConnectedElements(textPart) {
-        if (!textPart || !Array.isArray(textPart.elements)) return [];
-        const elements = [];
-        const seen = new Set();
-        textPart.elements.forEach(el => {
-            if (!el || !el.isConnected || seen.has(el)) return;
-            seen.add(el);
-            elements.push(el);
-        });
-        return elements;
-    }
-
-    #inferPdfFontStyle(element) {
-        if (!element) {
-            return { bold: false, italic: false };
-        }
-        const rawName = element.getAttribute('data-fontname') || '';
-        const name = typeof rawName === 'string' ? rawName.toLowerCase() : '';
-        return {
-            bold: name.includes('bold'),
-            italic: name.includes('italic') || name.includes('oblique')
-        };
-    }
-
-    #applyItalicWidthPadding(textPart) {
-        const elements = this.#getConnectedElements(textPart);
-        elements.forEach(el => {
-            if (el.getAttribute('data-italic-pad')) return;
-            const width = this.#parsePx(el.style.width);
-            const rectWidth = el.getBoundingClientRect().width;
-            const baseWidth = width || rectWidth;
-            if (baseWidth > 0) {
-                el.style.width = (baseWidth + 3) + 'px';
-                el.setAttribute('data-italic-pad', '1');
-            }
-        });
-    }
-
-    #getBackgroundColorByCanvas(bounds, textColor, expanded = false) {
-        if (!bounds || !this.content) return null;
-        const ctx = this.content.getContext('2d');
-        if (!ctx) return null;
-        const scale = this.outputScale || 1;
-        const inset = expanded ? 6 : 3;
-        const xLeft = bounds.left - inset;
-        const xRight = bounds.right + inset;
-        const xMid = bounds.left + bounds.width * 0.5;
-        const yTop = bounds.top - inset;
-        const yBottom = bounds.bottom + inset;
-        const yMid = bounds.top + bounds.height * 0.5;
-        const candidates = [
-            { x: xLeft, y: yMid },
-            { x: xRight, y: yMid },
-            { x: xMid, y: yTop },
-            { x: xMid, y: yBottom },
-            { x: bounds.left + bounds.width * 0.2, y: yTop },
-            { x: bounds.left + bounds.width * 0.8, y: yTop },
-            { x: bounds.left + bounds.width * 0.2, y: yBottom },
-            { x: bounds.left + bounds.width * 0.8, y: yBottom }
-        ];
-
-        const textRgb = textColor ? this.#parseColorToRgba(textColor) : null;
-        const samples = [];
-        for (const point of candidates) {
-            const px = Math.round(point.x * scale);
-            const py = Math.round(point.y * scale);
-            if (px < 0 || py < 0 || px >= this.content.width || py >= this.content.height) {
-                continue;
-            }
-            const color = getPixelColor(ctx, px, py);
-            const rgb = this.#parseColorToRgba(color);
-            if (!rgb) continue;
-            if (textRgb && this.#isNearColor(rgb.r, rgb.g, rgb.b, textRgb, 18)) {
-                continue;
-            }
-            samples.push(rgb);
-        }
-
-        if (!samples.length) return null;
-        const counts = new Map();
-        const quant = 8;
-        samples.forEach(rgb => {
-            const rq = Math.max(0, Math.min(255, Math.round(rgb.r / quant) * quant));
-            const gq = Math.max(0, Math.min(255, Math.round(rgb.g / quant) * quant));
-            const bq = Math.max(0, Math.min(255, Math.round(rgb.b / quant) * quant));
-            const key = `${rq},${gq},${bq}`;
-            counts.set(key, (counts.get(key) || 0) + 1);
-        });
-
-        let bestKey = null;
-        let bestCount = -1;
-        counts.forEach((count, key) => {
-            if (count > bestCount) {
-                bestCount = count;
-                bestKey = key;
-            }
-        });
-        if (!bestKey) return null;
-        const parts = bestKey.split(',').map(v => parseInt(v, 10));
-        if (parts.length < 3 || parts.some(v => !Number.isFinite(v))) return null;
-        return `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
-    }
-
-    #inferTextColorByCanvas(bounds, bgColor) {
-        if (!bounds || !this.content) return null;
-        const ctx = this.content.getContext('2d');
-        if (!ctx) return null;
-        const scale = this.outputScale || 1;
-        const x0 = Math.max(0, Math.floor(bounds.left * scale));
-        const y0 = Math.max(0, Math.floor(bounds.top * scale));
-        const x1 = Math.min(this.content.width, Math.ceil(bounds.right * scale));
-        const y1 = Math.min(this.content.height, Math.ceil(bounds.bottom * scale));
-        if (x1 <= x0 || y1 <= y0) return null;
-
-        const width = x1 - x0;
-        const height = y1 - y0;
-        let data;
-        try {
-            data = ctx.getImageData(x0, y0, width, height).data;
-        } catch (err) {
-            return null;
-        }
-        if (!data || data.length === 0) return null;
-
-        const bg = this.#parseColorToRgba(bgColor);
-        const tolerance = 24;
-        const quant = 8;
-        const counts = new Map();
-        const sampleRows = [0.3, 0.5, 0.7].map(ratio => {
-            const row = Math.floor(height * ratio);
-            return Math.max(0, Math.min(height - 1, row));
-        });
-        const stepX = Math.max(1, Math.floor(width / 60));
-
-        const record = (r, g, b) => {
-            const rq = Math.max(0, Math.min(255, Math.round(r / quant) * quant));
-            const gq = Math.max(0, Math.min(255, Math.round(g / quant) * quant));
-            const bq = Math.max(0, Math.min(255, Math.round(b / quant) * quant));
-            const key = `${rq},${gq},${bq}`;
-            counts.set(key, (counts.get(key) || 0) + 1);
-        };
-
-        let found = false;
-        for (const row of sampleRows) {
-            const rowOffset = row * width * 4;
-            for (let x = 0; x < width; x += stepX) {
-                const idx = rowOffset + x * 4;
-                const r = data[idx];
-                const g = data[idx + 1];
-                const b = data[idx + 2];
-                const a = data[idx + 3];
-                if (a < 10) continue;
-                if (bg && this.#isNearColor(r, g, b, bg, tolerance)) {
-                    continue;
-                }
-                record(r, g, b);
-                found = true;
-            }
-        }
-
-        if (!found) {
-            for (const row of sampleRows) {
-                const rowOffset = row * width * 4;
-                for (let x = 0; x < width; x += stepX) {
-                    const idx = rowOffset + x * 4;
-                    const r = data[idx];
-                    const g = data[idx + 1];
-                    const b = data[idx + 2];
-                    const a = data[idx + 3];
-                    if (a < 10) continue;
-                    record(r, g, b);
-                }
-            }
-        }
-
-        if (!counts.size) return null;
-        const parseKey = (key) => {
-            const parts = key.split(',').map(v => parseInt(v, 10));
-            if (parts.length < 3 || parts.some(v => !Number.isFinite(v))) return null;
-            return parts;
-        };
-
-        const contrast = (rgb) => {
-            if (!bg) return 0;
-            return Math.abs(rgb[0] - bg.r) + Math.abs(rgb[1] - bg.g) + Math.abs(rgb[2] - bg.b);
-        };
-
-        // Prefer the best-contrast color among the top-K most frequent samples.
-        // This avoids picking anti-aliased gray edge pixels as the "dominant" text color.
-        const entries = [];
-        counts.forEach((count, key) => {
-            const rgb = parseKey(key);
-            if (!rgb) return;
-            if (bg && this.#isNearColor(rgb[0], rgb[1], rgb[2], bg, tolerance)) return;
-            entries.push({ key, count, rgb });
-        });
-        if (!entries.length) return null;
-        entries.sort((a, b) => b.count - a.count);
-
-        const top = entries.slice(0, 6);
-        let chosen = top[0];
-        if (bg) {
-            let best = null;
-            let bestC = -1;
-            for (const item of top) {
-                const c = contrast(item.rgb);
-                if (!best || c > bestC || (c === bestC && item.count > best.count)) {
-                    best = item;
-                    bestC = c;
-                }
-            }
-            if (best) chosen = best;
-        }
-
-        return `rgb(${chosen.rgb[0]}, ${chosen.rgb[1]}, ${chosen.rgb[2]})`;
-    }
-
-    #refineLineBoundsByCanvas(bounds, bgColor, fontSize) {
-        if (!bounds || !this.content) return null;
-        const ctx = this.content.getContext('2d');
-        if (!ctx) return null;
-        const bg = this.#parseColorToRgba(bgColor);
-        if (!bg) return null;
-        const scale = this.outputScale || 1;
-        const padPx = Math.max(6, Math.ceil((fontSize || 0) * 0.6));
-        const pad = Math.max(0, Math.round(padPx * scale));
-        const x0 = Math.max(0, Math.floor(bounds.left * scale));
-        const y0 = Math.max(0, Math.floor(bounds.top * scale));
-        const x1 = Math.min(this.content.width, Math.ceil(bounds.right * scale) + pad);
-        const y1 = Math.min(this.content.height, Math.ceil(bounds.bottom * scale));
-        if (x1 <= x0 || y1 <= y0) return null;
-
-        const width = x1 - x0;
-        const height = y1 - y0;
-        let data;
-        try {
-            data = ctx.getImageData(x0, y0, width, height).data;
-        } catch (err) {
-            return null;
-        }
-        if (!data || data.length === 0) return null;
-
-        const sampleRows = [0.3, 0.5, 0.7].map(ratio => {
-            const row = Math.floor(height * ratio);
-            return Math.max(0, Math.min(height - 1, row));
-        });
-        const tolerance = 16;
-        let maxX = -1;
-        for (const row of sampleRows) {
-            const rowOffset = row * width * 4;
-            for (let x = width - 1; x >= 0; x--) {
-                const idx = rowOffset + x * 4;
-                const r = data[idx];
-                const g = data[idx + 1];
-                const b = data[idx + 2];
-                if (!this.#isNearColor(r, g, b, bg, tolerance)) {
-                    maxX = Math.max(maxX, x);
-                    break;
-                }
-            }
-        }
-        if (maxX < 0) return null;
-        const newRight = (x0 + maxX + 1) / scale;
-        if (Number.isFinite(newRight) && newRight > bounds.right) {
-            const refined = {
-                left: bounds.left,
-                top: bounds.top,
-                right: newRight,
-                bottom: bounds.bottom,
-                width: newRight - bounds.left,
-                height: bounds.bottom - bounds.top
-            };
-            return refined;
-        }
-        return bounds;
-    }
-
-    #parseColorToRgba(value) {
-        if (typeof value !== 'string') return null;
-        const trimmed = value.trim();
-        if (!trimmed) return null;
-        if (trimmed.startsWith('#')) {
-            const hex = trimmed.slice(1);
-            if (hex.length === 3) {
-                const r = parseInt(hex[0] + hex[0], 16);
-                const g = parseInt(hex[1] + hex[1], 16);
-                const b = parseInt(hex[2] + hex[2], 16);
-                return { r, g, b, a: 1 };
-            }
-            if (hex.length >= 6) {
-                const r = parseInt(hex.slice(0, 2), 16);
-                const g = parseInt(hex.slice(2, 4), 16);
-                const b = parseInt(hex.slice(4, 6), 16);
-                const a = hex.length >= 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1;
-                return { r, g, b, a };
-            }
-        }
-        const match = /^rgba?\(([^)]+)\)$/i.exec(trimmed);
-        if (match) {
-            const parts = match[1].split(',').map(part => part.trim());
-            if (parts.length >= 3) {
-                const nums = parts.slice(0, 3).map(val => parseFloat(val));
-                if (nums.some(val => !Number.isFinite(val))) return null;
-                const max = Math.max(...nums);
-                const scale = max <= 1 ? 255 : 1;
-                const r = Math.max(0, Math.min(255, Math.round(nums[0] * scale)));
-                const g = Math.max(0, Math.min(255, Math.round(nums[1] * scale)));
-                const b = Math.max(0, Math.min(255, Math.round(nums[2] * scale)));
-                let a = 1;
-                if (parts.length >= 4) {
-                    const alpha = parseFloat(parts[3]);
-                    if (Number.isFinite(alpha)) {
-                        a = Math.max(0, Math.min(1, alpha));
-                    }
-                }
-                return { r, g, b, a };
-            }
-        }
-        return null;
-    }
-
-    #isNearColor(r, g, b, ref, tolerance) {
-        const diff = Math.abs(r - ref.r) + Math.abs(g - ref.g) + Math.abs(b - ref.b);
-        return diff <= tolerance;
-    }
-
-    #parsePx(value) {
-        const num = parseFloat(value);
-        return Number.isFinite(num) ? num : 0;
-    }
-
-    #normalizeFontColor(value) {
-        if (typeof value !== 'string') return null;
-        const trimmed = value.trim();
-        if (!trimmed) return null;
-        if (trimmed === 'transparent') return null;
-        if (trimmed.startsWith('#')) return trimmed;
-        if (trimmed.startsWith('rgba')) {
-            const match = /^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/i.exec(trimmed);
-            if (match) {
-                const alpha = parseFloat(match[4]);
-                if (!Number.isFinite(alpha) || alpha <= 0) return null;
-                const r = Math.max(0, Math.min(255, Math.round(parseFloat(match[1]))));
-                const g = Math.max(0, Math.min(255, Math.round(parseFloat(match[2]))));
-                const b = Math.max(0, Math.min(255, Math.round(parseFloat(match[3]))));
-                return `rgb(${r}, ${g}, ${b})`;
-            }
-            return trimmed;
-        }
-        if (trimmed.startsWith('rgb')) return trimmed;
-
-        const parts = trimmed.split(/[,\s]+/).filter(Boolean);
-        if (parts.length === 1 || parts.length === 2) {
-            const value = parseFloat(parts[0]);
-            if (!Number.isFinite(value)) return null;
-            const scaled = value <= 1 ? Math.round(value * 255) : Math.round(value);
-            const gray = Math.max(0, Math.min(255, scaled));
-            return `rgb(${gray}, ${gray}, ${gray})`;
-        }
-        if (parts.length >= 4) {
-            const nums = parts.slice(0, 4).map(v => parseFloat(v));
-            if (nums.some(v => !Number.isFinite(v))) return null;
-            const max = Math.max(...nums);
-            const toUnit = v => {
-                const scaled = max <= 1 ? v : v / 255;
-                return Math.max(0, Math.min(1, scaled));
-            };
-            const c = toUnit(nums[0]);
-            const m = toUnit(nums[1]);
-            const y = toUnit(nums[2]);
-            const k = toUnit(nums[3]);
-            const r = Math.round(255 * (1 - c) * (1 - k));
-            const g = Math.round(255 * (1 - m) * (1 - k));
-            const b = Math.round(255 * (1 - y) * (1 - k));
-            return `rgb(${r}, ${g}, ${b})`;
-        }
-        if (parts.length < 3) return null;
-        const nums = parts.slice(0, 3).map(v => parseFloat(v));
-        if (nums.some(v => !Number.isFinite(v))) return null;
-        const max = Math.max(...nums);
-        const scale = max <= 1 ? 255 : 1;
-        const toByte = v => Math.max(0, Math.min(255, Math.round(v * scale)));
-        return `rgb(${toByte(nums[0])}, ${toByte(nums[1])}, ${toByte(nums[2])})`;
     }
 };

@@ -38,31 +38,14 @@ function rgbToHex(r, g, b) {
 }
 
 function hexToRgb(hex) {
-    if (typeof hex !== 'string') return null;
-    const value = hex.trim();
-
-    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(value);
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (result) {
-        const r = parseInt(result[1], 16);
-        const g = parseInt(result[2], 16);
-        const b = parseInt(result[3], 16);
-        return [r, g, b];
+        let r = parseInt(result[1], 16);
+        let g = parseInt(result[2], 16);
+        let b = parseInt(result[3], 16);
+        //return r + "," + g + "," + b;
+        return [ r, g, b ];
     }
-
-    result = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(value);
-    if (result) {
-        const r = parseInt(result[1] + result[1], 16);
-        const g = parseInt(result[2] + result[2], 16);
-        const b = parseInt(result[3] + result[3], 16);
-        return [r, g, b];
-    }
-
-    result = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i.exec(value);
-    if (result) {
-        const clamp = v => Math.max(0, Math.min(255, parseInt(v, 10)));
-        return [clamp(result[1]), clamp(result[2]), clamp(result[3])];
-    }
-
     return null;
 }
 
@@ -239,10 +222,6 @@ function elSliderShow(el, className, showDisplayValue) {
         showDisplayValue = 'block';
     }
     const classList = el.classList;
-    if (el.__sliderHideTimer) {
-        clearTimeout(el.__sliderHideTimer);
-        el.__sliderHideTimer = null;
-    }
     el.style.display = showDisplayValue;
     el.offsetWidth;
     classList.add(className);
@@ -251,12 +230,8 @@ function elSliderShow(el, className, showDisplayValue) {
 function elSliderHide(el, className) {
     const classList = el.classList;
     classList.remove(className);
-    if (el.__sliderHideTimer) {
-        clearTimeout(el.__sliderHideTimer);
-    }
-    el.__sliderHideTimer = setTimeout(() => {
+    setTimeout(() => {
         el.style.display = 'none';
-        el.__sliderHideTimer = null;
     }, 300);
 }
 
@@ -324,18 +299,15 @@ function getUrlParam(name) {
 }
 
 function downloadLoad(percent){
-    let _percent = 314 * (percent / 100)+ ', ' + 314;
-    const elSvg = document.querySelector('._loadingv2');
-    if (!elSvg) return;
-    const elProgress = elSvg.querySelector("circle.progress");
-    const elProgressText = elSvg.querySelector('.progress-text');
-    if (elProgress) {
+    let _percent = 314 * (percent / 100)+ ', ' + 314,
+    elSvg = document.querySelector('._loadingv2'),
+    elProgress = elSvg.querySelector(".progress"),
+    elProgressText = elSvg.querySelector('.progress-text');
+    if(elProgress){
         elProgress.style.strokeDasharray = _percent;
-    }
-    if(percent > 100){
-        percent = 100
-    }
-    if (elProgressText) {
+        if(percent > 100){
+            percent = 100
+        }
         elProgressText.textContent = parseInt(percent) + '%';
     }
 }

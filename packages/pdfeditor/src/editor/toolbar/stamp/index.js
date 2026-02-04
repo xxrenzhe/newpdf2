@@ -67,16 +67,11 @@ class Stamp extends ToolbarItemBase {
         this.dropdown.setAttribute('id','dropdown_stamp')
         this.dropdown.innerHTML = require('./actions.html')();
         var toolStamp = document.querySelector(".tool_stamp");
-        if (!toolStamp) {
-            return;
-        }
         toolStamp.appendChild(this.dropdown);
         const pdfMainWrapper = document.querySelector(".pdf-wrapper");
-        if (pdfMainWrapper) {
-            pdfMainWrapper.addEventListener('click',()=>{
-                this.dropdown.style.display = 'none';
-            })
-        }
+        pdfMainWrapper.addEventListener('click',()=>{
+            this.dropdown.style.display = 'none';
+        })
         
         const elBody = this.dialog.elDialogBody;
         const elDropDowm =  this.dropdown;
@@ -433,12 +428,8 @@ class Stamp extends ToolbarItemBase {
         const page = this.editor.pdfDocument.getPage(readerPage.pageNum);
         
         const rect = readerPage.elWrapper.getBoundingClientRect();
-        let y = parseInt(this.floatElement?.style.top || '', 10) - rect.top;
-        let x = parseInt(this.floatElement?.style.left || '', 10) - rect.left;
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-            y = e.data.evt.clientY - rect.top;
-            x = e.data.evt.clientX - rect.left;
-        }
+        let y = parseInt(this.floatElement.style.top) - rect.top;
+        let x = parseInt(this.floatElement.style.left) - rect.left;
         page.elements.add('image', {
             image: this.image,
             imageType: this.imageType,
@@ -464,7 +455,6 @@ class Stamp extends ToolbarItemBase {
         this.floatElement = element;
         this.floatElement.style.position = 'fixed';
         this.floatElement.style.zIndex = 1;
-        this.floatElement.style.pointerEvents = 'none';
         document.body.appendChild(this.floatElement);
 
         this.evtMousemove = e => {

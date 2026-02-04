@@ -29,27 +29,14 @@ class RectStroke extends ToolbarItemBase {
         const temp = document.createElement('div');
         temp.innerHTML = require('./actions.phtml')();
 
-        // Color selection with active state (pdf.net style)
+
         const elColors = temp.querySelector('.__act_colors');
-        const colorItems = elColors.querySelectorAll('.color-item');
-
-        const updateActiveColor = (color) => {
-            colorItems.forEach(item => {
-                const itemColor = item.getAttribute('data-color');
-                if (itemColor && itemColor.toLowerCase() === color.toLowerCase()) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        };
-        updateActiveColor(this.attrs.borderColor);
-
-        colorItems.forEach(elColor => {
+        elColors.querySelectorAll('.color-item').forEach(elColor => {
             elColor.addEventListener('click', e => {
                 let borderColor = elColor.getAttribute('data-color');
-                this.updateAttrs({ borderColor }, objElement);
-                updateActiveColor(borderColor);
+                this.updateAttrs({
+                    borderColor
+                }, objElement);
             });
         });
 
@@ -81,35 +68,66 @@ class RectStroke extends ToolbarItemBase {
         });
         colorPickr.on('change', color => {
             let borderColor = color.toHEXA().toString().toLocaleLowerCase();
-            this.updateAttrs({ borderColor }, objElement);
-            updateActiveColor(borderColor);
+            this.updateAttrs({
+                borderColor
+            }, objElement);
         });
 
-        // Stroke thickness buttons (pdf.net style)
-        const elStrokeOptions = temp.querySelector('.__act_stroke_options');
-        if (elStrokeOptions) {
-            const strokeBtns = elStrokeOptions.querySelectorAll('.__act_stroke_btn');
 
-            const updateActiveStroke = (lineWidth) => {
-                strokeBtns.forEach(btn => {
-                    const stroke = parseInt(btn.getAttribute('data-stroke'));
-                    if (stroke === parseInt(lineWidth)) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
-            };
-            updateActiveStroke(this.attrs.borderWidth);
+        // const elBGOpacityText = temp.querySelector('.__act_bg_opacity_text');
+        // elBGOpacityText.textContent = (this.attrs.opacity * 100) + '%';
+        // const elBGOpacity = temp.querySelector('.__act_bg_opacity');
+        // elBGOpacity.value = this.attrs.opacity * 10;
 
-            strokeBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const borderWidth = parseInt(btn.getAttribute('data-stroke'));
-                    this.updateAttrs({ borderWidth }, objElement);
-                    updateActiveStroke(borderWidth);
-                });
-            });
-        }
+        // const opacityChange = () => {
+        //     elBGOpacityText.textContent = (elBGOpacity.value * 10) + '%';
+        //     let opacity = elBGOpacity.value / 10;
+        //     this.updateAttrs({
+        //         opacity
+        //     }, objElement);
+        // };
+        // elBGOpacity.addEventListener('input', opacityChange);
+
+        // const elBGOpacityReduce = temp.querySelector('.__act_range_reduce');
+        // elBGOpacityReduce.addEventListener('click', () => {
+        //     elBGOpacity.stepDown();
+        //     opacityChange();
+        // });
+
+        // const elBGOpacityPlus = temp.querySelector('.__act_range_plus');
+        // elBGOpacityPlus.addEventListener('click', () => {
+        //     elBGOpacity.stepUp();
+        //     opacityChange();
+        // });
+
+
+        const elDrawStrokeText = temp.querySelector('.__act_draw_text');
+        elDrawStrokeText.textContent = this.attrs.borderWidth + 'px';
+
+        const elDrawStroke = temp.querySelector('.__act_draw');
+        elDrawStroke.value = this.attrs.borderWidth;
+
+
+        const drawStrokeChange = () => {
+            elDrawStrokeText.textContent = elDrawStroke.value + 'px';
+            let borderWidth = parseInt(elDrawStroke.value);
+            this.updateAttrs({
+                borderWidth
+            }, objElement);
+        };
+        elDrawStroke.addEventListener('input', drawStrokeChange);
+
+        const elDrawStrokeReduce = temp.querySelector('.__act_draw_range_reduce');
+        elDrawStrokeReduce.addEventListener('click', () => {
+            elDrawStroke.stepDown();
+            drawStrokeChange();
+        });
+
+        const elDrawStrokePlus = temp.querySelector('.__act_draw_range_plus');
+        elDrawStrokePlus.addEventListener('click', () => {
+            elDrawStroke.stepUp();
+            drawStrokeChange();
+        });
 
         let elActions = [];
         for (let elChild of temp.children) {

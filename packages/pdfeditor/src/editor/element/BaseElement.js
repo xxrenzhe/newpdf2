@@ -184,11 +184,6 @@ class BaseElement {
         this.attrs.height = this.actualRect.height * this.scale;
     }
 
-    getPageContentElement() {
-        const readerPage = this.page?.readerPage;
-        return readerPage?.content || readerPage?.elWrapper || null;
-    }
-
     //抛开缩放后的实际大小
     setActualRect() {
         this.actualRect = {
@@ -218,21 +213,13 @@ class BaseElement {
 
         this.updateAttrSize();
 
-        const pageContent = this.getPageContentElement();
-        if (this.dragElement.options.draggable && pageContent) {
-            this.dragElement.plugins.draggable.inElement = pageContent;
+        if (this.dragElement.options.draggable) {
+            this.dragElement.plugins.draggable.inElement = this.page.readerPage.content;
         }
-        if (this.dragElement.options.resizable && pageContent) {
-            this.dragElement.plugins.resizable.inElement = pageContent;
+        if (this.dragElement.options.resizable) {
+            this.dragElement.plugins.resizable.inElement = this.page.readerPage.content;
         }
         return rect;
-    }
-
-    applyAttrs(attrs) {
-        this.attrs = Object.assign({}, attrs);
-        this.setStyle(this.attrs);
-        this.el.classList.toggle('__pdf_el_hidden', Boolean(this.attrs.hidden));
-        this.zoom(this.scale);
     }
 
     edit(attrs) {
@@ -244,7 +231,6 @@ class BaseElement {
         });
         this.attrs = Object.assign(this.attrs, attrs);
         this.setStyle(this.attrs);
-        this.el.classList.toggle('__pdf_el_hidden', Boolean(this.attrs.hidden));
         this.zoom(this.scale);
         PDFEvent.dispatch(Events.ELEMENT_UPDATE_AFTER, Object.assign({}, {
             page: this.page,
@@ -271,9 +257,7 @@ class BaseElement {
 
     getY() {
         const height = this.page.height;
-        const pageContent = this.getPageContentElement();
-        if (!pageContent) return 0;
-        let rect = pageContent.getBoundingClientRect();
+        let rect = this.page.readerPage.content.getBoundingClientRect();
         let scale = height / rect.height;
         let y = !this.el.style.top ? 0 : parseFloat(this.el.style.top);
         return y * scale + (this.options.drawOffset.y / this.pageScale);
@@ -281,9 +265,7 @@ class BaseElement {
 
     getX() {
         const width = this.page.width;
-        const pageContent = this.getPageContentElement();
-        if (!pageContent) return 0;
-        let rect = pageContent.getBoundingClientRect();
+        let rect = this.page.readerPage.content.getBoundingClientRect();
         let scale = width / rect.width;
         let x = !this.el.style.left ? 0 : parseFloat(this.el.style.left);
         return x * scale + (this.options.drawOffset.x / this.pageScale);
@@ -297,10 +279,7 @@ class BaseElement {
         this.el.classList.add('active');
         this.el.setAttribute('data-type', this.dataType);
 
-        const elCanvas = this.getPageContentElement();
-        if (!elCanvas) {
-            return;
-        }
+        const elCanvas = this.page.readerPage.content;
         if (this.options.pos.x === null) {
             this.options.pos.x = (elCanvas.offsetWidth / 2.2) + 'px';
         }
@@ -452,7 +431,6 @@ class BaseElement {
         // this.page.readerPage.elWrapper.appendChild(this.el);
         this.page.readerPage.elElementLayer.appendChild(this.el);
 
-        this.el.classList.toggle('__pdf_el_hidden', Boolean(this.attrs.hidden));
         this.setActualRect();
 
         PDFEvent.dispatch(Events.ELEMENT_RENDERD, {

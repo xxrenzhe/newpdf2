@@ -3,14 +3,12 @@ import DrawRect from '../../../components/draw/rect';
 import Pickr from '@simonwep/pickr';
 import { CSSActive } from '../../../misc';
 import { COLOR_ITEMS } from '../../../defines';
-import { Font } from '../../../font';
 
 class TextBox extends Rect {
     init() {
         this.name = 'textbox';
-        const defaultFont = Font.getDefaultFont();
         let attrs = {
-            background: null,
+            background: '#fff000',
             opacity: 0.6,
             rotate: undefined,
             borderWidth: undefined,
@@ -24,9 +22,8 @@ class TextBox extends Rect {
             underline: false,
             bold: false,
             italic: false,
-            fontFamily: defaultFont.fontFamily,
-            fontFile: defaultFont.fontFile,
-            showName: defaultFont.showName
+            fontFamily: 'Helvetica',
+            fontFile: 'NotoSansCJKsc-Regular.otf'
         };
         if (TextBox.attrs) {
             attrs = Object.assign(attrs, TextBox.attrs);
@@ -37,7 +34,7 @@ class TextBox extends Rect {
         this.minHeight = 13;
         this.actions = TextBox.actions;
 
-        this.defBGColor = attrs.background || '#fff000';
+        this.defBGColor = attrs.background;
         this.defTextColor = attrs.color;
     }
 
@@ -46,14 +43,7 @@ class TextBox extends Rect {
         temp.innerHTML = require('./actions.phtml')();
 
         const elFontDropdown = temp.querySelector('.font-dropdown');
-        const defaultFont = Font.getDefaultFont();
-        const uiFonts = Font.getUiFontList();
-        const fallbackFont = uiFonts.find(font => font.fontFamily === this.attrs.fontFamily) || uiFonts[0] || defaultFont;
-        this.attrs.fontFamily = fallbackFont.fontFamily;
-        this.attrs.fontFile = fallbackFont.fontFile;
-        this.attrs.showName = fallbackFont.showName || defaultFont.showName;
-
-        uiFonts.forEach((font) => {
+        fontList.forEach((font, i) => {
             let elOption = document.createElement('div');
             elOption.classList.add('font-item');
             elOption.textContent = font.showName;
@@ -71,6 +61,10 @@ class TextBox extends Rect {
                 elFontDropdown.classList.remove('show');
             });
             elFontDropdown.appendChild(elOption);
+            if (i == 0) {
+                this.attrs.fontFamily = font.fontFamily;
+                this.attrs.fontFile = font.fontFile;
+            }
         });
 
         const btnFontList = temp.querySelector('.fontlist');
@@ -303,7 +297,7 @@ class TextBox extends Rect {
             applyColor(instance.getColor());
         });
 
-        textColorPickr.on('swatchselect', objColor => {
+        bgColorPickr.on('swatchselect', objColor => {
             applyColor(objColor);
         });
 
@@ -351,15 +345,12 @@ class TextBox extends Rect {
             background: this.attrs.background,
             opacity: this.attrs.opacity,
             onFinished: rect => {
-                let width = rect.width;
-                let height = rect.height;
-                if (width < this.minWidth && height < this.minHeight) {
-                    width = Math.max(180, this.minWidth);
-                    height = Math.max(48, this.minHeight);
+                if (rect.width < this.minWidth && rect.height < this.minHeight) {
+                    return;
                 }
                 const objElement = page.elements.add('textbox', Object.assign({
-                    width,
-                    height
+                    width: rect.width,
+                    height: rect.height
                 }, this.attrs), {
                     pos: {
                         x: rect.x,

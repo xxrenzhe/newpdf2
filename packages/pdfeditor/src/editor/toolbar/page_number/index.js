@@ -1,6 +1,5 @@
 import { ToolbarItemBase } from '../ToolbarItemBase';
 import Dialog from '../../../components/dialog';
-import { Font } from '../../../font';
 import { Locale } from '../../../locale';
 
 
@@ -18,11 +17,8 @@ class PageNumber extends ToolbarItemBase {
         this.headerText = 1;
         this.footerText = 1;
         this.textSize = 12;
-        const defaultFont = Font.getDefaultFont();
-        const uiFonts = Font.getUiFontList();
-        const fallbackFont = uiFonts.find(font => font.fontFamily === defaultFont.fontFamily) || uiFonts[0] || defaultFont;
-        this.fontFamily = fallbackFont.fontFamily;
-        this.fontFile = fallbackFont.fontFile;
+        this.fontFamily = fontList[0].fontFamily;
+        this.fontFile = fontList[0].fontFile;
         this.position = 1;
 
 
@@ -39,7 +35,7 @@ class PageNumber extends ToolbarItemBase {
 
 
         const elFontList = elBody.querySelector('.font_family');
-        uiFonts.forEach(font => {
+        fontList.forEach(font => {
             let elOption = document.createElement('option');
             elOption.text = font.showName;
             elOption.fontFamily = font.fontFamily;

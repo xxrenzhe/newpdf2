@@ -15,7 +15,7 @@ body,
 html {
     font-size: var(--font-size);
     color: var(--text-color);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    font-family: "Open Sans","sans-serif",Helvetica;
 }
 
 body {
@@ -63,33 +63,6 @@ img {
     position: relative;
 }
 
-.font-compliance-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 6px 14px;
-    background: #fff3cd;
-    color: #7a4b00;
-    border-bottom: 1px solid #f1d69b;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-.font-compliance-text {
-    flex: 1;
-}
-
-.font-compliance-close {
-    background: transparent;
-    border: 1px solid #d6b26e;
-    color: #7a4b00;
-    border-radius: 4px;
-    font-size: 12px;
-    padding: 2px 6px;
-    cursor: pointer;
-}
-
 .pdf-header .logo {
     padding-right: 60px;
 }
@@ -97,71 +70,6 @@ img {
 .pdf-header .logo img {
     width: 128px;
     height: 20px;
-}
-
-html.embed .pdf-header {
-    display: none;
-    height: 0;
-    padding: 0;
-    border: 0;
-}
-
-html.embed .pdf-header .logo {
-    display: none;
-}
-
-html.embed .pdf-header .tab-item {
-    padding-left: 18px;
-    padding-right: 18px;
-}
-
-html.embed .btn-download {
-    display: none !important;
-}
-
-html.embed body {
-    background-color: #f5f6fa;
-}
-
-html.embed .pdf-toolbar {
-    background: #ffffff;
-}
-
-html.embed .pdf-el-actions-wrapper {
-    /* Prevent the actions bar slide-in animation from moving under the toolbar
-       where it can be clipped and become unclickable in embedded mode. */
-    transform: translateY(0);
-    transition: none;
-}
-
-html.embed .pdf-el-actions-wrapper.show {
-    z-index: 20;
-}
-
-html.embed .pdf-main-wrapper {
-    padding-bottom: 84px;
-}
-
-html.embed .pdf-footer {
-    position: fixed;
-    left: 50%;
-    bottom: 20px;
-    transform: translateX(-50%);
-    height: auto;
-    padding: 6px 10px;
-    border: 1px solid rgba(17, 24, 39, 0.10);
-    border-radius: 10px;
-    background: #ffffff;
-    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.12);
-}
-
-html.embed .pdf-footer-center {
-    display: none;
-}
-
-html.embed .pdf-footer-left,
-html.embed .pdf-footer-right {
-    gap: 2px;
 }
 
 .pdf-header .tabs {
@@ -191,7 +99,7 @@ html.embed .pdf-footer-right {
     position: absolute;
     left: -7px;
     bottom: -4px;
-    background: url(../assets/img/tableleft.png) no-repeat;
+    background: url(/assets/img/tableleft.png) no-repeat;
     background-size: contain;
 }
 .pdf-header .tab-item.active::after {
@@ -201,7 +109,7 @@ html.embed .pdf-footer-right {
     position: absolute;
     right: -7px; 
     bottom: -4px;
-    background: url(../assets/img/tableright.png) no-repeat;
+    background: url(/assets/img/tableright.png) no-repeat;
     background-size: contain;
 }
 
@@ -562,40 +470,10 @@ html.embed .pdf-footer-right {
     width: 100%;
     height: 150px;
     box-shadow: var(--pdf-preview-box-shadow);
-    position: relative;
-    overflow: hidden;
 }
 
 .pdf-thumbs-wrapper .active .__pdf_page_preview_wrapper {
     outline: var(--pdf-thumbs-preview-wrapper-border);
-}
-
-.pdf-thumbs-wrapper .elementLayer,
-.pdf-thumbs-wrapper .drawLayer,
-.pdf-thumbs-wrapper .textLayer,
-.pdf-thumbs-wrapper .annotationLayer {
-    display: none;
-}
-
-.pdf-thumbs-wrapper .__pdf_thumb_overlay {
-    position: absolute;
-    left: 0;
-    top: 0;
-    transform-origin: top left;
-    pointer-events: none;
-}
-
-.pdf-thumbs-wrapper .__pdf_thumb_overlay .elementLayer,
-.pdf-thumbs-wrapper .__pdf_thumb_overlay .drawLayer,
-.pdf-thumbs-wrapper .__pdf_thumb_overlay .textLayer,
-.pdf-thumbs-wrapper .__pdf_thumb_overlay .annotationLayer {
-    display: block;
-}
-
-.pdf-thumbs-wrapper .__pdf_thumb_overlay .__pdf_el_actions_wrapper,
-.pdf-thumbs-wrapper .__pdf_thumb_overlay .resizable-handle,
-.pdf-thumbs-wrapper .__pdf_thumb_overlay .__resizable-border {
-    display: none !important;
 }
 
 .pdf-thumbs-wrapper .insert_page_box {
@@ -649,7 +527,7 @@ html.embed .pdf-footer-right {
 }
 
 .pdf-main-box .insert_page_box {
-    display: none;
+    display: flex;
     justify-content: center;
     margin-top: 20px;
     margin-bottom: 10px;
@@ -680,16 +558,6 @@ html.embed .pdf-footer-right {
     width: 25px;
     position: absolute;
     left: -29px;
-    display: none;
-}
-.pdf-main-box.__cursor_delete_pages .remove_page {
-    display: block;
-}
-
-/* Delete Pages mode should focus on page order only (no editing overlays). */
-.pdf-main-box.__cursor_delete_pages .elementLayer,
-.pdf-main-box.__cursor_delete_pages .drawLayer {
-    display: none;
 }
 
 .btn-download {

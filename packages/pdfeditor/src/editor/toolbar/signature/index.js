@@ -1,7 +1,6 @@
 import { ToolbarItemBase } from '../ToolbarItemBase';
 import Dialog from '../../../components/dialog';
 import Pickr from '@simonwep/pickr';
-import { Font } from '../../../font';
 import { Locale } from '../../../locale';
 import { trimSpace } from '../../../misc';
 import DrawLine from '../../../components/draw/line';
@@ -36,8 +35,7 @@ class Signature extends ToolbarItemBase {
         this.text = DEF_TEXT;
         this.textFontSize = 40;
         this.textColor = '#000000';
-        const defaultFont = Font.getDefaultFont();
-        this.textFontFamily = defaultFont.fontFamily;
+        this.textFontFamily = 'Allura';
         this.mode = 'text';
         this.zIndex = 1;
 
@@ -58,12 +56,6 @@ class Signature extends ToolbarItemBase {
         let elSignImg = elBody.querySelector('.sign_img');
         let elSignDraw = elBody.querySelector('.sign_draw');
         let elSelectFonts = elBody.querySelector('#' + selectFontList);
-        if (defaultFont?.fontFamily) {
-            const hasOption = Array.from(elSelectFonts.options).some(option => option.value === defaultFont.fontFamily);
-            if (hasOption) {
-                elSelectFonts.value = defaultFont.fontFamily;
-            }
-        }
         elSelectFonts.addEventListener('change', () => {
             elSignEnter.style.fontFamily = elSelectFonts.value;
             this.textFontFamily = elSelectFonts.value;
@@ -325,7 +317,6 @@ class Signature extends ToolbarItemBase {
         this.floatElement = element;
         this.floatElement.style.position = 'fixed';
         this.floatElement.style.zIndex = 1;
-        this.floatElement.style.pointerEvents = 'none';
         document.body.appendChild(this.floatElement);
 
         this.evtMousemove = e => {

@@ -33,35 +33,27 @@ class Base {
 
         this.disabled = false;
         this.drawing = false;
-        this.sawPointerEvent = false;
         this.initEventTypes();
         this.initEvents();
     }
 
     initEvents() {
-        const isValidDownTarget = target => {
-            if (!target) return false;
-            if (target === this.container) return true;
-            return Boolean(target.classList && target.classList.contains('__draw_canvas'));
-        };
-
-        const onDown = e => {
-            if (this.disabled) return;
-            if (this.drawing) return;
-            if (!isValidDownTarget(e.target)) return;
+        // this.drawing = false;
+        this.container.addEventListener(this.eventTypes.down, e => {
+            if (this.disabled || (e.target != this.container && !e.target.classList.contains('__draw_canvas'))) return;
             //不放在getPoe方法中是为了避免每次调用都去计算offset
             this.offset = this.getOffset(this.container);
             this.drawing = true;
             this.firstPos = this.getPos(e);
             this.onDown(e);
-        };
+        });
 
-        const onMove = e => {
+        this.container.addEventListener(this.eventTypes.move, e => {
             if (!this.drawing || this.disabled) return;
             this.onMove(e);
-        };
+        });
 
-        const onUp = e => {
+        this.container.addEventListener(this.eventTypes.up, e => {
             if (!this.drawing || this.disabled) return;
             this.drawing = false;
             this.flushRect(e);
@@ -70,36 +62,6 @@ class Base {
                 res = [];
             }
             this.options.onFinished(...res);
-        };
-
-        // Prefer Pointer Events when available, but also listen to Mouse Events
-        // as a fallback for environments where synthetic input does not emit pointer events.
-        if (window.PointerEvent) {
-            this.container.addEventListener('pointerdown', e => {
-                this.sawPointerEvent = true;
-                onDown(e);
-            });
-            this.container.addEventListener('pointermove', e => {
-                this.sawPointerEvent = true;
-                onMove(e);
-            });
-            this.container.addEventListener('pointerup', e => {
-                this.sawPointerEvent = true;
-                onUp(e);
-            });
-        }
-
-        this.container.addEventListener('mousedown', e => {
-            if (this.sawPointerEvent) return;
-            onDown(e);
-        });
-        this.container.addEventListener('mousemove', e => {
-            if (this.sawPointerEvent) return;
-            onMove(e);
-        });
-        this.container.addEventListener('mouseup', e => {
-            if (this.sawPointerEvent) return;
-            onUp(e);
         });
     }
 

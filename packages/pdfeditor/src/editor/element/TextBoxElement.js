@@ -1,11 +1,9 @@
 import { hexToRgb } from '../../misc';
-import { Font } from '../../font';
 import { TextElement } from './TextElement';
 
 class TextBoxElement extends TextElement {
     init() {
         this.dataType = 'textbox';
-        const defaultFont = Font.getDefaultFont();
         let attrs = {
             width: 50,
             height: 50,
@@ -24,23 +22,10 @@ class TextBoxElement extends TextElement {
             underline: false,
             bold: false,
             italic: false,
-            fontFamily: defaultFont.fontFamily,
-            fontFile: defaultFont.fontFile,
-            showName: defaultFont.showName,
-            textMode: 'paragraph'
+            fontFamily: null,
+            fontFile: 'NotoSansCJKsc-Regular.otf'
         };
         this.attrs = Object.assign(attrs, this.attrs);
-        const safeFont = Font.resolveSafeFont({
-            fontFamily: this.attrs.fontFamily,
-            fontFile: this.attrs.fontFile,
-            fontName: this.attrs.fontName,
-            text: this.attrs.text
-        });
-        this.attrs.fontFamily = safeFont.fontFamily;
-        this.attrs.fontFile = safeFont.fontFile;
-        if (!this.attrs.showName) {
-            this.attrs.showName = safeFont.showName;
-        }
         this.options.draggableOptions.isCancelDefaultEvent = false;
         this.options.draggableOptions.disabled = false;
         if (!this.attrs.lineHeight) {
@@ -68,8 +53,8 @@ class TextBoxElement extends TextElement {
         }
         this.elText.style.color = this.attrs.color;
         this.elText.style.fontSize = this.attrs.size + 'px';
-        this.elText.style.fontWeight = this.attrs.bold ? 'bold' : 'normal';
-        this.elText.style.fontStyle = this.attrs.italic ? 'italic' : 'normal';
+        this.elText.style.fontWeight = this.attrs.bold ? 'bold' : '';
+        this.elText.style.fontStyle = this.attrs.italic ? 'italic' : '';
         this.elText.style.fontFamily = this.attrs.fontFamily;
         this.elText.style.lineHeight = this.attrs.lineHeight + 'px';
         this.elText.style.opacity = this.attrs.textOpacity;
@@ -130,38 +115,15 @@ class TextBoxElement extends TextElement {
         let x = this.getX();
         let y = this.page.height - (this.getY() + fontSize - 2);
         let lineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : (fontSize - 2)) + lineTop;
-        const preferredFontFile = this.attrs.fontFile;
-        const angleRad = this.attrs.rotate ? (this.attrs.rotate * Math.PI) / 180 : 0;
-        const cos = Math.cos(angleRad);
-        const sin = Math.sin(angleRad);
-
-        const lineRuns = lines.map(line => Font.splitTextByFont(line, preferredFontFile));
-        const lineRunsWithFonts = [];
-        const lineWidths = [];
-        let missingFont = false;
-        for (const runs of lineRuns) {
-            let width = 0;
-            const resolvedRuns = [];
-            for (const run of runs) {
-                const font = await this.pdfDocument.getFont(this.page.id, run.text, run.fontFile);
-                if (!font) {
-                    missingFont = true;
-                } else {
-                    width += font.widthOfTextAtSize(run.text, fontSize);
-                }
-                resolvedRuns.push({ ...run, font });
-            }
-            lineRunsWithFonts.push(resolvedRuns);
-            lineWidths.push(width);
-        }
 
         let options = {
             x: x,
             y: y,
             size: fontSize,
             color: this.editor.PDFLib.componentsToColor(hexToRgb(this.attrs.color).map(v => (v / 255))),
-            opacity: this.attrs.textOpacity,
+            opacity: this.attrs.opacity,
             lineHeight: lineHeight,
+            font: await this.pdfDocument.getFont(this.page.id, this.attrs.text, this.attrs.fontFile),
             rotate: this.attrs.rotate ? this.degrees(this.attrs.rotate) : undefined
         };
 
@@ -188,33 +150,8 @@ class TextBoxElement extends TextElement {
             this.page.pageProxy.drawRectangle(_options);
         }
 
-        const forceRasterize = Boolean(this.attrs.rasterizeOnExport);
-        if (missingFont || forceRasterize) {
-            await this._insertTextAsImage({ includeBackground: false, opacity: this.attrs.textOpacity });
-            return;
-        }
-
-        for (let i = 0; i < lineRunsWithFonts.length; i++) {
-            const runs = lineRunsWithFonts[i];
-            const lineX = x + sin * lineHeight * i;
-            const lineY = y - cos * lineHeight * i;
-            let cursorX = lineX;
-            let cursorY = lineY;
-
-            for (const run of runs) {
-                const font = run.font;
-                if (!font) continue;
-                this.page.pageProxy.drawText(run.text, {
-                    ...options,
-                    x: cursorX,
-                    y: cursorY,
-                    font
-                });
-                const advance = font.widthOfTextAtSize(run.text, fontSize);
-                cursorX += cos * advance;
-                cursorY += sin * advance;
-            }
-        }
+        options.opacity = this.attrs.textOpacity;
+        this.page.pageProxy.drawText(this.attrs.text, options);
         
         if (this.attrs.lineStyle) {
             let lineY = 0;
@@ -226,7 +163,7 @@ class TextBoxElement extends TextElement {
                 }
                 this.page.pageProxy.drawLine({
                     start: { x: x, y: lineY },
-                    end: { x: x + (lineWidths[i] || 0), y: lineY },
+                    end: { x: x + options.font.widthOfTextAtSize(lines[i], fontSize), y: lineY },
                     thickness: thickness,
                     // color: options.color,
                     color: this.editor.PDFLib.componentsToColor(hexToRgb('#ff0000').map(v => (v / 255))),
@@ -244,8 +181,8 @@ class TextBoxElement extends TextElement {
         const elTemp = document.createElement('span');
         elTemp.style.opacity = 0;
         elTemp.style.fontSize = this.attrs.size * this.scale + 'px';
-        elTemp.style.fontWeight = this.attrs.bold ? 'bold' : 'normal';
-        elTemp.style.fontStyle = this.attrs.italic ? 'italic' : 'normal';
+        elTemp.style.fontWeight = this.attrs.bold ? 'bold' : '';
+        elTemp.style.fontStyle = this.attrs.italic ? 'italic' : '';
         elTemp.style.fontFamily = this.attrs.fontFamily;
         elTemp.textContent = this.attrs.text[0];
         document.body.appendChild(elTemp);

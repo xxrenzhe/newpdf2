@@ -8,7 +8,6 @@ export class PDFPage {
     pageNum = 1;
     elements = null;
     #id = null;
-    _idFallback = false;
     newPagesize = false;
 
     constructor(pdfDocument, pageNum) {
@@ -23,14 +22,7 @@ export class PDFPage {
         if (!this.#id) {
             //AssemblePDF使用了压缩流，ref已经改变了
             // this.#id = this.pageProxy.ref ? this.pageProxy.ref.objectNumber + '_' + this.pageProxy.ref.generationNumber : createId('page');
-            const readerPage = this.reader?.pdfDocument?.getPage?.(this.pageNum);
-            const readerId = readerPage?.id;
-            if (readerId) {
-                this.#id = readerId;
-            } else if (!this.#id) {
-                this.#id = createId('page');
-                this._idFallback = true;
-            }
+            this.#id = this.reader.pdfDocument.getPage(this.pageNum).id;
         }
         return this.#id;
     }
@@ -48,7 +40,7 @@ export class PDFPage {
     }
 
     get readerPage() {
-        return this.reader?.pdfDocument?.getPage?.(this.pageNum) || null;
+        return this.reader.pdfDocument.getPage(this.pageNum);
     }
 
     get pageProxy() {
@@ -101,7 +93,6 @@ export class PDFPage {
             this.newPagesize = [width, height];
         }
         
-        newReaderPage.newPageSize = this.newPagesize;
         newReaderPage.elWrapper.style.width = prevWrapper.style.width;
         newReaderPage.elWrapper.style.height = prevWrapper.style.height;
         newReaderPage.elDrawLayer.style.width = prevWrapper.style.width;
@@ -129,22 +120,8 @@ export class PDFPage {
         elThumbs.querySelector('.__pdf_page_preview_wrapper').setAttribute('style', '');
         elThumbs.querySelector('.drawLayer').setAttribute('style', '');
 
-        if (!this.reader.thumbsBox && typeof this.reader.ensureThumbs === 'function') {
-            this.reader.ensureThumbs();
-        }
-        const thumbsBox = this.reader.thumbsBox;
         let targetElementThumb = prevPage.readerPage.elThumbs;
-        if (!targetElementThumb && thumbsBox) {
-            targetElementThumb = thumbsBox.querySelector('.__pdf_page_preview[data-page="'+ prevPage.pageNum +'"]');
-        }
-        if (targetElementThumb?.parentNode) {
-            targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb.nextElementSibling);
-        } else if (thumbsBox) {
-            thumbsBox.appendChild(newReaderPage.elThumbs);
-        }
-        if (thumbsBox) {
-            this.reader.thumbsObserver?.observe(newReaderPage.elThumbs);
-        }
+        targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb.nextElementSibling);
     }
 
     addToFirst(oriFirstPage, newReaderPage) {
@@ -163,7 +140,6 @@ export class PDFPage {
             this.newPagesize = [width, height];
         }
 
-        newReaderPage.newPageSize = this.newPagesize;
         newReaderPage.elWrapper.style.width = prevWrapper.style.width;
         newReaderPage.elWrapper.style.height = prevWrapper.style.height;
         newReaderPage.elDrawLayer.style.width = prevWrapper.style.width;
@@ -190,22 +166,8 @@ export class PDFPage {
         elThumbs.querySelector('.__pdf_page_preview_wrapper').setAttribute('style', '');
         elThumbs.querySelector('.drawLayer').setAttribute('style', '');
 
-        if (!this.reader.thumbsBox && typeof this.reader.ensureThumbs === 'function') {
-            this.reader.ensureThumbs();
-        }
-        const thumbsBox = this.reader.thumbsBox;
         let targetElementThumb = oriFirstPage.readerPage.elThumbs;
-        if (!targetElementThumb && thumbsBox) {
-            targetElementThumb = thumbsBox.querySelector('.__pdf_page_preview[data-page="'+ oriFirstPage.pageNum +'"]');
-        }
-        if (targetElementThumb?.parentNode) {
-            targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb);
-        } else if (thumbsBox) {
-            thumbsBox.prepend(newReaderPage.elThumbs);
-        }
-        if (thumbsBox) {
-            this.reader.thumbsObserver?.observe(newReaderPage.elThumbs);
-        }
+        targetElementThumb.parentNode.insertBefore(newReaderPage.elThumbs, targetElementThumb);
     }
 
     insert() {

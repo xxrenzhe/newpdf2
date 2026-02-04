@@ -48,8 +48,8 @@ const TOOLS = [
     'textArt',
     'stamp'
 ];
-// Offline font assets base (same-origin). `Font.fetchFont()` loads from this base.
-Font.fontUrl = ASSETS_URL;
+// Font.fontUrl = 'https://localhost:3000/api/font/load';
+Font.fontUrl = 'https://genfont.qwerpdf.com/';
 // let fileUrl = 'http://localhost/files/150kb.pdf';
 // let fileUrl = 'http://localhost/files/TEST/d/EMRPUB_2012_EN_1362.pdf';
 // let fileUrl = 'http://localhost/files/E0300IUC22_Invoice.pdf';

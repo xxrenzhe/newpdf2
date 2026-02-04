@@ -4,9 +4,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const NODE_ENV = process.env.NODE_ENV || 'production';
-// NOTE: This build is consumed by the Next.js app via /public/pdfeditor/**.
-// Default BASE_URL should match the public mount path.
-const BASE_URL = process.env.BASE_URL || '/pdfeditor/';
+const BASE_URL = process.env.BASE_URL || '/';
 const BASE_PATH = path.resolve(__dirname, 'src');
 const ASSETS_URL = BASE_URL + 'assets/';
 const LANG_CODE = 'en';
@@ -48,12 +46,7 @@ let plugins = [
             {
                 from: path.resolve(__dirname, 'src/assets'),
                 to: 'assets',
-                noErrorOnMissing: true,
-                globOptions: {
-                    ignore: [
-                        '**/temp.otf'
-                    ]
-                }
+                noErrorOnMissing: true
             }
         ]
     }),
@@ -61,12 +54,35 @@ let plugins = [
         $L: [ path.resolve(__dirname, 'src/locale.js'), 'Locale']
     })
 ];
-let externals = {};
+let externals = {
+    pdfjsLib: [ 'http://localhost/pdf/pdfeditor/src/assets/js/pdfjs/pdf.min.js', 'pdfjsLib' ],
+    // 'opentype.js': [ 'http://localhost/pdf/pdfeditor/src/assets/js/opentype/opentype.min.js', 'opentype' ],
+    // '@simonwep/pickr': [ 'http://localhost/pdf/pdfeditor/src/assets/js/pickr/pickr.min.js', 'Pickr' ]
+    // 'opentype': 'opentype.js',
+    // 'Pickr': '@simonwep/pickr'
+};
+
+if (NODE_ENV == 'production') {
+    // entry = {
+    //     pdfeditor: './src/index.js'
+    // }
+    // output = {
+    //     filename: '[name].js',
+    //     library: {
+    //         name: 'PDFEditor',
+    //         type: 'umd'
+    //     }
+    // };
+    externals = {
+        pdfjsLib: [ BASE_URL + 'assets/js/pdfjs/pdf.min.js', 'pdfjsLib' ],
+        // 'opentype': 'opentype.js',
+        // 'Pickr': '@simonwep/pickr'
+        // 'opentype.js': [ BASE_URL + 'js/opentype/opentype.min.js', 'opentype' ],
+        // '@simonwep/pickr': [ BASE_URL + 'js/pickr/pickr.min.js', 'Pickr' ]
+    };
+}
 
 const configs = {
-    // Ensure all relative paths resolve from this package directory,
-    // even when webpack is invoked from the monorepo root.
-    context: __dirname,
     mode: NODE_ENV,
     entry: entry,
     performance: {
@@ -83,8 +99,7 @@ const configs = {
     },
     output: Object.assign(output, {
         publicPath: BASE_URL,
-        // Build output goes to Next.js public folder so it can be served at BASE_URL.
-        path: path.resolve(__dirname, '../../public/pdfeditor'),
+        path: path.resolve(__dirname, 'pdfeditor'),
         clean: true
     }),
     resolve: {

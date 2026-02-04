@@ -12,7 +12,6 @@ export const Events = {
     ERROR: 'error',
     PASSWORD_ERROR: 'password_error',
     READER_INIT: 'reader_init',
-    LOAD_PROGRESS: 'load_progress',
     SET_SCALE: 'set_scale',
     PAGE_ZOOM: 'page_zoom',
     PAGE_ACTIVE: 'page_active',
@@ -52,13 +51,10 @@ export const Events = {
     //工具栏属性点击时
     TOOLBAR_ITEM_OPTION_CLICK: 'toolbar_item_option_click',
 
-    FONT_WARNING: 'font_warning',
-
     SAVE_BEFORE: 'save_before',
     SAVE: 'save',
     SAVE_AFTER: 'save_after',
-    DOWNLOAD: 'download',
-    DOWNLOAD_AFTER: 'download_after'
+    DOWNLOAD: 'download'
 };
 
 const _ONCE = '_#once#_';

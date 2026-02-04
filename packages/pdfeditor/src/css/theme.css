@@ -4,20 +4,6 @@
     --font-size: 14px;
     --input-bg-color: #FEFEFE;
     --input-border: 1px solid #d6d6d6;
-    --focus-ring-color: rgba(90, 88, 242, 0.6);
-    --focus-ring-offset: 2px;
-
-    /* Brand tokens (match app UI palette) */
-    --brand-purple: #5b4bb7;
-    --brand-purple-dark: #4a3a99;
-    --brand-orange: #f28c28;
-    --brand-orange-dark: #de7a1c;
-    --brand-ink: #2c1e4a;
-    --brand-muted: #6a5f84;
-    --brand-line: #efe2d2;
-    --brand-cream: #fff7ee;
-    --brand-lilac: #f2ecff;
-    --brand-peach: #fff1df;
 
     --scroll-width: 8px;
     --scroll-height: 8px;
@@ -33,71 +19,36 @@
     --input-range-thumb-bg-color: #ffffff;
     --input-range-thumb-border: 1px solid #cdcdcd;
 
-    --border: 1px solid #e5e7eb;
-    --hover-bg-color: rgba(45, 133, 222, 0.12);
-    --hover-border-bg-color: rgba(45, 133, 222, 0.22);
+    --border: 1px solid #E0E8F2;
+    --hover-bg-color: rgba(224, 232, 241, 0.9);
+    --hover-border-bg-color: #d1ddeb;
     --hover-ms: 300ms;
-    --border-radius: 6px;
+    --border-radius: 3px;
     /* Common end */
 
-    /* === pdf.net 风格变量 === */
-    /* 品牌色系 */
-    --brand-primary: #5A58F2;
-    --brand-primary-light: #ECEBFE;
-    --brand-primary-dark: #3B38ED;
-
-    /* 工具栏 */
-    --toolbar-height: 64px;
-    --toolbar-bg: #FFFFFF;
-
-    /* 工具按钮 */
-    --tool-btn-min-width: 52px;
-    --tool-btn-height: 52px;
-    --tool-btn-icon-size: 22px;
-    --tool-btn-font-size: 11px;
-    --tool-btn-gap: 4px;
-    --tool-btn-radius: 8px;
-    --tool-btn-active-bg: var(--brand-primary);
-    --tool-btn-active-color: #FFFFFF;
-    --tool-btn-hover-bg: var(--brand-primary-light);
-
-    /* 分隔线 */
-    --toolbar-divider-height: 32px;
-    --toolbar-divider-margin: 8px;
-
-    /* 浮动面板 */
-    --panel-bg: #FFFFFF;
-    --panel-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    --panel-radius: 12px;
-
-    /* 颜色选择器 */
-    --color-dot-size: 26px;
-    --color-dot-gap: 6px;
-    /* === pdf.net 风格变量结束 === */
-
-    --pdf-header-bg-color: #2d85de;
+    --pdf-header-bg-color: #446994;
     --pdf-header-text-color: #ffffff;
     --pdf-header-tab-item-active-bg-color: #ffffff;
     --pdf-header-tab-item-active-text-color: #333333;
 
 
-    --history-remove-btn-bg-color: #2d85de;
+    --history-remove-btn-bg-color: #3EB0AC;
     --history-remove-btn-text-color: #ffffff;
     --history-remove-btn-border-radius: 5px;
 
-    --history-page-title-bg-color: #1f2937;
+    --history-page-title-bg-color: #738cac;
     --history-page-title-text-color: #ffffff;
     --history-page-title-border-radius: 5px;
 
 
     --pdf-preview-box-shadow: 0 0 12px 2px rgb(0 0 0 / 12%), 0 2px 4px 0 rgb(0 0 0 / 24%);
     --pdf-thumbs-bg-color: var(--main-background);
-    --pdf-thumbs-preview-wrapper-border: 2px solid rgba(45, 133, 222, 0.6);
+    --pdf-thumbs-preview-wrapper-border: 2px solid #d58987;
 
 
     --pdf-main-bg-color: var(--main-background);
 
-    --selection-color: rgba(45, 133, 222, 0.45);
+    --selection-color: rgba(67, 138, 219, 0.61);
     --selection-opacity: 0.2;
 
     --tool-items-text-size: 12px;
@@ -105,7 +56,7 @@
 
 
     /* 固定的工具栏 */
-    --fixed-actions-bg-color: #f8fbff;
+    --fixed-actions-bg-color: #F2F8FF;
 
     /* 添加元素跟随的工具栏 */
     --element-actions-border-radius: 5px;
@@ -124,7 +75,7 @@
 
     --element-border-width: 1px;
     --element-border-color: #8e8e8e;
-    --element-border-color2: #2d85de;
+    --element-border-color2: #2680eb;
     --element-border-style: dashed;
     --element-border-style2: solid;
     --element-outline-offset: 5px;
@@ -139,6 +90,6 @@
 
 
     /* 弹窗 */
-    --dialog-header-bg-color: #f3f4f6;
+    --dialog-header-bg-color: #E0E8F2;
     /* end */
 }

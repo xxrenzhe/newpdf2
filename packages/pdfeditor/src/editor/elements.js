@@ -79,10 +79,7 @@ export class Elements {
     async insertToPDF() {
         for (let i in this.items) {
             const item = this.items[i];
-            const isTextLike = ['text', 'textbox', 'textCanvans', 'textCanvas'].indexOf(item.dataType) > -1;
-            const isEmptyText = trimSpace(item.attrs?.text || '') == '';
-            // Keep converted text elements even when empty so export can cover/redact the original glyphs.
-            if (isTextLike && isEmptyText && !item.attrs?.coverOriginal) {
+            if (['text', 'textbox', 'textCanvans'].indexOf(item.dataType) > -1 && trimSpace(item.attrs.text) == '') { //内容为空时删除
                 this.remove(this.items[i].id);
                 continue;
             }
@@ -122,32 +119,6 @@ export class Elements {
 
     remove(id) {
         const element = this.get(id);
-        if (!element) return;
-        if (element.el && element.el.parentElement) {
-            const prev = element.el.previousElementSibling;
-            const next = element.el.nextElementSibling;
-            element.__historyAnchor = {
-                prevId: prev ? prev.id : null,
-                nextId: next ? next.id : null
-            };
-        }
-
-        // Converted original PDF text needs a "soft delete" so export can still cover/redact
-        // the original glyphs. Removing the element outright would make the deleted text
-        // reappear in the saved PDF because the source content is unchanged.
-        const isConvertedText = element.dataType === 'text' && element.attrs?.coverOriginal;
-        if (isConvertedText) {
-            if (element.elText) {
-                element.elText.textContent = '';
-            }
-            element.edit({
-                text: '',
-                hidden: true
-            });
-            this.activeId = null;
-            return;
-        }
-
         element.remove();
         delete this.items[id];
         this.activeId = null;

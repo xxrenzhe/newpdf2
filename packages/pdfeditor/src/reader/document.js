@@ -14,9 +14,7 @@ export class PDFDocument {
     }
 
     get pageCount() {
-        const proxyCount = this.documentProxy?.numPages || 0;
-        const knownCount = this.pages.length;
-        return Math.max(proxyCount, knownCount);
+        return this.documentProxy.numPages;
     }
 
     get scale() {
@@ -37,10 +35,6 @@ export class PDFDocument {
             for (let i = start; i <= end; i++) {
                 this.getPage(i).zoom(scale, renderType, force);
             }
-            this.pages.forEach(page => {
-                if (!page || !page.isNewPage) return;
-                page.zoom(scale, renderType, force);
-            });
         }, 1);
     }
 
@@ -63,16 +57,10 @@ export class PDFDocument {
         if (this.pageActive == pageNum) {
             return;
         }
-        if (!this.reader.thumbsBox) {
-            return;
-        }
         if (setActive) {
             this.setPageActive(pageNum);
         }
         const elThumbs = this.reader.thumbsBox.querySelector('.__pdf_page_preview[data-page="'+ pageNum +'"]');
-        if (!elThumbs) {
-            return;
-        }
         const parentClientRect = this.reader.thumbsBox.getBoundingClientRect();
         let parentBottom = parentClientRect.bottom;
         let parentTop = parentClientRect.top;
