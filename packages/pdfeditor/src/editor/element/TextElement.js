@@ -64,6 +64,9 @@ class TextElement extends BaseElement {
                 this.elText.style.textDecoration = 'line-through #ff0000';
                 break;
         }
+        if (this.elText.isConnected) {
+            this.syncSizeToContent();
+        }
     }
 
     // setActualRect() {
@@ -82,6 +85,7 @@ class TextElement extends BaseElement {
         this.setStyle();
         this.elText.addEventListener('input', () => {
             this.attrs.text = this.elText.innerText;
+            this.syncSizeToContent();
         });
 
         this.elText.setAttribute('contenteditable', true);
@@ -127,6 +131,7 @@ class TextElement extends BaseElement {
         setTimeout(() => {
             this.elText.style.cursor = 'auto';
             this.elText.focus();
+            this.syncSizeToContent();
 
             //全选文本
             // let selection = window.getSelection();
@@ -141,6 +146,25 @@ class TextElement extends BaseElement {
             selection.collapseToEnd();
         }, 10);
         return this.elText;
+    }
+
+    syncSizeToContent() {
+        if (!this.el || !this.elText) {
+            return;
+        }
+        const width = Math.ceil(this.elText.scrollWidth || 0);
+        const height = Math.ceil(this.elText.scrollHeight || 0);
+        const minWidth = Math.ceil((this.attrs.size || 0) * 0.5) || 1;
+        const minHeight = Math.ceil(this.attrs.lineHeight || this.attrs.size || 0) || 1;
+        const nextWidth = Math.max(width, minWidth);
+        const nextHeight = Math.max(height, minHeight);
+        if (Number.isFinite(nextWidth) && nextWidth > 0) {
+            this.el.style.width = nextWidth + 'px';
+        }
+        if (Number.isFinite(nextHeight) && nextHeight > 0) {
+            this.el.style.height = nextHeight + 'px';
+        }
+        this.setActualRect();
     }
 
     async insertToPDF() {

@@ -113,9 +113,11 @@ export class PDFPage extends PDFPageBase {
                     textDiv.style.backgroundColor = data.backgroundColor;
                 });
 
+                const wrapperRect = this.elWrapper ? this.elWrapper.getBoundingClientRect() : null;
                 let text = '';
                 let textWidth = 0;
                 let elements = [];
+                let lineBounds = null;
                 let n = 0;
                 let prevTextItem = null;
                 // console.log(this.textContentItems);
@@ -123,8 +125,6 @@ export class PDFPage extends PDFPageBase {
                 for (let i = 0; i < this.textContentItems.length; i++) {
                     let textItem = this.textContentItems[i];
                     text += textItem.str;
-                    textWidth += this.textDivs[i].getBoundingClientRect().width;
-
                     let elDiv = this.textDivs[i];
                     if (this.hideOriginElements.findIndex(data => data.idx == i) === -1) {
                         elDiv.classList.add('text-border');
@@ -156,6 +156,24 @@ export class PDFPage extends PDFPageBase {
                         let objs = this.pageProxy.commonObjs.get(textItem.fontName);
                         elDiv.setAttribute('data-fontname', objs.name);
                     }
+
+                    const rect = elDiv.getBoundingClientRect();
+                    textWidth += rect.width;
+                    if (wrapperRect) {
+                        const left = rect.left - wrapperRect.left;
+                        const top = rect.top - wrapperRect.top;
+                        const right = left + rect.width;
+                        const bottom = top + rect.height;
+                        if (!lineBounds) {
+                            lineBounds = { left, top, right, bottom };
+                        } else {
+                            lineBounds.left = Math.min(lineBounds.left, left);
+                            lineBounds.top = Math.min(lineBounds.top, top);
+                            lineBounds.right = Math.max(lineBounds.right, right);
+                            lineBounds.bottom = Math.max(lineBounds.bottom, bottom);
+                        }
+                    }
+
                     elements.push(elDiv);
                     elDiv.addEventListener('click', () => {
                         this.convertWidget(elDiv);
@@ -164,7 +182,9 @@ export class PDFPage extends PDFPageBase {
                     if ((i+1) == this.textContentItems.length) {
                         this.textParts[n] = {
                             text: text,
-                            elements: elements
+                            elements: elements,
+                            width: textWidth,
+                            bounds: lineBounds
                         };
                         this.#filterDiv(n);
                         break;
@@ -179,12 +199,14 @@ export class PDFPage extends PDFPageBase {
                         this.textParts[n] = {
                             text: trimSpace(text),
                             elements: elements,
-                            width: textWidth
+                            width: textWidth,
+                            bounds: lineBounds
                         };
                         this.#filterDiv(n);
                         text = '';
                         textWidth = 0;
                         elements = [];
+                        lineBounds = null;
                         n++;
                     }
                 }
@@ -373,15 +395,43 @@ export class PDFPage extends PDFPageBase {
             }
         });
         if (firstElement) {
-            firstElement.style.width = (textParts.width * this.outputScale) + 'px';
+            if (textParts.bounds) {
+                const width = Math.max(0, textParts.bounds.right - textParts.bounds.left);
+                const height = Math.max(0, textParts.bounds.bottom - textParts.bounds.top);
+                if (Number.isFinite(textParts.bounds.left)) {
+                    firstElement.style.left = textParts.bounds.left + 'px';
+                }
+                if (Number.isFinite(textParts.bounds.top)) {
+                    firstElement.style.top = textParts.bounds.top + 'px';
+                }
+                if (Number.isFinite(width) && width > 0) {
+                    firstElement.style.width = width + 'px';
+                }
+                if (Number.isFinite(height) && height > 0) {
+                    firstElement.style.height = height + 'px';
+                }
+            } else {
+                firstElement.style.width = (textParts.width * this.outputScale) + 'px';
+            }
         }
     }
 
     #isBreak(textItem, nextIdx) {
         let nextTextItem = this.textContentItems[nextIdx];
+        const y1 = Array.isArray(textItem.transform) ? textItem.transform[5] : null;
+        const y2 = nextTextItem && Array.isArray(nextTextItem.transform) ? nextTextItem.transform[5] : null;
+        if (y1 !== null && y2 !== null) {
+            const height = Math.max(textItem.height || 0, nextTextItem.height || 0);
+            const threshold = Math.max(1, height * 0.6);
+            if (Math.abs(y2 - y1) > threshold) {
+                return true;
+            }
+        }
         if (nextTextItem.height == 0) {
             // return nextTextItem.width >= 2.5;
-            return nextTextItem.width > 8;
+            const height = Math.max(textItem.height || 0, nextTextItem.height || 0);
+            const threshold = Math.max(8, height * 0.6);
+            return nextTextItem.width > threshold;
         } else {
             return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
         }
