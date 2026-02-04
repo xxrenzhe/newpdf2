@@ -5,6 +5,7 @@ import Link from "@/components/AppLink";
 import { downloadBlob } from "@/lib/pdf/client";
 import { savePdfEditorInput, savePdfEditorOutput } from "@/lib/pdfEditorCache";
 import { useLanguage } from "@/components/LanguageProvider";
+import EmbeddedPdfEditor from "@/features/pdf-editor/EmbeddedPdfEditor";
 
 type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
 type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number; loadToken?: number };
@@ -156,7 +157,7 @@ export default function PdfEditorTool({
   toolSwitcher?: React.ReactNode;
   actionsPosition?: "inline" | "top-right";
 }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileObjectUrlRef = useRef<string | null>(null);
   const fileBytesPromiseRef = useRef<Promise<ArrayBuffer> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -195,13 +196,11 @@ export default function PdfEditorTool({
   const compatPollTokenRef = useRef<number | null>(null);
   const pendingEditorLoadIdRef = useRef<number | null>(null);
   const blockedEmbedCountRef = useRef(0);
-  const externalNavAttemptsRef = useRef(0);
-  const iframeSrc = useMemo(() => {
+  const editorKey = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
     if (PDFEDITOR_BUILD_ID) params.set("v", PDFEDITOR_BUILD_ID.slice(0, 12));
-    const qs = params.toString();
-    return qs ? `/pdfeditor/index.html?${qs}#embed` : "/pdfeditor/index.html#embed";
+    return params.toString();
   }, [lang]);
 
   const outName = useMemo(() => file.name.replace(/\.[^.]+$/, "") + "-edited.pdf", [file.name]);
@@ -220,7 +219,6 @@ export default function PdfEditorTool({
     setError("");
     setExternalEmbedWarning("");
     blockedEmbedCountRef.current = 0;
-    externalNavAttemptsRef.current = 0;
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
     editorFallbackUsedRef.current = false;
@@ -238,7 +236,7 @@ export default function PdfEditorTool({
       compatPollTimerRef.current = null;
     }
     compatPollTokenRef.current = null;
-  }, [iframeSrc]);
+  }, [editorKey]);
 
   useEffect(() => {
     setExternalEmbedWarning("");
@@ -246,12 +244,10 @@ export default function PdfEditorTool({
   }, [file]);
 
   const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
-    const win = iframeRef.current?.contentWindow;
-    if (!win) return;
     if (transfer && transfer.length > 0) {
-      win.postMessage(message, "*", transfer);
+      window.postMessage(message, "*", transfer);
     } else {
-      win.postMessage(message, "*");
+      window.postMessage(message, "*");
     }
   }, []);
 
@@ -290,24 +286,17 @@ export default function PdfEditorTool({
   );
 
   const detectEditorBooted = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return false;
-    try {
-      const doc = iframe.contentDocument;
-      return Boolean(doc?.getElementById("pdf-main"));
-    } catch {
-      return false;
-    }
+    const container = editorContainerRef.current;
+    if (!container) return false;
+    return Boolean(container.querySelector("#pdf-main"));
   }, []);
 
   const getEditorSnapshot = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return null;
     try {
-      const win = iframe.contentWindow as (Window & {
+      const win = window as Window & {
         reader?: { pdfDocument?: { pageCount?: number; numPages?: number }; pageCount?: number; loadId?: number };
-      }) | null;
-      const reader = win?.reader;
+      };
+      const reader = win.reader;
       if (!reader) return null;
       const pageCount = reader?.pdfDocument?.pageCount ?? reader?.pdfDocument?.numPages ?? reader?.pageCount;
       const loadId = typeof reader?.loadId === "number" ? reader.loadId : null;
@@ -323,33 +312,21 @@ export default function PdfEditorTool({
       const pendingLoadId = pendingEditorLoadIdRef.current;
       if (pendingLoadId === null || snapshot.loadId === null || snapshot.loadId !== pendingLoadId) return true;
     }
-    const iframe = iframeRef.current;
-    if (!iframe) return false;
-    try {
-      const doc = iframe.contentDocument;
-      if (doc?.querySelector("#pdf-main .__pdf_page_preview, #pdf-main .page, #pdf-main canvas")) return true;
-    } catch {
-      // ignore
-    }
+    const container = editorContainerRef.current;
+    if (!container) return false;
+    if (container.querySelector("#pdf-main .__pdf_page_preview, #pdf-main .page, #pdf-main canvas")) return true;
     return false;
   }, [getEditorSnapshot]);
 
   const injectMobileOverrides = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    try {
-      const doc = iframe.contentDocument;
-      if (!doc) return;
-      doc.documentElement.classList.add("embed");
-      if (!doc.getElementById("pdfeditor-mobile-overrides")) {
-        const link = doc.createElement("link");
-        link.id = "pdfeditor-mobile-overrides";
-        link.rel = "stylesheet";
-        link.href = "/pdfeditor-mobile.css";
-        doc.head?.appendChild(link);
-      }
-    } catch {
-      // Ignore cross-origin access errors.
+    document.documentElement.classList.add("embed");
+    if (!document.getElementById("pdfeditor-mobile-overrides")) {
+      const link = document.createElement("link");
+      link.id = "pdfeditor-mobile-overrides";
+      link.rel = "stylesheet";
+      link.href = "/pdfeditor-mobile.css";
+      link.setAttribute("data-pdfeditor-asset", "embedded");
+      document.head?.appendChild(link);
     }
   }, []);
 
@@ -676,7 +653,7 @@ export default function PdfEditorTool({
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
-      if (evt.source !== iframeRef.current?.contentWindow) return;
+      if (evt.source !== window) return;
       if (!isPdfDownloadMessage(evt.data)) return;
       setBusy(false);
       downloadBlob(evt.data.blob, outName);
@@ -688,7 +665,7 @@ export default function PdfEditorTool({
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
-      if (evt.source !== iframeRef.current?.contentWindow) return;
+      if (evt.source !== window) return;
       if (hasMessageType<PdfEditorReadyMessage["type"]>(evt.data, "pdf-editor-ready")) {
         setIframeReady(true);
         setEditorReady(true);
@@ -861,37 +838,7 @@ export default function PdfEditorTool({
           ? t("statusWaiting", "Waiting…")
           : t("statusLoading", "Loading…");
 
-  const handleIframeLoad = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (iframe) {
-      let sameOrigin = false;
-      try {
-        const href = iframe.contentWindow?.location?.href;
-        if (href) {
-          const parsed = new URL(href);
-          sameOrigin = parsed.origin === window.location.origin;
-        }
-      } catch {
-        sameOrigin = false;
-      }
-      if (!sameOrigin) {
-        externalNavAttemptsRef.current += 1;
-        setIframeReady(false);
-        setEditorReady(false);
-        setEditorBooted(false);
-        setBusy(false);
-        setError(
-          t(
-            "pdfEditorExternalNavigation",
-            "The editor tried to open an external page and was blocked. Retrying…"
-          )
-        );
-        if (externalNavAttemptsRef.current <= 2) {
-          iframe.src = iframeSrc;
-        }
-        return;
-      }
-    }
+  const handleEditorReady = useCallback(() => {
     injectMobileOverrides();
     setIframeReady(true);
     setEditorReady(false);
@@ -902,7 +849,7 @@ export default function PdfEditorTool({
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
     }
-  }, [detectEditorBooted, iframeSrc, injectMobileOverrides, t]);
+  }, [detectEditorBooted, injectMobileOverrides]);
 
   return (
     <div className={shellClassName}>
@@ -999,12 +946,16 @@ export default function PdfEditorTool({
       ) : null}
 
       <div className={viewerClassName}>
-        <iframe
-          ref={iframeRef}
-          title={t("pdfEditorTitle", "PDF Editor")}
-          className="w-full h-full"
-          src={iframeSrc}
-          onLoad={handleIframeLoad}
+        <EmbeddedPdfEditor
+          key={editorKey}
+          containerRef={editorContainerRef}
+          lang={lang}
+          buildId={PDFEDITOR_BUILD_ID ? PDFEDITOR_BUILD_ID.slice(0, 12) : undefined}
+          onReady={handleEditorReady}
+          onError={(message) => {
+            setBusy(false);
+            setError(message);
+          }}
         />
       </div>
     </div>

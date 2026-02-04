@@ -11,7 +11,7 @@
     "eraser": "ممحاة",
     "shapes": "الأشكال",
     "draw": "ألفت",
-    "textbox": "Add Text",
+    "textbox": "مربع الكتابة",
     "auto_zoom": "التكبير التلقائي",
     "actual_size": "الحجم الأصلي",
     "fit_width": "العرض المناسب",
@@ -83,8 +83,9 @@
     "processing": "يعالج",
     "please_wait": "أرجو الإنتظار",
     "sign_input_placeholder": "أدخل اسمك الكامل أو الأحرف الأولى من اسمك",
-    "textart": "فن النص",
-    "seal_stamp": "ختم",
+    "textart":"فن النص",
+
+    "seal_stamp": "ختم" ,
     "seal_preset": "إعداد مسبق",
     "seal_custom": "مخصص",
     "seal_round": "ختم دائري",
@@ -98,6 +99,5 @@
     "seal_font_size": "حجم الخط:",
     "middle_font_size": "حجم الخط الأوسط:",
     "seal_upload": "تحميل",
-    "seal_upload_text": "تحميل الطابع:",
-    "edit_text": "Edit Text"
+    "seal_upload_text": "تحميل الطابع:"
 }

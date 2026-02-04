@@ -4,7 +4,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const NODE_ENV = process.env.NODE_ENV || 'production';
-const BASE_URL = process.env.BASE_URL || '/';
+const BASE_URL = process.env.BASE_URL || '/pdfeditor/';
 const BASE_PATH = path.resolve(__dirname, 'src');
 const ASSETS_URL = BASE_URL + 'assets/';
 const LANG_CODE = 'en';
@@ -46,7 +46,12 @@ let plugins = [
             {
                 from: path.resolve(__dirname, 'src/assets'),
                 to: 'assets',
-                noErrorOnMissing: true
+                noErrorOnMissing: true,
+                globOptions: {
+                    ignore: [
+                        '**/temp.otf'
+                    ]
+                }
             }
         ]
     }),
@@ -83,6 +88,7 @@ if (NODE_ENV == 'production') {
 }
 
 const configs = {
+    context: __dirname,
     mode: NODE_ENV,
     entry: entry,
     performance: {
@@ -99,7 +105,7 @@ const configs = {
     },
     output: Object.assign(output, {
         publicPath: BASE_URL,
-        path: path.resolve(__dirname, 'pdfeditor'),
+        path: path.resolve(__dirname, '../../public/pdfeditor'),
         clean: true
     }),
     resolve: {

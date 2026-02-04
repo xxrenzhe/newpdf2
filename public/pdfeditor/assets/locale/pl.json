@@ -11,7 +11,7 @@
     "eraser": "gumka do mazania",
     "shapes": "Kształty",
     "draw": "Rysować",
-    "textbox": "Add Text",
+    "textbox": "Pole tekstowe",
     "auto_zoom": "Automatyczne powiększanie",
     "actual_size": "Rzeczywisty rozmiar",
     "fit_width": "Dopasuj szerokość",
@@ -83,11 +83,12 @@
     "processing": "Przetwarzanie",
     "please_wait": "Proszę czekać",
     "sign_input_placeholder": "Wpisz swoje imię i nazwisko lub inicjały",
-    "textart": "sztuka tekstowa",
+    "textart":"sztuka tekstowa",
+
     "seal_stamp": "Pieczęć",
-    "seal_preset": "Preset",
+    "seal_preset":"Preset",
     "seal_custom": "Niestandardowy",
-    "seal_round": "Okrągły znaczek",
+    "seal_round":"Okrągły znaczek",
     "seal_ractangular": "Prostokątny stempel",
     "seal_content1": "Zawartość 1:",
     "seal_content2": "Zawartość 2:",
@@ -98,6 +99,5 @@
     "seal_font_size": "Rozmiar czcionki:",
     "middle_font_size": "Średni rozmiar czcionki:",
     "seal_upload": "Prześlij",
-    "seal_upload_text": "Prześlij pieczęć:",
-    "edit_text": "Edit Text"
+    "seal_upload_text": "Prześlij pieczęć:"
 }

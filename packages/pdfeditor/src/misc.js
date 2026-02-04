@@ -292,6 +292,14 @@ function getPosCenterPointRotation(x, y, width, height, deg) {
 }
 
 function getUrlParam(name) {
+    if (typeof window !== 'undefined') {
+        const embedParams = window.__PDFEDITOR_EMBED_PARAMS__;
+        if (embedParams && typeof embedParams === 'object' && Object.prototype.hasOwnProperty.call(embedParams, name)) {
+            const value = embedParams[name];
+            if (typeof value === 'string') return value;
+            if (value !== null && value !== undefined) return String(value);
+        }
+    }
     var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
     var r = window.location.search.substr(1).match(reg);
     if (r != null) return decodeURI(r[2]);//unescape(r[2]);
