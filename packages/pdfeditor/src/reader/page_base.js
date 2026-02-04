@@ -1,5 +1,5 @@
 import { Events, PDFEvent } from '../event';
-import { PDFLinkService } from 'pdfjs-dist/lib/web/pdf_link_service';
+import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { computeScale } from '../misc';
 
 const CAVANS_CLASS = '__pdf_item_render';

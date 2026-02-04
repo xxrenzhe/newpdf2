@@ -1,6 +1,6 @@
 import { Events, PDFEvent } from '../event';
 import { Font } from '../font';
-import { PDFLinkService } from 'pdfjs-dist/lib/web/pdf_link_service';
+import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base';
 import { getPixelColor, trimSpace } from '../misc';
 import { Locale } from '../locale';
