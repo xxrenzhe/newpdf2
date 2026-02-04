@@ -1,5 +1,5 @@
 import { Events, PDFEvent } from '../event';
-import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
+import { PDFLinkService, LinkTarget } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { computeScale } from '../misc';
 
 const CAVANS_CLASS = '__pdf_item_render';
@@ -171,6 +171,11 @@ export class PDFPageBase {
             this.elWrapper.appendChild(this.elAnnotationLayer);
         }
         
+        const linkService = new PDFLinkService();
+        linkService.externalLinkEnabled = false;
+        linkService.externalLinkTarget = LinkTarget.NONE;
+        linkService.externalLinkRel = 'noopener noreferrer';
+
         let params = {
             annotations: this.annotations,
             viewport: viewport.clone({ dontFlip: true }),
@@ -178,7 +183,7 @@ export class PDFPageBase {
             page: this.pageProxy,
             renderForms: true,
             annotationStorage: this.pdfDocument.documentProxy.annotationStorage,
-            linkService: new PDFLinkService()
+            linkService: linkService
         };
         if (!this.annotations) {
             this.pageProxy.getAnnotations().then(annotations => {

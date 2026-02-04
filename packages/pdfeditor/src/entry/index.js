@@ -64,9 +64,15 @@ const normalizeUrl = (url) => {
     }
 };
 
+const isBlockedProtocol = (parsed) => {
+    if (!parsed) return false;
+    return parsed.protocol === 'blob:' || parsed.protocol === 'data:' || parsed.protocol === 'about:';
+};
+
 const isExternalUrl = (url) => {
     const parsed = normalizeUrl(url);
     if (!parsed) return false;
+    if (isBlockedProtocol(parsed)) return true;
     return parsed.origin !== window.location.origin;
 };
 
@@ -98,6 +104,22 @@ const installNavigationGuard = () => {
                 return originalReplace(url);
             };
         }
+
+        const proto = Object.getPrototypeOf(loc);
+        const hrefDescriptor = proto ? Object.getOwnPropertyDescriptor(proto, 'href') : null;
+        if (hrefDescriptor && typeof hrefDescriptor.set === 'function' && typeof hrefDescriptor.get === 'function') {
+            Object.defineProperty(proto, 'href', {
+                configurable: hrefDescriptor.configurable,
+                enumerable: hrefDescriptor.enumerable,
+                get() {
+                    return hrefDescriptor.get.call(this);
+                },
+                set(value) {
+                    if (shouldBlock(value)) return;
+                    return hrefDescriptor.set.call(this, value);
+                }
+            });
+        }
     } catch (err) {
         // ignore
     }
@@ -108,6 +130,28 @@ const installNavigationGuard = () => {
         if (!anchor) return;
         const href = anchor.getAttribute('href') || anchor.href;
         if (shouldBlock(href)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+
+    document.addEventListener('auxclick', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const anchor = target?.closest?.('a');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href') || anchor.href;
+        if (shouldBlock(href)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+
+    document.addEventListener('submit', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const form = target?.closest?.('form');
+        if (!form) return;
+        const action = form.getAttribute('action') || form.action;
+        if (shouldBlock(action)) {
             event.preventDefault();
             event.stopPropagation();
         }

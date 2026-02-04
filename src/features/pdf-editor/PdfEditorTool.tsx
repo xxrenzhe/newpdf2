@@ -27,6 +27,7 @@ const EDITOR_READY_TIMEOUT_MS = 12000;
 const PDF_LOAD_TIMEOUT_MS = 60000;
 const IFRAME_LOAD_TIMEOUT_MS = 15000;
 const PDFEDITOR_BUILD_ID = (process.env.NEXT_PUBLIC_PDFEDITOR_BUILD_ID ?? "").trim();
+const BLOCKED_NAVIGATION_MESSAGE = "Editor navigation was blocked and reloaded.";
 
 function UploadProgressOverlay({
   open,
@@ -962,6 +963,17 @@ export default function PdfEditorTool({
           onReady={handleEditorReady}
           onError={(message) => {
             setBusy(false);
+            if (message === BLOCKED_NAVIGATION_MESSAGE) {
+              if (iframeReady || editorBooted) {
+                setExternalEmbedWarning(
+                  t(
+                    "pdfNavigationBlocked",
+                    "A link in this PDF tried to open a new page. We blocked it to keep you in the editor."
+                  )
+                );
+                return;
+              }
+            }
             setError(message);
           }}
         />

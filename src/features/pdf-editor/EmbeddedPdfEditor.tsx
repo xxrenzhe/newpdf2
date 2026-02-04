@@ -43,11 +43,17 @@ export default function EmbeddedPdfEditor({
         try {
           const href = frame.contentWindow?.location.href ?? "";
           const url = new URL(href, window.location.href);
-          if (url.pathname !== "/pdfeditor/index.html") {
+          const isEditorPath =
+            url.origin === window.location.origin &&
+            (url.pathname === "/pdfeditor" ||
+              url.pathname === "/pdfeditor/" ||
+              url.pathname === "/pdfeditor/index.html");
+          if (!isEditorPath) {
             if (!blockedRef.current) {
               blockedRef.current = true;
               onError?.("Editor navigation was blocked and reloaded.");
             }
+            readyRef.current = false;
             frame.src = src;
             return;
           }
@@ -56,11 +62,13 @@ export default function EmbeddedPdfEditor({
             blockedRef.current = true;
             onError?.("Editor navigation was blocked and reloaded.");
           }
+          readyRef.current = false;
           frame.src = src;
           return;
         }
 
         if (readyRef.current) return;
+        blockedRef.current = false;
         readyRef.current = true;
         onReady?.();
       }}
