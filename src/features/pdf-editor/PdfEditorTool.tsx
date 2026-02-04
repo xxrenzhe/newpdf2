@@ -758,7 +758,7 @@ export default function PdfEditorTool({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onOpenTool, t]);
+  }, [editorBooted, editorReady, onOpenTool, t]);
 
   useEffect(() => {
     if (!pdfLoaded) return;

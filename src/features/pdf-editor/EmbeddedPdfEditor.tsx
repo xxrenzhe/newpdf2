@@ -112,31 +112,43 @@ function createGlobalTracker(): GlobalTracker {
   const intervals: number[] = [];
   const rafs: number[] = [];
 
-  const originalWindowAdd = window.addEventListener;
+  const originalWindowAdd = window.addEventListener.bind(window);
   const originalDocumentAdd = document.addEventListener.bind(document);
   const originalSetTimeout = window.setTimeout.bind(window);
   const originalSetInterval = window.setInterval.bind(window);
-  const originalRequestAnimationFrame = window.requestAnimationFrame?.bind(window);
-  const originalCancelAnimationFrame = window.cancelAnimationFrame?.bind(window);
+  const originalRequestAnimationFrame =
+    typeof window.requestAnimationFrame === "function" ? window.requestAnimationFrame.bind(window) : undefined;
+  const originalCancelAnimationFrame =
+    typeof window.cancelAnimationFrame === "function" ? window.cancelAnimationFrame.bind(window) : undefined;
 
-  window.addEventListener = function (type, listener, options) {
+  const trackedWindowAdd: typeof window.addEventListener = (
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions
+  ) => {
     listeners.push({ target: window, type, listener, options });
     return originalWindowAdd.call(window, type, listener, options);
   };
+  window.addEventListener = trackedWindowAdd;
 
-  document.addEventListener = function (type, listener, options) {
+  const trackedDocumentAdd: typeof document.addEventListener = (
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions
+  ) => {
     listeners.push({ target: document, type, listener, options });
     return originalDocumentAdd(type, listener, options);
   };
+  document.addEventListener = trackedDocumentAdd;
 
-  window.setTimeout = ((handler, timeout, ...args) => {
-    const id = originalSetTimeout(handler, timeout, ...args);
+  window.setTimeout = ((...args: Parameters<typeof window.setTimeout>) => {
+    const id = originalSetTimeout(...args);
     timeouts.push(id);
     return id;
   }) as typeof window.setTimeout;
 
-  window.setInterval = ((handler, timeout, ...args) => {
-    const id = originalSetInterval(handler, timeout, ...args);
+  window.setInterval = ((...args: Parameters<typeof window.setInterval>) => {
+    const id = originalSetInterval(...args);
     intervals.push(id);
     return id;
   }) as typeof window.setInterval;
