@@ -59,33 +59,7 @@ let plugins = [
         $L: [ path.resolve(__dirname, 'src/locale.js'), 'Locale']
     })
 ];
-let externals = {
-    pdfjsLib: [ 'http://localhost/pdf/pdfeditor/src/assets/js/pdfjs/pdf.min.js', 'pdfjsLib' ],
-    // 'opentype.js': [ 'http://localhost/pdf/pdfeditor/src/assets/js/opentype/opentype.min.js', 'opentype' ],
-    // '@simonwep/pickr': [ 'http://localhost/pdf/pdfeditor/src/assets/js/pickr/pickr.min.js', 'Pickr' ]
-    // 'opentype': 'opentype.js',
-    // 'Pickr': '@simonwep/pickr'
-};
-
-if (NODE_ENV == 'production') {
-    // entry = {
-    //     pdfeditor: './src/index.js'
-    // }
-    // output = {
-    //     filename: '[name].js',
-    //     library: {
-    //         name: 'PDFEditor',
-    //         type: 'umd'
-    //     }
-    // };
-    externals = {
-        pdfjsLib: [ BASE_URL + 'assets/js/pdfjs/pdf.min.js', 'pdfjsLib' ],
-        // 'opentype': 'opentype.js',
-        // 'Pickr': '@simonwep/pickr'
-        // 'opentype.js': [ BASE_URL + 'js/opentype/opentype.min.js', 'opentype' ],
-        // '@simonwep/pickr': [ BASE_URL + 'js/pickr/pickr.min.js', 'Pickr' ]
-    };
-}
+let externals = {};
 
 const configs = {
     context: __dirname,

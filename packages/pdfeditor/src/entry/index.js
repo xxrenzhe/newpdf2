@@ -9,15 +9,12 @@ import { PDFReader } from '../../src/reader';
 import { PDFEditor } from '../../src/editor';
 import { Font } from '../../src/font';
 import { Events, PDFEvent } from '../../src/event';
-import * as pdfjsLib from 'pdfjsLib';
+import * as pdfjsLib from 'pdfjs-dist-v2/legacy/build/pdf';
 import { LANG_LIST, VIEW_MODE } from '../../src/defines';
 import Loading from '../components/loading';
 import { getUrlParam,downloadLoad } from '../misc';
 import { Locale } from '../locale';
 let baseUrl = ASSETS_URL + 'js/pdfjs/';
-if (NODE_ENV == 'development') {
-    baseUrl = 'http://localhost/pdf/pdf.js/build/generic/build/';
-}
 pdfjsLib.GlobalWorkerOptions.workerSrc = baseUrl + 'pdf.worker.min.js';
 const cMapUrl = baseUrl + 'cmaps/';
 const standardFontDataUrl = baseUrl + 'standard_fonts/';
@@ -49,6 +46,73 @@ const TOOLS = [
     'textArt',
     'stamp'
 ];
+
+const isEmbedded = () => {
+    try {
+        return window.self !== window.top;
+    } catch (err) {
+        return true;
+    }
+};
+
+const normalizeUrl = (url) => {
+    if (!url) return null;
+    try {
+        return new URL(url, window.location.href);
+    } catch (err) {
+        return null;
+    }
+};
+
+const isExternalUrl = (url) => {
+    const parsed = normalizeUrl(url);
+    if (!parsed) return false;
+    return parsed.origin !== window.location.origin;
+};
+
+const installNavigationGuard = () => {
+    if (!isEmbedded()) return;
+    const shouldBlock = (url) => isExternalUrl(url);
+
+    if (typeof window.open === 'function') {
+        const originalOpen = window.open;
+        window.open = function (url, target, features) {
+            if (shouldBlock(url)) return null;
+            return originalOpen.call(window, url, target, features);
+        };
+    }
+
+    try {
+        const loc = window.location;
+        const originalAssign = loc.assign?.bind(loc);
+        if (originalAssign) {
+            loc.assign = (url) => {
+                if (shouldBlock(url)) return;
+                return originalAssign(url);
+            };
+        }
+        const originalReplace = loc.replace?.bind(loc);
+        if (originalReplace) {
+            loc.replace = (url) => {
+                if (shouldBlock(url)) return;
+                return originalReplace(url);
+            };
+        }
+    } catch (err) {
+        // ignore
+    }
+
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const anchor = target?.closest?.('a');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href') || anchor.href;
+        if (shouldBlock(href)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+};
 // Font.fontUrl = 'https://localhost:3000/api/font/load';
 Font.fontUrl = 'https://genfont.qwerpdf.com/';
 // let fileUrl = 'http://localhost/files/150kb.pdf';
@@ -130,6 +194,7 @@ const reader = new PDFReader({
     expandThumbs: false
 }, pdfjsLib);
 
+installNavigationGuard();
 reader.init();
 
 const editor = new PDFEditor({

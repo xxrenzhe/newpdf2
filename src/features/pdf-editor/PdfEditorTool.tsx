@@ -157,7 +157,7 @@ export default function PdfEditorTool({
   toolSwitcher?: React.ReactNode;
   actionsPosition?: "inline" | "top-right";
 }) {
-  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const editorFrameRef = useRef<HTMLIFrameElement>(null);
   const fileObjectUrlRef = useRef<string | null>(null);
   const fileBytesPromiseRef = useRef<Promise<ArrayBuffer> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -244,10 +244,12 @@ export default function PdfEditorTool({
   }, [file]);
 
   const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
+    const target = editorFrameRef.current?.contentWindow;
+    if (!target) return;
     if (transfer && transfer.length > 0) {
-      window.postMessage(message, "*", transfer);
+      target.postMessage(message, "*", transfer);
     } else {
-      window.postMessage(message, "*");
+      target.postMessage(message, "*");
     }
   }, []);
 
@@ -285,18 +287,26 @@ export default function PdfEditorTool({
     [postToEditor]
   );
 
-  const detectEditorBooted = useCallback(() => {
-    const container = editorContainerRef.current;
-    if (!container) return false;
-    return Boolean(container.querySelector("#pdf-main"));
+  const getEditorDocument = useCallback(() => {
+    try {
+      return editorFrameRef.current?.contentDocument ?? null;
+    } catch {
+      return null;
+    }
   }, []);
+
+  const detectEditorBooted = useCallback(() => {
+    const doc = getEditorDocument();
+    if (!doc) return false;
+    return Boolean(doc.querySelector("#pdf-main"));
+  }, [getEditorDocument]);
 
   const getEditorSnapshot = useCallback(() => {
     try {
-      const win = window as Window & {
+      const win = editorFrameRef.current?.contentWindow as (Window & {
         reader?: { pdfDocument?: { pageCount?: number; numPages?: number }; pageCount?: number; loadId?: number };
-      };
-      const reader = win.reader;
+      }) | null;
+      const reader = win?.reader;
       if (!reader) return null;
       const pageCount = reader?.pdfDocument?.pageCount ?? reader?.pdfDocument?.numPages ?? reader?.pageCount;
       const loadId = typeof reader?.loadId === "number" ? reader.loadId : null;
@@ -312,17 +322,18 @@ export default function PdfEditorTool({
       const pendingLoadId = pendingEditorLoadIdRef.current;
       if (pendingLoadId === null || snapshot.loadId === null || snapshot.loadId !== pendingLoadId) return true;
     }
-    const container = editorContainerRef.current;
-    if (!container) return false;
-    if (container.querySelector("#pdf-main .__pdf_page_preview, #pdf-main .page, #pdf-main canvas")) return true;
+    const doc = getEditorDocument();
+    if (!doc) return false;
+    if (doc.querySelector("#pdf-main .__pdf_page_preview, #pdf-main .page, #pdf-main canvas")) return true;
     return false;
-  }, [getEditorSnapshot]);
+  }, [getEditorDocument, getEditorSnapshot]);
 
   const injectMobileOverrides = useCallback(() => {
-    const root = editorContainerRef.current;
-    if (!root) return;
-    root.classList.add("embed");
-  }, []);
+    const doc = getEditorDocument();
+    if (!doc) return;
+    doc.documentElement.classList.add("embed");
+    doc.body?.classList.add("embed");
+  }, [getEditorDocument]);
 
   useEffect(() => {
     const useTransfer = file.size <= TRANSFER_PDF_BYTES_LIMIT;
@@ -647,7 +658,8 @@ export default function PdfEditorTool({
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
-      if (evt.source !== window) return;
+      const source = editorFrameRef.current?.contentWindow;
+      if (!source || evt.source !== source) return;
       if (!isPdfDownloadMessage(evt.data)) return;
       setBusy(false);
       downloadBlob(evt.data.blob, outName);
@@ -659,7 +671,8 @@ export default function PdfEditorTool({
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
-      if (evt.source !== window) return;
+      const source = editorFrameRef.current?.contentWindow;
+      if (!source || evt.source !== source) return;
       if (hasMessageType<PdfEditorReadyMessage["type"]>(evt.data, "pdf-editor-ready")) {
         setIframeReady(true);
         setEditorReady(true);
@@ -836,6 +849,7 @@ export default function PdfEditorTool({
     injectMobileOverrides();
     setIframeReady(true);
     setEditorReady(false);
+    setError("");
     if (detectEditorBooted()) {
       setEditorBooted(true);
     }
@@ -942,7 +956,7 @@ export default function PdfEditorTool({
       <div className={viewerClassName}>
         <EmbeddedPdfEditor
           key={editorKey}
-          containerRef={editorContainerRef}
+          iframeRef={editorFrameRef}
           lang={lang}
           buildId={PDFEDITOR_BUILD_ID ? PDFEDITOR_BUILD_ID.slice(0, 12) : undefined}
           onReady={handleEditorReady}
