@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectPdfHeader, makePdfBytes, readDownloadBytes } from "./utils";
+import { expectPdfHeader, makePdfBytes, readDownloadBytes, editorSaveDownloadButton } from "./utils";
 
 test("guest edit-pdf download completes and output reopens without font extraction errors", async ({ page }) => {
   test.setTimeout(240_000);
@@ -18,7 +18,7 @@ test("guest edit-pdf download completes and output reopens without font extracti
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frame = page.frameLocator('iframe[title="PDF Editor"]');
@@ -55,7 +55,7 @@ test("guest edit-pdf download completes and output reopens without font extracti
     buffer: Buffer.from(outBytes),
   });
 
-  await expect(page.getByRole("button", { name: "Save & Download" })).toBeEnabled({ timeout: 120_000 });
+  await expect(editorSaveDownloadButton(page)).toBeEnabled({ timeout: 120_000 });
   await page.waitForTimeout(1500);
 
   expect(fontExtractErrors).toEqual([]);

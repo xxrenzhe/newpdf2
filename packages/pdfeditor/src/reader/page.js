@@ -1,10 +1,16 @@
-import { Events, PDFEvent } from '../event';
-import { Font } from '../font';
+import { Events, PDFEvent } from '../event.js';
+import { Font } from '../font.js';
 import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
-import { PDFPageBase } from './page_base';
-import { getPixelColor, trimSpace } from '../misc';
-import { Locale } from '../locale';
-import { collectTextIndicesInRect } from './text_selection';
+import { PDFPageBase } from './page_base.js';
+import { getPixelColor, trimSpace } from '../misc.js';
+import { Locale } from '../locale.js';
+import { collectTextIndicesInRect } from './text_selection.js';
+import { getTextRotation, shouldBreakTextRun } from './text_layout.js';
+import {
+    collectClearTextItems,
+    markClearTextIndices,
+    restoreClearTextIndices
+} from './clear_text_state.js';
 
 const textContentOptions = {
     disableCombineTextItems: false,
@@ -17,6 +23,8 @@ const REMOVE_BTN = 'remove_page';
 export class PDFPage extends PDFPageBase {
     textParts = [];
     clearTexts = [];
+    clearTextIndexCounts = Object.create(null);
+    textItemRects = [];
     //要隐藏的元素
     hideOriginElements = [];
     isConvertWidget = [];
@@ -107,24 +115,34 @@ export class PDFPage extends PDFPageBase {
             taskTextLayer.promise.then(() => {
                 this.hideOriginElements.forEach(data => {
                     let textDiv = this.textDivs[data.idx];
-                    textDiv.style.userSelect = data.userSelect;
-                    textDiv.classList.remove(data.className);
-                    textDiv.style.padding = data.padding;
-                    textDiv.style.backgroundColor = data.backgroundColor;
+                    if (!textDiv) {
+                        return;
+                    }
+                    textDiv.style.userSelect = data.hiddenUserSelect ?? data.userSelect ?? '';
+                    textDiv.style.padding = data.hiddenPadding ?? data.padding ?? '';
+                    textDiv.style.backgroundColor = data.hiddenBackgroundColor ?? data.backgroundColor ?? '';
+                    if (data.className) {
+                        textDiv.classList.add(data.className);
+                    }
+                    textDiv.classList.remove('text-border');
                 });
 
                 const wrapperRect = this.elWrapper ? this.elWrapper.getBoundingClientRect() : null;
+                this.textItemRects = [];
                 let text = '';
                 let textWidth = 0;
                 let elements = [];
                 let lineBounds = null;
+                let lineRotate = null;
                 let n = 0;
-                let prevTextItem = null;
                 // console.log(this.textContentItems);
                 
                 for (let i = 0; i < this.textContentItems.length; i++) {
                     let textItem = this.textContentItems[i];
                     text += textItem.str;
+                    if (lineRotate === null) {
+                        lineRotate = getTextRotation(textItem);
+                    }
                     let elDiv = this.textDivs[i];
                     if (this.hideOriginElements.findIndex(data => data.idx == i) === -1) {
                         elDiv.classList.add('text-border');
@@ -164,6 +182,10 @@ export class PDFPage extends PDFPageBase {
                         const top = rect.top - wrapperRect.top;
                         const right = left + rect.width;
                         const bottom = top + rect.height;
+                        this.textItemRects[i] = {
+                            dataIdx: i,
+                            rect: { left, top, width: rect.width, height: rect.height }
+                        };
                         if (!lineBounds) {
                             lineBounds = { left, top, right, bottom };
                         } else {
@@ -184,29 +206,27 @@ export class PDFPage extends PDFPageBase {
                             text: text,
                             elements: elements,
                             width: textWidth,
-                            bounds: lineBounds
+                            bounds: lineBounds,
+                            rotate: lineRotate
                         };
                         this.#filterDiv(n);
                         break;
                     }
 
-                    if (!prevTextItem && textItem.height > 0) {
-                        prevTextItem = textItem;
-                    }
-
-                    if (textItem.hasEOL || (prevTextItem && this.#isBreak(prevTextItem, i+1))) {
-                        prevTextItem = null;
+                    if (textItem.hasEOL || this.#isBreak(textItem, i+1)) {
                         this.textParts[n] = {
                             text: trimSpace(text),
                             elements: elements,
                             width: textWidth,
-                            bounds: lineBounds
+                            bounds: lineBounds,
+                            rotate: lineRotate
                         };
                         this.#filterDiv(n);
                         text = '';
                         textWidth = 0;
                         elements = [];
                         lineBounds = null;
+                        lineRotate = null;
                         n++;
                     }
                 }
@@ -240,17 +260,124 @@ export class PDFPage extends PDFPageBase {
         return canvas;
     }
 
+    #collectPartTextIndices(textPart) {
+        if (!textPart || !Array.isArray(textPart.elements)) {
+            return [];
+        }
+        const indices = [];
+        for (const element of textPart.elements) {
+            if (!element || typeof element.getAttribute !== 'function') {
+                continue;
+            }
+            const idx = Number.parseInt(element.getAttribute('data-idx'), 10);
+            if (Number.isNaN(idx) || idx < 0) {
+                continue;
+            }
+            if (indices.indexOf(idx) === -1) {
+                indices.push(idx);
+            }
+        }
+        return indices;
+    }
+
+    markClearTextsByIndices(indices) {
+        const accepted = markClearTextIndices({
+            indices,
+            textContentItems: this.textContentItems,
+            clearTextIndexCounts: this.clearTextIndexCounts
+        });
+
+        this.syncClearTextsFromCounts();
+        return accepted;
+    }
+
+    syncClearTextsFromCounts() {
+        this.clearTexts = collectClearTextItems({
+            clearTextIndexCounts: this.clearTextIndexCounts,
+            textContentItems: this.textContentItems,
+            fallbackItems: this.clearTexts
+        });
+        return this.clearTexts;
+    }
+
+    getClearTextItems() {
+        return this.syncClearTextsFromCounts();
+    }
+
+    restoreClearTexts(indices) {
+        const restoredIndices = restoreClearTextIndices({
+            indices,
+            clearTextIndexCounts: this.clearTextIndexCounts
+        });
+
+        if (restoredIndices.length === 0) {
+            return [];
+        }
+
+        this.syncClearTextsFromCounts();
+
+        const restoredSet = new Set(restoredIndices.map((idx) => String(idx)));
+        this.hideOriginElements = this.hideOriginElements.filter((data) => {
+            const idx = Number.parseInt(data?.idx, 10);
+            if (Number.isNaN(idx) || !restoredSet.has(String(idx))) {
+                return true;
+            }
+            const textDiv = this.textDivs?.[idx];
+            if (textDiv) {
+                if (data.className) {
+                    textDiv.classList.remove(data.className);
+                }
+                textDiv.classList.add('text-border');
+                textDiv.style.userSelect = data.originUserSelect ?? '';
+                textDiv.style.padding = data.originPadding ?? '';
+                textDiv.style.backgroundColor = data.originBackgroundColor ?? '';
+            }
+            return false;
+        });
+
+        return restoredIndices;
+    }
+    lockConvertedTextPart(partIdx) {
+        const key = String(partIdx ?? '');
+        if (!key) {
+            return false;
+        }
+        if (this.isConvertWidget.indexOf(key) > -1) {
+            return false;
+        }
+        this.isConvertWidget.push(key);
+        return true;
+    }
+
+    releaseConvertedTextPart(partIdx) {
+        const key = String(partIdx ?? '');
+        if (!key) {
+            return false;
+        }
+        const index = this.isConvertWidget.indexOf(key);
+        if (index === -1) {
+            return false;
+        }
+        this.isConvertWidget.splice(index, 1);
+        return true;
+    }
+
     async convertWidget(elDiv) {
         let idx = elDiv.getAttribute('data-parts');
-        if (this.isConvertWidget.indexOf(idx) > -1) {
+        const originTextPartIdx = String(idx ?? '');
+        if (!originTextPartIdx || this.isConvertWidget.indexOf(originTextPartIdx) > -1) {
             return;
         }
 
         let id = this.pageNum + '_' + idx + '_' + elDiv.getAttribute('data-l');
         const textPart = this.textParts[idx];
+        if (!textPart) {
+            return;
+        }
+        const originTextIndices = this.#collectPartTextIndices(textPart);
         let x = parseFloat(elDiv.style.left);
         let y = parseFloat(elDiv.style.top);
-        let fontName = textPart.elements[0].getAttribute('data-fontname')?.toLocaleLowerCase();;
+        let fontName = textPart.elements[0].getAttribute('data-fontname')?.toLocaleLowerCase();
         let bold = fontName && fontName.indexOf('bold') > -1 ? true : false;
         let italic = fontName && (fontName.indexOf('oblique') > -1 || fontName.indexOf('italic') > -1);
         if (italic) {
@@ -261,22 +388,13 @@ export class PDFPage extends PDFPageBase {
         let color = elDiv.getAttribute('data-fontcolor');
         let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), x * this.outputScale, y * this.outputScale);
         let fontFamily = elDiv.getAttribute('data-loadedname') || 'Helvetica';
-
-        // textPart.elements.forEach(async (element, i) => {
-        //     if (fontSize == 0) {
-        //         fontSize = parseFloat(element.getAttribute('data-fontsize'));
-        //     }
-        //     if (!color && element.getAttribute('data-fontcolor')) {
-        //         color = element.getAttribute('data-fontcolor');
-        //     }
-        // });
+        const rotate = Number.isFinite(textPart.rotate) ? textPart.rotate : null;
 
         PDFEvent.dispatch(Events.CONVERT_TO_ELEMENT, {
             elDiv,
             type: 'text',
             attrs: {
                 id: id,
-                // size: fontSize / this.scale / this.outputScale,
                 size: fontSize / this.scale,
                 color: color,
                 text: textPart.text,
@@ -289,7 +407,10 @@ export class PDFPage extends PDFPageBase {
                 background: null,
                 bold: bold,
                 italic: italic,
-                rotate: null
+                rotate: rotate,
+                originTextIndices,
+                originPageNum: this.pageNum,
+                originTextPartIdx
             },
             options: {
                 pos: {
@@ -298,9 +419,23 @@ export class PDFPage extends PDFPageBase {
             },
             pageNum: this.pageNum
         }, () => {
-            this.isConvertWidget.push(idx);
+            this.lockConvertedTextPart(originTextPartIdx);
             elDiv.style.cursor = 'default';
-            textPart.elements.forEach(async (element, i) => {
+            textPart.elements.forEach((element) => {
+                let textItemIdx = element.getAttribute('data-idx');
+                if (this.hideOriginElements.findIndex(data => String(data.idx) === String(textItemIdx)) === -1) {
+                    this.hideOriginElements.push({
+                        idx: textItemIdx,
+                        className: 'text-hide',
+                        originPadding: element.style.padding,
+                        originBackgroundColor: element.style.backgroundColor,
+                        originUserSelect: element.style.userSelect,
+                        hiddenPadding: '3px 0 3px 0',
+                        hiddenBackgroundColor: bgColor,
+                        hiddenUserSelect: 'none'
+                    });
+                }
+
                 element.classList.remove('text-border');
                 element.classList.add('text-hide');
                 element.style.backgroundColor = bgColor;
@@ -308,82 +443,43 @@ export class PDFPage extends PDFPageBase {
                 element.style.padding = '3px 0 3px 0';
                 element.style.top = (y - 2) + 'px';
                 element.style.left = (x - 2) + 'px';
-    
-                let textItemIdx = element.getAttribute('data-idx');
-                if (this.hideOriginElements.findIndex(data => data.idx == textItemIdx) === -1) {
-                    this.hideOriginElements.push({
-                        idx: textItemIdx,
-                        padding: element.style.padding,
-                        backgroundColor: bgColor,
-                        userSelect: element.style.userSelect
-                    });
-                }
-                this.clearTexts.push(this.textContentItems[parseInt(element.getAttribute('data-idx'))]);
             });
+            this.markClearTextsByIndices(originTextIndices);
         });
         return true;
     }
 
     markClearTextsInRect(rect) {
-        if (!rect || !this.elWrapper || !this.textDivs || !this.textContentItems) {
-            return;
+        if (!rect || !this.elWrapper || !this.textContentItems) {
+            return [];
         }
-        const containerRect = this.elWrapper.getBoundingClientRect();
+        const hasCachedRects = Array.isArray(this.textItemRects) && this.textItemRects.length > 0;
+        const containerRect = hasCachedRects
+            ? { left: 0, top: 0 }
+            : this.elWrapper.getBoundingClientRect();
+        const textDivs = hasCachedRects ? this.textItemRects : this.textDivs;
         const indices = collectTextIndicesInRect({
             rect,
-            textDivs: this.textDivs,
-            containerRect
+            textDivs,
+            containerRect,
+            getRect: hasCachedRects ? (item) => item.rect : undefined
         });
-        if (indices.length === 0) {
-            return;
-        }
-        const partIndices = new Set();
-        for (const idx of indices) {
-            const div = this.textDivs[idx];
-            if (!div || typeof div.getAttribute !== 'function') {
-                continue;
-            }
-            const partIdx = Number.parseInt(div.getAttribute('data-parts'), 10);
-            if (!Number.isNaN(partIdx)) {
-                partIndices.add(partIdx);
-            }
-        }
-        if (partIndices.size === 0) {
-            return;
-        }
-        for (const partIdx of partIndices) {
-            const part = this.textParts[partIdx];
-            if (!part || !part.elements) {
-                continue;
-            }
-            for (const element of part.elements) {
-                if (!element || typeof element.getAttribute !== 'function') {
-                    continue;
-                }
-                const elementIdx = Number.parseInt(element.getAttribute('data-idx'), 10);
-                if (Number.isNaN(elementIdx)) {
-                    continue;
-                }
-                const item = this.textContentItems[elementIdx];
-                if (!item) {
-                    continue;
-                }
-                if (this.clearTexts.indexOf(item) === -1) {
-                    this.clearTexts.push(item);
-                }
-            }
-        }
+        return this.markClearTextsByIndices(indices);
     }
-
     #filterDiv(n) {
         const textParts = this.textParts[n];
         let firstElement = null;
-        textParts.elements.forEach((el, i) => {
+        const rotate = Number.isFinite(textParts?.rotate) ? textParts.rotate : 0;
+        const isRotatedRun = Math.abs(rotate) > 2;
+
+        textParts.elements.forEach((el) => {
             let isEmptyStr = trimSpace(el.textContent) == '';
             if (!firstElement) {
                 if (!isEmptyStr) {
                     firstElement = el;
-                    firstElement.style.transform = 'none';
+                    if (!isRotatedRun) {
+                        firstElement.style.transform = 'none';
+                    }
                     firstElement.style.left = el.style.left;
                     firstElement.style.top = el.style.top;
                 } else {
@@ -418,22 +514,6 @@ export class PDFPage extends PDFPageBase {
 
     #isBreak(textItem, nextIdx) {
         let nextTextItem = this.textContentItems[nextIdx];
-        const y1 = Array.isArray(textItem.transform) ? textItem.transform[5] : null;
-        const y2 = nextTextItem && Array.isArray(nextTextItem.transform) ? nextTextItem.transform[5] : null;
-        if (y1 !== null && y2 !== null) {
-            const height = Math.max(textItem.height || 0, nextTextItem.height || 0);
-            const threshold = Math.max(1, height * 0.6);
-            if (Math.abs(y2 - y1) > threshold) {
-                return true;
-            }
-        }
-        if (nextTextItem.height == 0) {
-            // return nextTextItem.width >= 2.5;
-            const height = Math.max(textItem.height || 0, nextTextItem.height || 0);
-            const threshold = Math.max(8, height * 0.6);
-            return nextTextItem.width > threshold;
-        } else {
-            return nextTextItem.height != textItem.height || nextTextItem.color != textItem.color;
-        }
+        return shouldBreakTextRun(textItem, nextTextItem);
     }
 };

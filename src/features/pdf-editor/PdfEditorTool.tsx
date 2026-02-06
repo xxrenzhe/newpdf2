@@ -2,25 +2,15 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "@/components/AppLink";
-import { downloadBlob } from "@/lib/pdf/client";
-import { savePdfEditorInput, savePdfEditorOutput } from "@/lib/pdfEditorCache";
 import { useLanguage } from "@/components/LanguageProvider";
 import EmbeddedPdfEditor from "@/features/pdf-editor/EmbeddedPdfEditor";
-
-type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
-type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number; loadToken?: number };
-type PdfProgressMessage = { type: "pdf-progress"; loaded: number; total?: number; loadToken?: number };
-type PdfPasswordErrorMessage = { type: "pdf-password-error"; loadToken?: number };
-type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number };
-type PdfExternalEmbedBlockedMessage = {
-  type: "pdf-external-embed-blocked";
-  count?: number;
-  origins?: string[];
-  loadToken?: number;
-};
-type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
-type PdfOpenToolMessage = { type: "open-tool"; tool?: string };
-type PdfEditorReadyMessage = { type: "pdf-editor-ready" };
+import { usePdfEditorMessages } from "@/features/pdf-editor/usePdfEditorMessages";
+import { usePdfEditorLoadLifecycle } from "@/features/pdf-editor/usePdfEditorLoadLifecycle";
+import { usePdfEditorBridge } from "@/features/pdf-editor/usePdfEditorBridge";
+import { usePdfEditorDom } from "@/features/pdf-editor/usePdfEditorDom";
+import { usePdfEditorFileIO } from "@/features/pdf-editor/usePdfEditorFileIO";
+import { usePdfEditorUiState } from "@/features/pdf-editor/usePdfEditorUiState";
+import { usePdfEditorErrorHandler } from "@/features/pdf-editor/usePdfEditorErrorHandler";
 
 const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 const EDITOR_READY_TIMEOUT_MS = 12000;
@@ -28,6 +18,7 @@ const PDF_LOAD_TIMEOUT_MS = 60000;
 const IFRAME_LOAD_TIMEOUT_MS = 15000;
 const PDFEDITOR_BUILD_ID = (process.env.NEXT_PUBLIC_PDFEDITOR_BUILD_ID ?? "").trim();
 const BLOCKED_NAVIGATION_MESSAGE = "Editor navigation was blocked and reloaded.";
+const ENABLE_EDITOR_LEGACY_FALLBACK = process.env.NEXT_PUBLIC_EDITOR_LEGACY_FALLBACK === "true";
 
 function UploadProgressOverlay({
   open,
@@ -116,25 +107,6 @@ function UploadProgressOverlay({
   );
 }
 
-function isPdfDownloadMessage(value: unknown): value is PdfDownloadMessage {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return v.type === "pdf-download" && v.blob instanceof Blob;
-}
-
-function hasMessageType<T extends string>(value: unknown, type: T): value is { type: T } {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return v.type === type;
-}
-
-function matchesLoadToken(value: unknown, expectedToken: number) {
-  if (!value || typeof value !== "object") return true;
-  const v = value as Record<string, unknown>;
-  if (typeof v.loadToken !== "number") return true;
-  return v.loadToken === expectedToken;
-}
-
 export default function PdfEditorTool({
   file,
   onBack,
@@ -159,8 +131,6 @@ export default function PdfEditorTool({
   actionsPosition?: "inline" | "top-right";
 }) {
   const editorFrameRef = useRef<HTMLIFrameElement>(null);
-  const fileObjectUrlRef = useRef<string | null>(null);
-  const fileBytesPromiseRef = useRef<Promise<ArrayBuffer> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeLoadTokenRef = useRef(0);
   const fileInputId = useId();
@@ -193,10 +163,13 @@ export default function PdfEditorTool({
   const editorPingAttemptsRef = useRef(0);
   const editorFallbackTimerRef = useRef<number | null>(null);
   const editorFallbackUsedRef = useRef(false);
-  const compatPollTimerRef = useRef<number | null>(null);
-  const compatPollTokenRef = useRef<number | null>(null);
-  const pendingEditorLoadIdRef = useRef<number | null>(null);
+  const manualCancelTokenRef = useRef<number | null>(null);
   const blockedEmbedCountRef = useRef(0);
+  const { fileObjectUrlRef, fileBytesPromiseRef } = usePdfEditorFileIO({
+    file,
+    pdfLoaded,
+    transferPdfBytesLimit: TRANSFER_PDF_BYTES_LIMIT,
+  });
   const editorKey = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
@@ -222,21 +195,18 @@ export default function PdfEditorTool({
     blockedEmbedCountRef.current = 0;
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
-    editorFallbackUsedRef.current = false;
-    pendingEditorLoadIdRef.current = null;
-    if (editorFallbackTimerRef.current) {
-      window.clearTimeout(editorFallbackTimerRef.current);
-      editorFallbackTimerRef.current = null;
+    manualCancelTokenRef.current = null;
+    if (ENABLE_EDITOR_LEGACY_FALLBACK) {
+      editorFallbackUsedRef.current = false;
+      if (editorFallbackTimerRef.current) {
+        window.clearTimeout(editorFallbackTimerRef.current);
+        editorFallbackTimerRef.current = null;
+      }
     }
     if (editorPingTimerRef.current) {
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
     }
-    if (compatPollTimerRef.current) {
-      window.clearInterval(compatPollTimerRef.current);
-      compatPollTimerRef.current = null;
-    }
-    compatPollTokenRef.current = null;
   }, [editorKey]);
 
   useEffect(() => {
@@ -244,535 +214,90 @@ export default function PdfEditorTool({
     blockedEmbedCountRef.current = 0;
   }, [file]);
 
-  const postToEditor = useCallback((message: unknown, transfer?: Transferable[]) => {
-    const target = editorFrameRef.current?.contentWindow;
-    if (!target) return;
-    if (transfer && transfer.length > 0) {
-      target.postMessage(message, "*", transfer);
-    } else {
-      target.postMessage(message, "*");
-    }
-  }, []);
+  const { postToEditor } = usePdfEditorBridge({
+    editorFrameRef,
+    file,
+    iframeReady,
+    editorReady,
+    setError,
+    setPdfLoaded,
+    setLoadCancelled,
+    setBusy,
+    activeLoadTokenRef,
+    pendingLoadTokenRef,
+    pendingLoadFileRef,
+    manualCancelTokenRef,
+    hasRealProgressRef,
+    appliedToolRef,
+    editorFallbackTimerRef,
+    editorFallbackUsedRef,
+    editorPingTimerRef,
+    editorPingAttemptsRef,
+    fileObjectUrlRef,
+    fileBytesPromiseRef,
+    enableLegacyFallback: ENABLE_EDITOR_LEGACY_FALLBACK,
+    transferPdfBytesLimit: TRANSFER_PDF_BYTES_LIMIT,
+  });
 
-  const sendLoadToEditor = useCallback(
-    async (targetFile: File, token: number) => {
-      const useTransfer = targetFile.size <= TRANSFER_PDF_BYTES_LIMIT;
-      if (useTransfer) {
-        const promise = fileBytesPromiseRef.current ?? targetFile.arrayBuffer();
-        let buffer = await promise.catch(() => null);
-        if (activeLoadTokenRef.current !== token) return;
-        if (!buffer || buffer.byteLength === 0) {
-          buffer = await targetFile.arrayBuffer().catch(() => null);
-        }
-        if (!buffer || buffer.byteLength === 0) {
-          fileBytesPromiseRef.current = null;
-          postToEditor({ type: "load-pdf", blob: targetFile, loadToken: token, fileName: targetFile.name });
-          return;
-        }
-        postToEditor(
-          { type: "load-pdf", data: buffer, blob: targetFile, loadToken: token, fileName: targetFile.name },
-          [buffer]
-        );
-        fileBytesPromiseRef.current = null;
-        return;
-      }
+  const { detectEditorBooted, injectMobileOverrides } = usePdfEditorDom({
+    editorFrameRef,
+  });
 
-      const url = fileObjectUrlRef.current;
-      if (activeLoadTokenRef.current !== token) return;
-      if (url) {
-        postToEditor({ type: "load-pdf", url, blob: targetFile, loadToken: token, fileName: targetFile.name });
-        return;
-      }
-      postToEditor({ type: "load-pdf", blob: targetFile, loadToken: token, fileName: targetFile.name });
-    },
-    [postToEditor]
-  );
 
-  const getEditorDocument = useCallback(() => {
-    try {
-      return editorFrameRef.current?.contentDocument ?? null;
-    } catch {
-      return null;
-    }
-  }, []);
+  const { uploadOverlayOpen, abortActiveLoad, cancelLoading } = usePdfEditorLoadLifecycle({
+    t,
+    iframeReady,
+    editorReady,
+    editorBooted,
+    pdfLoaded,
+    busy,
+    error,
+    uploadTips,
+    activeLoadTokenRef,
+    pendingLoadTokenRef,
+    pendingLoadFileRef,
+    manualCancelTokenRef,
+    hasRealProgressRef,
+    editorFallbackTimerRef,
+    uploadProgressStartTimeoutRef,
+    uploadProgressTimerRef,
+    postToEditor,
+    setBusy,
+    setLoadCancelled,
+    setError,
+    setPdfLoaded,
+    setUploadProgress,
+    setUploadTip,
+    iframeLoadTimeoutMs: IFRAME_LOAD_TIMEOUT_MS,
+    editorReadyTimeoutMs: EDITOR_READY_TIMEOUT_MS,
+    pdfLoadTimeoutMs: PDF_LOAD_TIMEOUT_MS,
+  });
 
-  const detectEditorBooted = useCallback(() => {
-    const doc = getEditorDocument();
-    if (!doc) return false;
-    return Boolean(doc.querySelector("#pdf-main"));
-  }, [getEditorDocument]);
+  usePdfEditorMessages({
+    editorFrameRef,
+    outName,
+    t,
+    activeLoadTokenRef,
+    manualCancelTokenRef,
+    hasRealProgressRef,
+    blockedEmbedCountRef,
+    uploadProgressStartTimeoutRef,
+    uploadProgressTimerRef,
+    editorPingTimerRef,
+    editorReady,
+    editorBooted,
+    onOpenTool,
+    setIframeReady,
+    setEditorReady,
+    setEditorBooted,
+    setPdfLoaded,
+    setBusy,
+    setLoadCancelled,
+    setError,
+    setExternalEmbedWarning,
+    setUploadProgress,
+  });
 
-  const getEditorSnapshot = useCallback(() => {
-    try {
-      const win = editorFrameRef.current?.contentWindow as (Window & {
-        reader?: { pdfDocument?: { pageCount?: number; numPages?: number }; pageCount?: number; loadId?: number };
-      }) | null;
-      const reader = win?.reader;
-      if (!reader) return null;
-      const pageCount = reader?.pdfDocument?.pageCount ?? reader?.pdfDocument?.numPages ?? reader?.pageCount;
-      const loadId = typeof reader?.loadId === "number" ? reader.loadId : null;
-      return { pageCount: typeof pageCount === "number" ? pageCount : null, loadId };
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const detectPdfLoadedFromIframe = useCallback(() => {
-    const snapshot = getEditorSnapshot();
-    if (snapshot?.pageCount && snapshot.pageCount > 0) {
-      const pendingLoadId = pendingEditorLoadIdRef.current;
-      if (pendingLoadId === null || snapshot.loadId === null || snapshot.loadId !== pendingLoadId) return true;
-    }
-    const doc = getEditorDocument();
-    if (!doc) return false;
-    if (doc.querySelector("#pdf-main .__pdf_page_preview, #pdf-main .page, #pdf-main canvas")) return true;
-    return false;
-  }, [getEditorDocument, getEditorSnapshot]);
-
-  const injectMobileOverrides = useCallback(() => {
-    const doc = getEditorDocument();
-    if (!doc) return;
-    doc.documentElement.classList.add("embed");
-    doc.body?.classList.add("embed");
-  }, [getEditorDocument]);
-
-  useEffect(() => {
-    const useTransfer = file.size <= TRANSFER_PDF_BYTES_LIMIT;
-
-    if (useTransfer) {
-      if (fileObjectUrlRef.current) {
-        try {
-          URL.revokeObjectURL(fileObjectUrlRef.current);
-        } catch {
-          // ignore
-        }
-        fileObjectUrlRef.current = null;
-      }
-      fileBytesPromiseRef.current = file.arrayBuffer();
-      return;
-    }
-
-    fileBytesPromiseRef.current = null;
-    const url = URL.createObjectURL(file);
-    if (fileObjectUrlRef.current) {
-      try {
-        URL.revokeObjectURL(fileObjectUrlRef.current);
-      } catch {
-        // ignore
-      }
-    }
-    fileObjectUrlRef.current = url;
-    return () => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch {
-        // ignore
-      }
-      if (fileObjectUrlRef.current === url) {
-        fileObjectUrlRef.current = null;
-      }
-    };
-  }, [file]);
-
-  useEffect(() => {
-    if (!pdfLoaded) return;
-    let cancelled = false;
-    let idleHandle: number | null = null;
-    let usedIdleCallback = false;
-
-    const schedule = () => {
-      const w = window as unknown as {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number;
-        cancelIdleCallback?: (handle: number) => void;
-      };
-      if (typeof w.requestIdleCallback === "function") {
-        usedIdleCallback = true;
-        idleHandle = w.requestIdleCallback(() => {
-          if (cancelled) return;
-          void savePdfEditorInput(file).catch(() => {});
-        }, { timeout: 5000 });
-        return;
-      }
-
-      idleHandle = window.setTimeout(() => {
-        if (cancelled) return;
-        void savePdfEditorInput(file).catch(() => {});
-      }, 500);
-    };
-
-    schedule();
-    return () => {
-      cancelled = true;
-      if (idleHandle === null) return;
-      if (usedIdleCallback) {
-        const w = window as unknown as { cancelIdleCallback?: (handle: number) => void };
-        w.cancelIdleCallback?.(idleHandle);
-      } else {
-        window.clearTimeout(idleHandle);
-      }
-    };
-  }, [file, pdfLoaded]);
-
-  useEffect(() => {
-    if (!iframeReady) return;
-    const token = activeLoadTokenRef.current + 1;
-    activeLoadTokenRef.current = token;
-    pendingLoadTokenRef.current = token;
-    pendingLoadFileRef.current = file;
-    pendingEditorLoadIdRef.current = getEditorSnapshot()?.loadId ?? null;
-    setError("");
-    setPdfLoaded(false);
-    setLoadCancelled(false);
-    setBusy(true);
-    appliedToolRef.current = null;
-    hasRealProgressRef.current = false;
-    editorFallbackUsedRef.current = false;
-    if (editorFallbackTimerRef.current) {
-      window.clearTimeout(editorFallbackTimerRef.current);
-      editorFallbackTimerRef.current = null;
-    }
-
-    if (!editorReady) {
-      postToEditor({ type: "ping" });
-      return;
-    }
-
-    pendingLoadTokenRef.current = null;
-    pendingLoadFileRef.current = null;
-    void sendLoadToEditor(file, token);
-  }, [editorReady, file, iframeReady, postToEditor, sendLoadToEditor, getEditorSnapshot]);
-
-  useEffect(() => {
-    if (!iframeReady) return;
-    postToEditor({ type: "set-file-name", fileName: file.name });
-  }, [file.name, iframeReady, postToEditor]);
-
-  useEffect(() => {
-    if (!iframeReady || editorReady) return;
-    if (editorPingTimerRef.current) {
-      window.clearInterval(editorPingTimerRef.current);
-      editorPingTimerRef.current = null;
-    }
-    editorPingAttemptsRef.current = 0;
-    const ping = () => {
-      editorPingAttemptsRef.current += 1;
-      postToEditor({ type: "ping" });
-      if (editorPingAttemptsRef.current >= 10 && editorPingTimerRef.current) {
-        window.clearInterval(editorPingTimerRef.current);
-        editorPingTimerRef.current = null;
-      }
-    };
-    ping();
-    editorPingTimerRef.current = window.setInterval(ping, 1000);
-    return () => {
-      if (editorPingTimerRef.current) {
-        window.clearInterval(editorPingTimerRef.current);
-        editorPingTimerRef.current = null;
-      }
-    };
-  }, [editorReady, iframeReady, postToEditor]);
-
-  useEffect(() => {
-    if (!iframeReady || editorReady) {
-      if (editorFallbackTimerRef.current) {
-        window.clearTimeout(editorFallbackTimerRef.current);
-        editorFallbackTimerRef.current = null;
-      }
-      return;
-    }
-    if (editorFallbackUsedRef.current || editorFallbackTimerRef.current) return;
-    if (!pendingLoadTokenRef.current || !pendingLoadFileRef.current) return;
-    editorFallbackTimerRef.current = window.setTimeout(() => {
-      editorFallbackTimerRef.current = null;
-      if (editorReady) return;
-      const token = pendingLoadTokenRef.current;
-      const pendingFile = pendingLoadFileRef.current;
-      if (!token || !pendingFile) return;
-      editorFallbackUsedRef.current = true;
-      pendingLoadTokenRef.current = null;
-      pendingLoadFileRef.current = null;
-      void sendLoadToEditor(pendingFile, token);
-    }, 1500);
-    return () => {
-      if (editorFallbackTimerRef.current) {
-        window.clearTimeout(editorFallbackTimerRef.current);
-        editorFallbackTimerRef.current = null;
-      }
-    };
-  }, [editorReady, iframeReady, sendLoadToEditor]);
-
-  useEffect(() => {
-    if (!iframeReady || !editorReady) return;
-    const token = pendingLoadTokenRef.current;
-    const pendingFile = pendingLoadFileRef.current;
-    if (!token || !pendingFile) return;
-    pendingLoadTokenRef.current = null;
-    pendingLoadFileRef.current = null;
-    void sendLoadToEditor(pendingFile, token);
-  }, [editorReady, iframeReady, sendLoadToEditor]);
-
-  const uploadOverlayOpen = !error && !pdfLoaded && (busy || !iframeReady);
-
-  useEffect(() => {
-    if (iframeReady || error || !uploadOverlayOpen) return;
-    const timeoutId = window.setTimeout(() => {
-      setBusy(false);
-      setLoadCancelled(false);
-      setError(
-        t("pdfEditorIframeLoadFailed", "The editor failed to load. Please refresh and try again.")
-      );
-    }, IFRAME_LOAD_TIMEOUT_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [error, iframeReady, t, uploadOverlayOpen]);
-
-  useEffect(() => {
-    if (!iframeReady || editorReady || pdfLoaded || error || !busy) return;
-    const timeoutId = window.setTimeout(() => {
-      if (editorBooted) return;
-      setBusy(false);
-      setLoadCancelled(false);
-      setError(
-        t("pdfEditorLoadFailed", "The editor failed to load. Please refresh and try again.")
-      );
-    }, EDITOR_READY_TIMEOUT_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [busy, editorBooted, editorReady, error, iframeReady, pdfLoaded, t]);
-
-  useEffect(() => {
-    if (!busy || pdfLoaded || error) return;
-    const timeoutId = window.setTimeout(() => {
-      setBusy(false);
-      setLoadCancelled(false);
-      setError(
-        t("pdfLoadTimeout", "This PDF is taking too long to load. Please try again.")
-      );
-    }, PDF_LOAD_TIMEOUT_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [busy, error, pdfLoaded, t]);
-
-  useEffect(() => {
-    if (!iframeReady || !busy || pdfLoaded || error) {
-      if (compatPollTimerRef.current) {
-        window.clearInterval(compatPollTimerRef.current);
-        compatPollTimerRef.current = null;
-      }
-      compatPollTokenRef.current = null;
-      return;
-    }
-
-    const token = activeLoadTokenRef.current;
-    compatPollTokenRef.current = token;
-    if (compatPollTimerRef.current) {
-      window.clearInterval(compatPollTimerRef.current);
-      compatPollTimerRef.current = null;
-    }
-
-    compatPollTimerRef.current = window.setInterval(() => {
-      if (compatPollTokenRef.current !== token) {
-        if (compatPollTimerRef.current) {
-          window.clearInterval(compatPollTimerRef.current);
-          compatPollTimerRef.current = null;
-        }
-        return;
-      }
-      if (detectPdfLoadedFromIframe()) {
-        setEditorReady(true);
-        setEditorBooted(true);
-        setPdfLoaded(true);
-        setBusy(false);
-        setLoadCancelled(false);
-        setError("");
-        pendingEditorLoadIdRef.current = null;
-        if (compatPollTimerRef.current) {
-          window.clearInterval(compatPollTimerRef.current);
-          compatPollTimerRef.current = null;
-        }
-        compatPollTokenRef.current = null;
-        return;
-      }
-    }, 500);
-
-    return () => {
-      if (compatPollTimerRef.current) {
-        window.clearInterval(compatPollTimerRef.current);
-        compatPollTimerRef.current = null;
-      }
-      compatPollTokenRef.current = null;
-    };
-  }, [busy, detectPdfLoadedFromIframe, error, iframeReady, pdfLoaded]);
-
-  const cancelLoading = useCallback(() => {
-    const tokenToCancel = activeLoadTokenRef.current;
-    activeLoadTokenRef.current = tokenToCancel + 1;
-    pendingLoadTokenRef.current = null;
-    pendingLoadFileRef.current = null;
-    pendingEditorLoadIdRef.current = null;
-    hasRealProgressRef.current = false;
-    setUploadProgress(0);
-    setError("");
-    setPdfLoaded(false);
-    setBusy(false);
-    setLoadCancelled(true);
-    postToEditor({ type: "cancel-load", loadToken: tokenToCancel });
-  }, [postToEditor]);
-
-  useEffect(() => {
-    if (!uploadOverlayOpen) {
-      if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
-      uploadProgressStartTimeoutRef.current = null;
-      if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
-      uploadProgressTimerRef.current = null;
-      setUploadProgress(0);
-      return;
-    }
-
-    if (uploadTips.length > 0) {
-      setUploadTip(uploadTips[Math.floor(Math.random() * uploadTips.length)] ?? uploadTips[0] ?? "");
-    }
-    setUploadProgress(0);
-
-    if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
-    if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
-    const started = Date.now();
-    uploadProgressStartTimeoutRef.current = window.setTimeout(() => {
-      if (hasRealProgressRef.current) return;
-      uploadProgressTimerRef.current = window.setInterval(() => {
-        const elapsed = Date.now() - started;
-        const t = Math.min(1, elapsed / 2800);
-        const eased = 1 - Math.pow(1 - t, 3);
-        const next = Math.round(eased * 95);
-        setUploadProgress((prev) => (prev >= 95 ? prev : Math.max(prev, next)));
-        if (next >= 95 && uploadProgressTimerRef.current) {
-          window.clearInterval(uploadProgressTimerRef.current);
-          uploadProgressTimerRef.current = null;
-        }
-      }, 100);
-    }, 250);
-
-    return () => {
-      if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
-      uploadProgressStartTimeoutRef.current = null;
-      if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
-      uploadProgressTimerRef.current = null;
-    };
-  }, [uploadOverlayOpen, uploadTips]);
-
-  useEffect(() => {
-    const onMessage = (evt: MessageEvent) => {
-      const source = editorFrameRef.current?.contentWindow;
-      if (!source || evt.source !== source) return;
-      if (!isPdfDownloadMessage(evt.data)) return;
-      setBusy(false);
-      downloadBlob(evt.data.blob, outName);
-      void savePdfEditorOutput(evt.data.blob, outName).catch(() => {});
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [outName]);
-
-  useEffect(() => {
-    const onMessage = (evt: MessageEvent) => {
-      const source = editorFrameRef.current?.contentWindow;
-      if (!source || evt.source !== source) return;
-      if (hasMessageType<PdfEditorReadyMessage["type"]>(evt.data, "pdf-editor-ready")) {
-        setIframeReady(true);
-        setEditorReady(true);
-        setEditorBooted(true);
-        if (editorPingTimerRef.current) {
-          window.clearInterval(editorPingTimerRef.current);
-          editorPingTimerRef.current = null;
-        }
-        return;
-      }
-      if (hasMessageType<PdfLoadedMessage["type"]>(evt.data, "pdf-loaded")) {
-        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
-        hasRealProgressRef.current = false;
-        setPdfLoaded(true);
-        setEditorReady(true);
-        setEditorBooted(true);
-        setBusy(false);
-        setLoadCancelled(false);
-        setError("");
-        pendingEditorLoadIdRef.current = null;
-      }
-      if (hasMessageType<PdfProgressMessage["type"]>(evt.data, "pdf-progress")) {
-        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
-        const data = evt.data as PdfProgressMessage;
-        if (!Number.isFinite(data.loaded)) return;
-        const total = typeof data.total === "number" ? data.total : 0;
-        if (!Number.isFinite(total) || total <= 0) return;
-        const ratio = Math.max(0, Math.min(1, data.loaded / total));
-        const pct = Math.min(95, Math.round(ratio * 95));
-        hasRealProgressRef.current = true;
-        if (!editorReady) setEditorReady(true);
-        if (!editorBooted) setEditorBooted(true);
-        if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
-        uploadProgressStartTimeoutRef.current = null;
-        if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
-        uploadProgressTimerRef.current = null;
-        setUploadProgress(pct);
-      }
-      if (hasMessageType<PdfPasswordErrorMessage["type"]>(evt.data, "pdf-password-error")) {
-        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
-        hasRealProgressRef.current = false;
-        setBusy(false);
-        setLoadCancelled(false);
-        pendingEditorLoadIdRef.current = null;
-        setError(
-          t(
-            "pdfPasswordProtected",
-            "This PDF is password protected. Please unlock it first, then re-open in the editor."
-          )
-        );
-      }
-      if (hasMessageType<PdfErrorMessage["type"]>(evt.data, "pdf-error")) {
-        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
-        hasRealProgressRef.current = false;
-        const rawMessage = (evt.data as PdfErrorMessage).message;
-        const message =
-          typeof rawMessage === "string" && rawMessage.trim().length > 0
-            ? rawMessage.trim()
-          : t("pdfEditorFailed", "Something went wrong in the PDF editor. Please try again.");
-        setBusy(false);
-        setLoadCancelled(false);
-        pendingEditorLoadIdRef.current = null;
-        setError(message);
-      }
-      if (hasMessageType<PdfExternalEmbedBlockedMessage["type"]>(evt.data, "pdf-external-embed-blocked")) {
-        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
-        const payload = evt.data as PdfExternalEmbedBlockedMessage;
-        const count = typeof payload.count === "number" ? payload.count : 0;
-        if (count <= blockedEmbedCountRef.current) return;
-        blockedEmbedCountRef.current = count;
-        const origins = Array.isArray(payload.origins)
-          ? payload.origins.filter((origin) => typeof origin === "string" && origin.trim().length > 0)
-          : [];
-        const originLabel = origins.slice(0, 3).join(", ");
-        const base = t(
-          "pdfExternalEmbedsBlocked",
-          "External content in this PDF was blocked for security. The editor should still work."
-        );
-        const message = originLabel ? `${base} (${originLabel})` : base;
-        setExternalEmbedWarning(message);
-      }
-      if (hasMessageType<PdfLoadCancelledMessage["type"]>(evt.data, "pdf-load-cancelled")) {
-        if (!matchesLoadToken(evt.data, activeLoadTokenRef.current)) return;
-        hasRealProgressRef.current = false;
-        setBusy(false);
-        setPdfLoaded(false);
-        setLoadCancelled(true);
-        pendingEditorLoadIdRef.current = null;
-      }
-      if (hasMessageType<PdfOpenToolMessage["type"]>(evt.data, "open-tool")) {
-        const toolKey = (evt.data as PdfOpenToolMessage).tool;
-        if (typeof toolKey === "string" && toolKey.trim().length > 0) {
-          onOpenTool?.(toolKey);
-        }
-      }
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [editorBooted, editorReady, onOpenTool, t]);
 
   useEffect(() => {
     if (!pdfLoaded) return;
@@ -802,49 +327,36 @@ export default function PdfEditorTool({
     [onReplaceFile]
   );
 
-  const shellClassName =
-    variant === "shell"
-      ? "bg-white overflow-hidden flex flex-col h-screen h-[100dvh]"
-      : "bg-white rounded-2xl border border-[color:var(--brand-line)] shadow-sm overflow-hidden";
+  const {
+    shellClassName,
+    viewerClassName,
+    headerClassName,
+    titleClassName,
+    actionsClassName,
+    secondaryActionClassName,
+    primaryActionClassName,
+    statusText,
+  } = usePdfEditorUiState({
+    variant,
+    actionsPosition,
+    busy,
+    pdfLoaded,
+    loadCancelled,
+    iframeReady,
+    t,
+  });
 
-  const viewerShellClassName =
-    variant === "shell"
-      ? "flex-1 min-h-0 bg-white"
-      : "h-[75vh] min-h-[560px] bg-white";
-
-  const viewerClassName =
-    actionsPosition === "top-right"
-      ? `${viewerShellClassName} pt-2`
-      : viewerShellClassName;
-
-  const headerClassName =
-    actionsPosition === "top-right"
-      ? "flex flex-col gap-3 px-4 py-3 min-h-[64px] bg-white/80 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6"
-      : "flex flex-col gap-4 px-4 py-4 min-h-[72px] border-b border-[color:var(--brand-line)] bg-white/80 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5";
-
-  const titleClassName = "min-w-0 flex items-center gap-3 w-full sm:w-auto";
-
-  const actionsClassName = "flex flex-wrap items-center gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end";
-
-  const secondaryActionClassName =
-    actionsPosition === "top-right"
-      ? "inline-flex items-center justify-center h-9 px-3 text-xs rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] whitespace-nowrap sm:h-10 sm:px-4 sm:text-sm"
-      : "inline-flex items-center justify-center h-10 px-4 text-xs rounded-lg border border-[color:var(--brand-line)] text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-cream)] whitespace-nowrap sm:h-11 sm:px-5 sm:text-sm";
-
-  const primaryActionClassName =
-    actionsPosition === "top-right"
-      ? "inline-flex items-center justify-center h-9 px-3 text-xs rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 whitespace-nowrap sm:h-10 sm:px-4 sm:text-sm"
-      : "inline-flex items-center justify-center h-10 px-4 text-xs rounded-lg bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium disabled:opacity-50 whitespace-nowrap sm:h-11 sm:px-5 sm:text-sm";
-
-  const statusText = busy
-    ? t("statusWorking", "Working…")
-    : pdfLoaded
-      ? t("statusReady", "Ready")
-      : loadCancelled
-        ? t("statusCanceled", "Canceled")
-        : iframeReady
-          ? t("statusWaiting", "Waiting…")
-          : t("statusLoading", "Loading…");
+  const handleEditorError = usePdfEditorErrorHandler({
+    t,
+    blockedNavigationMessage: BLOCKED_NAVIGATION_MESSAGE,
+    iframeReady,
+    editorBooted,
+    pdfLoaded,
+    abortActiveLoad,
+    setBusy,
+    setError,
+    setExternalEmbedWarning,
+  });
 
   const handleEditorReady = useCallback(() => {
     injectMobileOverrides();
@@ -891,6 +403,7 @@ export default function PdfEditorTool({
             id={fileInputId}
             type="file"
             name="editorFile"
+            data-testid="pdf-editor-upload-input"
             accept=".pdf,application/pdf"
             className="sr-only"
             onChange={onFileChange}
@@ -901,6 +414,7 @@ export default function PdfEditorTool({
           <label
             htmlFor={fileInputId}
             role="button"
+            data-testid="pdf-editor-upload-new"
             tabIndex={busy ? -1 : 0}
             aria-disabled={busy}
             onKeyDown={(e) => {
@@ -917,6 +431,7 @@ export default function PdfEditorTool({
           </label>
           <button
             type="button"
+            data-testid="pdf-editor-save-download"
             className={primaryActionClassName}
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
@@ -961,21 +476,7 @@ export default function PdfEditorTool({
           lang={lang}
           buildId={PDFEDITOR_BUILD_ID ? PDFEDITOR_BUILD_ID.slice(0, 12) : undefined}
           onReady={handleEditorReady}
-          onError={(message) => {
-            setBusy(false);
-            if (message === BLOCKED_NAVIGATION_MESSAGE) {
-              if (iframeReady || editorBooted) {
-                setExternalEmbedWarning(
-                  t(
-                    "pdfNavigationBlocked",
-                    "A link in this PDF tried to open a new page. We blocked it to keep you in the editor."
-                  )
-                );
-                return;
-              }
-            }
-            setError(message);
-          }}
+          onError={handleEditorError}
         />
       </div>
     </div>

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { expect, test } from "./fixtures";
 import { TOOLS } from "../../src/lib/tools";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { editorSaveDownloadButton, toolUploadBrowseButton } from "./utils";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -43,7 +44,7 @@ test('home "Browse files" opens file chooser', async ({ page }) => {
   await page.goto("/");
   const [chooser] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: "Browse files" }).click(),
+    toolUploadBrowseButton(page).click(),
   ]);
 
   await chooser.setFiles({
@@ -53,7 +54,7 @@ test('home "Browse files" opens file chooser', async ({ page }) => {
   });
 
   await expect(page).toHaveURL(/\/edit\/[^/?#]+/);
-  await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
+  await expect(editorSaveDownloadButton(page)).toBeVisible({ timeout: 30_000 });
 });
 
 test("pdf editor converts PDF text into editable element", async ({ page }) => {
@@ -66,7 +67,7 @@ test("pdf editor converts PDF text into editable element", async ({ page }) => {
   await page.goto("/");
   const [chooser] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: "Browse files" }).click(),
+    toolUploadBrowseButton(page).click(),
   ]);
 
   await chooser.setFiles({
@@ -75,7 +76,7 @@ test("pdf editor converts PDF text into editable element", async ({ page }) => {
     buffer: Buffer.from(pdfBytes),
   });
 
-  await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
+  await expect(editorSaveDownloadButton(page)).toBeVisible({ timeout: 30_000 });
 
   const editorFrame = page.frameLocator('iframe[title="PDF Editor"]');
   const firstTextDiv = editorFrame.locator(".text-border").first();
@@ -165,7 +166,7 @@ for (const tool of TOOLS) {
     }
 
     if (tool.key === "annotate" || tool.key === "edit") {
-      await expect(page.getByRole("button", { name: "Save & Download" })).toBeVisible({ timeout: 30_000 });
+      await expect(editorSaveDownloadButton(page)).toBeVisible({ timeout: 30_000 });
       return;
     }
 

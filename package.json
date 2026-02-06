@@ -7,14 +7,15 @@
     "clean:next": "node scripts/clean-next.mjs",
     "dev": "npm run clean:next && npm run build:pdfeditor && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0",
     "dev:turbopack": "npm run clean:next && npm run build:pdfeditor && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0 --turbopack",
-    "build:pdfeditor": "NODE_ENV=production BASE_URL=/pdfeditor/ webpack --config packages/pdfeditor/webpack.build.js",
+    "build:pdfeditor": "node scripts/sync-pdfjs-worker.mjs && NODE_ENV=production BASE_URL=/pdfeditor/ webpack --config packages/pdfeditor/webpack.build.js",
     "build": "node scripts/build.mjs",
     "start": "node scripts/validate-prod-env.mjs && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next start",
     "prelint": "node scripts/ensure-next-types.mjs",
     "lint": "tsc --noEmit && next lint",
     "validate-all": "npm run lint && npm run build",
     "test:e2e": "playwright test",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "test:pdfeditor": "node --test packages/pdfeditor/src/entry/__tests__/load_token_tracker.test.mjs packages/pdfeditor/src/editor/__tests__/origin_text_state.test.mjs packages/pdfeditor/src/editor/__tests__/history_policy.test.mjs packages/pdfeditor/src/editor/__tests__/history_push_source.test.mjs packages/pdfeditor/src/reader/__tests__/clear_text_state.test.mjs packages/pdfeditor/src/reader/__tests__/text_selection.test.mjs packages/pdfeditor/src/reader/__tests__/text_layout.test.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.34.3",

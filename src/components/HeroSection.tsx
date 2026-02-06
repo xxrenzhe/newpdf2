@@ -144,6 +144,7 @@ export default function HeroSection() {
                   id={fileInputId}
                   type="file"
                   name="heroUpload"
+                  data-testid="tool-upload-input"
                   className="sr-only"
                   aria-hidden="true"
                   tabIndex={-1}
@@ -168,6 +169,7 @@ export default function HeroSection() {
                     <label
                       htmlFor={fileInputId}
                       role="button"
+                      data-testid="tool-upload-browse"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key !== "Enter" && e.key !== " ") return;

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectPdfHeader, makePdfBytes, readDownloadBytes } from "./utils";
+import { expectPdfHeader, makePdfBytes, readDownloadBytes, editorSaveDownloadButton } from "./utils";
 
 test("editing existing PDF text can Save & Download after typing Hangul", async ({ page }) => {
   test.setTimeout(240_000);
@@ -12,7 +12,7 @@ test("editing existing PDF text can Save & Download after typing Hangul", async 
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frame = page.frameLocator('iframe[title="PDF Editor"]');

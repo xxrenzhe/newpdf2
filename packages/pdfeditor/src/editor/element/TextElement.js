@@ -42,8 +42,9 @@ class TextElement extends BaseElement {
     }
 
     setStyle() {
-        if (!this.elText.textContent) {
-            this.elText.textContent = this.attrs.text;
+        const nextText = this.attrs.text ?? '';
+        if (this.elText.textContent !== nextText) {
+            this.elText.textContent = nextText;
         }
         this.elText.style.color = this.attrs.color;
         this.elText.style.fontSize = this.attrs.size + 'px';

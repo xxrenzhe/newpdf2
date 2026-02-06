@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 import type { Frame } from "playwright/test";
-import { expectPdfHeader, makePdfBytes, readDownloadBytes } from "./utils";
+import { expectPdfHeader, makePdfBytes, readDownloadBytes, editorSaveDownloadButton } from "./utils";
 
 test("Save & Download still works if editor pages array contains undefined entries", async ({ page }) => {
   test.setTimeout(240_000);
@@ -13,7 +13,7 @@ test("Save & Download still works if editor pages array contains undefined entri
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frameLocator = page.frameLocator('iframe[title="PDF Editor"]');

@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 import type { Frame, FrameLocator, Page } from "playwright/test";
-import { loadPdfPageCount, makePdfBytes, readDownloadBytes, repoPath } from "./utils";
+import { loadPdfPageCount, makePdfBytes, readDownloadBytes, repoPath, editorSaveDownloadButton } from "./utils";
 
 async function openEditor(page: Page, pdfBytes: Uint8Array, filename: string) {
   await page.goto("/tools/edit");
@@ -10,7 +10,7 @@ async function openEditor(page: Page, pdfBytes: Uint8Array, filename: string) {
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frameLocator = page.frameLocator('iframe[title="PDF Editor"]');

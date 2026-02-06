@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { makePdfBytes } from "./utils";
+import { makePdfBytes, editorSaveDownloadButton } from "./utils";
 
 test("guest edit-pdf keeps actions top-right and renders PDF", async ({ page }) => {
   test.setTimeout(180_000);
@@ -14,7 +14,7 @@ test("guest edit-pdf keeps actions top-right and renders PDF", async ({ page }) 
 
   await expect(page).toHaveURL(/\/edit\/[^/?#]+/);
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const box = await exportButton.boundingBox();

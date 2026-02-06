@@ -65,7 +65,7 @@ export class PDFDocument {
                 }
             }
         }
-        PDFEvent.dispatch(Event.DOWNLOAD);
+        PDFEvent.dispatch(Events.DOWNLOAD);
     }
 
     async getFont(pageId, text, fontFile) {

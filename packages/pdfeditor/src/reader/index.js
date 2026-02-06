@@ -64,6 +64,9 @@ export class PDFReader {
     // outputScale = window.devicePixelRatio || 1;
     outputScale = 2;
     locale = null;
+    loadId = 0;
+    openedObjectUrl = null;
+    #loadingTask = null;
 
     constructor(options, pdfjsLib, password = null) {
         if (options) {
@@ -101,24 +104,81 @@ export class PDFReader {
                 if (!file) {
                     return;
                 }
-                if (this.pdfDocument?.documentProxy) {
-                    this.pdfDocument.documentProxy._transport.fontLoader.clear();
+                if (this.openedObjectUrl) {
+                    try {
+                        URL.revokeObjectURL(this.openedObjectUrl);
+                    } catch (err) {
+                        // ignore
+                    }
                 }
-                Font.clear();
-                
-                this.load(URL.createObjectURL(file));
+                this.openedObjectUrl = URL.createObjectURL(file);
+                void this.load(this.openedObjectUrl);
                 this.elFile.value = '';
             });
         }
         this.elFile.click();
     }
 
+
+    async #disposeCurrentDocument() {
+        const documentProxy = this.pdfDocument?.documentProxy;
+
+        if (documentProxy?._transport?.fontLoader?.clear) {
+            try {
+                documentProxy._transport.fontLoader.clear();
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        if (documentProxy?.cleanup) {
+            try {
+                await documentProxy.cleanup();
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        if (documentProxy?.destroy) {
+            try {
+                await documentProxy.destroy();
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        Font.clear();
+
+        if (this.openedObjectUrl) {
+            try {
+                URL.revokeObjectURL(this.openedObjectUrl);
+            } catch (err) {
+                // ignore
+            }
+            this.openedObjectUrl = null;
+        }
+
+        this.pdfDocument = null;
+    }
+
     async init() {
         if (!this.options.url) {
             return false;
         }
+
+        const nextLoadId = this.loadId + 1;
+        this.loadId = nextLoadId;
+
+        if (this.#loadingTask?.destroy) {
+            try {
+                await this.#loadingTask.destroy();
+            } catch (err) {
+                // ignore
+            }
+            this.#loadingTask = null;
+        }
+
         let cfg = {
-            url: this.options.url,
             cMapPacked: true,
             cMapUrl: this.options.cMapUrl,
             disableAutoFetch: false,
@@ -136,12 +196,31 @@ export class PDFReader {
             verbosity: 1
         };
 
+        if (this.options.url instanceof ArrayBuffer || ArrayBuffer.isView(this.options.url)) {
+            cfg.data = this.options.url;
+        } else {
+            cfg.url = this.options.url;
+        }
+
         if (this.password !== null) {
             cfg.password = this.password;
         }
 
         try {
             const loadingTask = this.pdfjsLib.getDocument(cfg);
+            this.#loadingTask = loadingTask;
+
+            loadingTask.onProgress = (progress) => {
+                if (this.loadId !== nextLoadId) {
+                    return;
+                }
+                PDFEvent.dispatch(Events.LOAD_PROGRESS, {
+                    loaded: progress?.loaded,
+                    total: progress?.total,
+                    loadId: nextLoadId
+                });
+            };
+
             if (this.password) {
                 loadingTask.onPassword = (passCallback, reason) => {
                     let msg = '';
@@ -154,19 +233,56 @@ export class PDFReader {
                     passCallback(password);
                 }
             }
-            this.pdfDocument = new PDFDocument(this, await loadingTask.promise);
+
+            const documentProxy = await loadingTask.promise;
+            if (this.loadId !== nextLoadId) {
+                return false;
+            }
+
+            this.#loadingTask = null;
+            this.pdfDocument = new PDFDocument(this, documentProxy);
             if (!this.disableViewer) {
                 this.#initReader();
             }
-            PDFEvent.dispatch(Events.READER_INIT);
+            PDFEvent.dispatch(Events.READER_INIT, {
+                loadId: nextLoadId
+            });
             return this;
         } catch (e) {
+            if (this.loadId !== nextLoadId) {
+                return false;
+            }
+
+            this.#loadingTask = null;
+
             if (e.name == 'PasswordException') {
-                // alert('Password protected file');
-                PDFEvent.dispatch(Events.PASSWORD_ERROR);
+                PDFEvent.dispatch(Events.PASSWORD_ERROR, {
+                    message: e?.message,
+                    loadId: nextLoadId
+                });
+            } else {
+                PDFEvent.dispatch(Events.ERROR, {
+                    message: e?.message || String(e),
+                    loadId: nextLoadId
+                });
             }
             console.log(e);
             return false;
+        }
+    }
+
+    async cancelLoad(advanceLoadId = true) {
+        const task = this.#loadingTask;
+        this.#loadingTask = null;
+        if (advanceLoadId) {
+            this.loadId += 1;
+        }
+        if (task?.destroy) {
+            try {
+                await task.destroy();
+            } catch (err) {
+                // ignore
+            }
         }
     }
 
@@ -175,6 +291,8 @@ export class PDFReader {
      * @param {string | ArrayBuffer} url
      */
     async load(url) {
+        await this.cancelLoad(false);
+        await this.#disposeCurrentDocument();
         this.options.url = url;
         if (this.mainBox) {
             while (this.mainBox.firstElementChild) {

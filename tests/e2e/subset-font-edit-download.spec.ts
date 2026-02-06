@@ -2,7 +2,7 @@ import fs from "node:fs";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb } from "pdf-lib";
 import { expect, test } from "./fixtures";
-import { expectPdfHeader, readDownloadBytes, repoPath } from "./utils";
+import { expectPdfHeader, readDownloadBytes, repoPath, editorSaveDownloadButton } from "./utils";
 
 async function makeSubsetFontPdfBytes(): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -30,7 +30,7 @@ test("subset font PDF can edit text and Save & Download without hanging", async 
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frame = page.frameLocator('iframe[title="PDF Editor"]');

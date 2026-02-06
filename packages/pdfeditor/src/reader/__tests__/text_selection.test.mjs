@@ -47,3 +47,25 @@ test('collectTextIndicesInRect ignores disconnected nodes', () => {
     assert.deepEqual(indices, []);
 });
 
+test('collectTextIndicesInRect supports cached non-DOM text rects', () => {
+    const rect = { x: 8, y: 8, width: 20, height: 10 };
+    const textDivs = [
+        {
+            dataIdx: 9,
+            rect: { left: 10, top: 10, width: 5, height: 5 }
+        },
+        {
+            dataIdx: 10,
+            rect: { left: 40, top: 40, width: 5, height: 5 }
+        }
+    ];
+
+    const indices = collectTextIndicesInRect({
+        rect,
+        textDivs,
+        containerRect: { left: 0, top: 0 },
+        getRect: (item) => item.rect
+    });
+
+    assert.deepEqual(indices, [9]);
+});

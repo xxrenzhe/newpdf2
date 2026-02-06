@@ -50,8 +50,13 @@ class Eraser extends Rect {
                         this.setActions(that);
                     }
                 });
+                let originTextIndices = [];
                 if (typeof readerPage.markClearTextsInRect === 'function') {
-                    readerPage.markClearTextsInRect(rect);
+                    originTextIndices = readerPage.markClearTextsInRect(rect) || [];
+                }
+                if (Array.isArray(originTextIndices) && originTextIndices.length > 0) {
+                    element.attrs.originTextIndices = originTextIndices;
+                    element.attrs.originPageNum = readerPage.pageNum;
                 }
                 PDFEvent.dispatch(Events.ELEMENT_BLUR, {
                     page,

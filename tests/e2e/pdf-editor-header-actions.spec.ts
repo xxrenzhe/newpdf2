@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { makePdfBytes } from "./utils";
+import { makePdfBytes, editorSaveDownloadButton } from "./utils";
 
 test("pdf editor page header actions: Upload New, Change file", async ({ page }) => {
   test.setTimeout(240_000);
@@ -13,7 +13,7 @@ test("pdf editor page header actions: Upload New, Change file", async ({ page })
     buffer: Buffer.from(pdfA),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   // Upload New should replace the file and re-load the editor.

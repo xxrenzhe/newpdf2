@@ -1,6 +1,6 @@
-import Rect from '../rect';
+import Eraser from '../eraser';
 
-class Radact extends Rect {
+class Radact extends Eraser {
     init() {
         this.name = 'radact';
         let attrs = {
@@ -14,7 +14,6 @@ class Radact extends Rect {
             attrs = Object.assign(attrs, Radact.attrs);
         }
         this.setAttrs(attrs);
-        //最小绘制
         this.minWidth = 13;
         this.minHeight = 13;
         this.actions = Radact.actions;

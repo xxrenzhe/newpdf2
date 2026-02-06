@@ -285,6 +285,7 @@ export default function FileDropzone({
             <label
             htmlFor={inputId}
             role="button"
+            data-testid="tool-upload-browse"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key !== "Enter" && e.key !== " ") return;
@@ -301,6 +302,7 @@ export default function FileDropzone({
             id={inputId}
             type="file"
             name="fileUpload"
+            data-testid="tool-upload-input"
             accept={accept}
             multiple={multiple}
             onChange={onChange}

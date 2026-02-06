@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectPdfHeader, makePdfBytes, readDownloadBytes } from "./utils";
+import { expectPdfHeader, makePdfBytes, readDownloadBytes, editorSaveDownloadButton } from "./utils";
 
 test("removing a converted text element still keeps a redaction cover on export", async ({ page }) => {
   test.setTimeout(240_000);
@@ -12,7 +12,7 @@ test("removing a converted text element still keeps a redaction cover on export"
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frame = page.frameLocator('iframe[title="PDF Editor"]');

@@ -16,3 +16,16 @@ const qpdfJsTo = path.join(root, "public", "wasm", "qpdf.js");
 
 copyFileIfExists(qpdfWasmFrom, qpdfWasmTo);
 copyFileIfExists(qpdfJsFrom, qpdfJsTo);
+
+const pdfEditorJsDir = path.join(root, "public", "pdfeditor", "js");
+if (fs.existsSync(pdfEditorJsDir)) {
+  for (const file of fs.readdirSync(pdfEditorJsDir)) {
+    if (/\s[0-9]+\.js$/.test(file)) {
+      try {
+        fs.rmSync(path.join(pdfEditorJsDir, file), { force: true });
+      } catch {
+        // ignore
+      }
+    }
+  }
+}

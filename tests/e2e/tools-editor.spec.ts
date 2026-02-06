@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { makePdfBytes, expectPdfHeader, readDownloadBytes, drawSignatureStroke } from "./utils";
+import { makePdfBytes, expectPdfHeader, readDownloadBytes, drawSignatureStroke, editorSaveDownloadButton } from "./utils";
 
 test("edit tool can load and download a PDF", async ({ page }) => {
   test.setTimeout(180_000);
@@ -12,7 +12,7 @@ test("edit tool can load and download a PDF", async ({ page }) => {
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const downloadPromise = page.waitForEvent("download");

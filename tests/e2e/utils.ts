@@ -1,11 +1,27 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Download, Locator } from "playwright/test";
+import type { Download, Locator, Page } from "playwright/test";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import JSZip from "jszip";
 
 export function repoPath(...parts: string[]) {
   return path.join(process.cwd(), ...parts);
+}
+
+export const E2E_TEST_IDS = {
+  toolUploadBrowse: "tool-upload-browse",
+  toolUploadInput: "tool-upload-input",
+  editorUploadNew: "pdf-editor-upload-new",
+  editorUploadInput: "pdf-editor-upload-input",
+  editorSaveDownload: "pdf-editor-save-download",
+} as const;
+
+export function toolUploadBrowseButton(page: Page): Locator {
+  return page.getByTestId(E2E_TEST_IDS.toolUploadBrowse).first();
+}
+
+export function editorSaveDownloadButton(page: Page): Locator {
+  return page.getByTestId(E2E_TEST_IDS.editorSaveDownload);
 }
 
 export async function makePdfBytes(label: string, pageCount = 2): Promise<Uint8Array> {

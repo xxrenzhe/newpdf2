@@ -4,6 +4,7 @@ import Pickr from '@simonwep/pickr';
 import 'rangy/lib/rangy-classapplier';
 import 'rangy/lib/rangy-highlighter';
 import { Events, PDFEvent } from '../../../event';
+import { HISTORY_SOURCE } from '../../history_policy';
 
 const HIGHLIGHT_CLASS = 'text_highlight';
 const REMOVED_CLASS = '__removed';
@@ -53,7 +54,8 @@ class TextHighLight extends ToolbarItemBase {
                         redo: () => {
                             el.classList.remove(REMOVED_CLASS);
                             el.style.display = 'inline';
-                        }
+                        },
+                        source: HISTORY_SOURCE.USER
                     });
 
 

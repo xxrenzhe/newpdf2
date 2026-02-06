@@ -7,6 +7,7 @@ import { Font } from '../font';
 import { saveAs } from 'file-saver';
 import { Toolbar } from './toolbar';
 import { History } from './history';
+import { HISTORY_SOURCE } from './history_policy';
 import { Locale } from '../locale';
 
 const DISABLED_CLASS = 'disabled';
@@ -86,7 +87,11 @@ export class PDFEditor {
             if (!this.toolbar.toolActive || this.toolbar.toolActive.name != 'text') return;
             sendResponse(true);
             const page = this.pdfDocument.getPage(e.data.pageNum);
+            if (!e.data.options || typeof e.data.options !== 'object') {
+                e.data.options = {};
+            }
             e.data.options.oriText = e.data.attrs.text;
+            e.data.options.historySource = HISTORY_SOURCE.SYSTEM;
             const element = page.elements.add(
                 e.data.type,
                 e.data.attrs,
@@ -136,7 +141,7 @@ export class PDFEditor {
             this.pdfDocument.fixFontData();
         });
 
-        PDFEvent.on(Event.DOWNLOAD, () => {
+        PDFEvent.on(Events.DOWNLOAD, () => {
             //检查字体是否加载完成
             if (!this.pdfDocument.checkFonts()) return;
             this.pdfDocument.save(true).then(async blob => {
@@ -159,7 +164,7 @@ export class PDFEditor {
             let data = e.data;
             if (data.type == 'font_subset_after') {
                 this.pdfDocument.setFont(data.pageId, data.fontFile, data.newBuffer);
-                PDFEvent.dispatch(Event.DOWNLOAD);
+                PDFEvent.dispatch(Events.DOWNLOAD);
             }
         });
 
@@ -224,11 +229,14 @@ export class PDFEditor {
         let isUpdateStream = false;
         let chars = {};
         for (let page of this.reader.pdfDocument.pages) {
-            for (let i = 0; i < page.clearTexts.length; i++) {
+            const clearTextItems = typeof page.getClearTextItems === 'function'
+                ? page.getClearTextItems()
+                : page.clearTexts;
+            for (let i = 0; i < clearTextItems.length; i++) {
                 if (!chars[page.index]) {
                     chars[page.index] = [];
                 }
-                chars[page.index].push(page.clearTexts[i]);
+                chars[page.index].push(clearTextItems[i]);
                 isUpdateStream = true;
             }
         }

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { makePdfBytes } from "./utils";
+import { makePdfBytes, editorSaveDownloadButton } from "./utils";
 
 test("clicking PDF text auto-enters Text edit mode", async ({ page }) => {
   test.setTimeout(180_000);
@@ -12,7 +12,7 @@ test("clicking PDF text auto-enters Text edit mode", async ({ page }) => {
     buffer: Buffer.from(pdfBytes),
   });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const editorFrame = page.frameLocator('iframe[title="PDF Editor"]');

@@ -1,4 +1,12 @@
-import { Events, PDFEvent } from '../event';
+import { Events, PDFEvent } from '../event.js';
+import { applyOriginTextState } from './origin_text_state.js';
+import {
+    HISTORY_SOURCE,
+    normalizeHistorySource,
+    resolveHistorySource,
+    shouldTrackElementHistory,
+    shouldTrackHistorySource
+} from './history_policy.js';
 
 const OPERATE = {
     CREATE: 1,
@@ -13,11 +21,13 @@ export { OPERATE };
 
 class OpObject {
     action = 0;
+    source = HISTORY_SOURCE.USER;
     undo = null;
     redo = null;
 
-    constructor(action, undo, redo) {
+    constructor(action, undo, redo, source = HISTORY_SOURCE.USER) {
         this.action = action;
+        this.source = normalizeHistorySource(source);
         this.undo = undo;
         this.redo = redo;
     }
@@ -28,9 +38,11 @@ const Operator = {
         elements.items[element.id] = element;
         element.page.readerPage.elWrapper.appendChild(element.el);
         element.zoom(element.scale);
+        applyOriginTextState(element, true, element?.page?.readerPage || null);
         elements.setActive(element.id);
     },
     remove: (element, elements) => {
+        applyOriginTextState(element, false, element?.page?.readerPage || null);
         element.remove();
         delete elements.items[element.id];
         elements.activeId = null;
@@ -49,8 +61,7 @@ const Operator = {
         element.setStyle(attrs);
         element.zoom(element.scale);
     }
-}
-
+};
 
 export class History {
     editor = null;
@@ -59,35 +70,51 @@ export class History {
 
     constructor(editor) {
         this.editor = editor;
-        let elSpan = document.querySelector('#history_slider span');
+        const elSpan = document.querySelector('#history_slider span');
+        const updateHistoryCount = () => {
+            if (!elSpan) {
+                return;
+            }
+            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+        };
 
         PDFEvent.on(Events.ELEMENT_CREATE, e => {
             const element = e.data.element;
-            const elements = this.editor.pdfDocument.getPageActive().elements;
-            if (element.options.oriText) {
+            const source = resolveHistorySource(element);
+            if (!shouldTrackElementHistory(element)) {
                 return;
             }
+            const elements = this.editor.pdfDocument.getPageActive().elements;
             this.push(OPERATE.REMOVE, () => {
                 Operator.remove(element, elements);
             }, () => {
                 Operator.create(element, elements);
-            });
-            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            }, source);
+            updateHistoryCount();
         });
 
         PDFEvent.on(Events.ELEMENT_REMOVE, e => {
             const element = e.data.element;
+            const source = resolveHistorySource(element);
+            if (!shouldTrackElementHistory(element)) {
+                return;
+            }
             const elements = this.editor.pdfDocument.getPageActive().elements;
             this.push(OPERATE.CREATE, () => {
                 Operator.create(element, elements);
             }, () => {
                 Operator.remove(element, elements);
-            });
-            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            }, source);
+            updateHistoryCount();
         });
 
         PDFEvent.on(Events.ELEMENT_MOVE_START, e => {
             const element = e.data.element;
+            const source = resolveHistorySource(element);
+            if (!shouldTrackHistorySource(source)) {
+                return;
+            }
+
             const el = element.el;
             const rect = {
                 top: e.data.that.activeElement.oriTop,
@@ -107,12 +134,17 @@ export class History {
                     Operator.updatePosAndSize(element, rect);
                 }, () => {
                     Operator.updatePosAndSize(element, redoRect);
-                });
+                }, source);
             }, true);
         });
 
         PDFEvent.on(Events.ELEMENT_RESIZE_START, e => {
             const element = e.data.element;
+            const source = resolveHistorySource(element);
+            if (!shouldTrackHistorySource(source)) {
+                return;
+            }
+
             const el = element.el;
             const rect = {
                 top: e.data.that.activeElement.oriTop,
@@ -131,25 +163,36 @@ export class History {
                     Operator.updatePosAndSize(element, rect);
                 }, () => {
                     Operator.updatePosAndSize(element, redoRect);
-                });
+                }, source);
             }, true);
         });
 
         PDFEvent.on(Events.ELEMENT_UPDATE_AFTER, e => {
             const element = e.data.element;
+            const source = resolveHistorySource(element);
+            if (!shouldTrackHistorySource(source)) {
+                return;
+            }
             this.push(OPERATE.UPDATE, () => {
                 Operator.updateAttrs(element, e.data.oriAttrs);
             }, () => {
                 Operator.updateAttrs(element, e.data.attrs);
-            });
+            }, source);
         });
 
         PDFEvent.on(Events.HISTORY_PUSH, e => {
+            const undo = e?.data?.undo;
+            const redo = e?.data?.redo;
+            if (typeof undo !== 'function' || typeof redo !== 'function') {
+                return;
+            }
+
+            const source = normalizeHistorySource(e?.data?.source);
             this.push(OPERATE.CUSTOM, () => {
-                e.data.undo();
+                undo();
             }, () => {
-                e.data.redo();
-            });
+                redo();
+            }, source);
         });
     }
 
@@ -157,11 +200,17 @@ export class History {
         return this.#opList;
     }
 
-    push(action, undo, redo) {
+    push(action, undo, redo, source = HISTORY_SOURCE.USER) {
+        const normalizedSource = normalizeHistorySource(source);
+        if (!shouldTrackHistorySource(normalizedSource)) {
+            return false;
+        }
+
         this.#opList.splice(this.#step);
-        this.#opList.push(new OpObject(action, undo, redo));
+        this.#opList.push(new OpObject(action, undo, redo, normalizedSource));
         this.#step++;
         this.#dispatchEvent();
+        return true;
     }
 
     clear() {

@@ -14,8 +14,10 @@ import { LANG_LIST, VIEW_MODE } from '../../src/defines';
 import Loading from '../components/loading';
 import { getUrlParam,downloadLoad } from '../misc';
 import { Locale } from '../locale';
+import { createLoadTokenTracker, toArrayBuffer } from './load_token_tracker';
 let baseUrl = ASSETS_URL + 'js/pdfjs/';
-pdfjsLib.GlobalWorkerOptions.workerSrc = baseUrl + 'pdf.worker.min.js';
+const workerVersion = typeof pdfjsLib.version === 'string' ? pdfjsLib.version : '2.15.349';
+pdfjsLib.GlobalWorkerOptions.workerSrc = baseUrl + 'pdf.worker.min.js?v=' + encodeURIComponent(workerVersion);
 const cMapUrl = baseUrl + 'cmaps/';
 const standardFontDataUrl = baseUrl + 'standard_fonts/';
 const TOOLS = [
@@ -46,6 +48,56 @@ const TOOLS = [
     'textArt',
     'stamp'
 ];
+
+let activeLoadToken = 0;
+let readySent = false;
+let fileNameState = '';
+let activeBlobUrl = null;
+const loadTokenTracker = createLoadTokenTracker(24);
+
+const clearActiveBlobUrl = () => {
+    if (!activeBlobUrl) return;
+    try {
+        URL.revokeObjectURL(activeBlobUrl);
+    } catch (err) {
+        // ignore
+    }
+    activeBlobUrl = null;
+};
+
+const rememberLoadToken = (loadId, token) => {
+    loadTokenTracker.remember(loadId, token);
+};
+
+const resolveLoadToken = (payload, fallbackToken = activeLoadToken) => {
+    const loadId = payload?.loadId;
+    return loadTokenTracker.resolve(loadId, fallbackToken);
+};
+
+const postToParent = (payload) => {
+    try {
+        if (window.parent) {
+            window.parent.postMessage(payload, '*');
+        }
+    } catch (err) {
+        // ignore
+    }
+};
+
+const setFileName = (value) => {
+    const text = typeof value === 'string' ? value.trim() : '';
+    fileNameState = text;
+    const fileNameEl = document.getElementById('file-name');
+    if (fileNameEl) {
+        fileNameEl.textContent = text;
+    }
+};
+
+const sendEditorReady = (force = false) => {
+    if (readySent && !force) return;
+    readySent = true;
+    postToParent({ type: 'pdf-editor-ready' });
+};
 
 const isEmbedded = () => {
     try {
@@ -79,11 +131,34 @@ const isExternalUrl = (url) => {
 const installNavigationGuard = () => {
     if (!isEmbedded()) return;
     const shouldBlock = (url) => isExternalUrl(url);
+    let blockedCount = 0;
+    const blockedOrigins = new Set();
+
+    const reportBlocked = (url) => {
+        try {
+            const parsed = normalizeUrl(url);
+            if (parsed?.origin) {
+                blockedOrigins.add(parsed.origin);
+            }
+            blockedCount += 1;
+            postToParent({
+                type: 'pdf-external-embed-blocked',
+                count: blockedCount,
+                origins: Array.from(blockedOrigins),
+                loadToken: activeLoadToken
+            });
+        } catch (err) {
+            // ignore
+        }
+    };
 
     if (typeof window.open === 'function') {
         const originalOpen = window.open;
         window.open = function (url, target, features) {
-            if (shouldBlock(url)) return null;
+            if (shouldBlock(url)) {
+                reportBlocked(url);
+                return null;
+            }
             return originalOpen.call(window, url, target, features);
         };
     }
@@ -93,14 +168,20 @@ const installNavigationGuard = () => {
         const originalAssign = loc.assign?.bind(loc);
         if (originalAssign) {
             loc.assign = (url) => {
-                if (shouldBlock(url)) return;
+                if (shouldBlock(url)) {
+                    reportBlocked(url);
+                    return;
+                }
                 return originalAssign(url);
             };
         }
         const originalReplace = loc.replace?.bind(loc);
         if (originalReplace) {
             loc.replace = (url) => {
-                if (shouldBlock(url)) return;
+                if (shouldBlock(url)) {
+                    reportBlocked(url);
+                    return;
+                }
                 return originalReplace(url);
             };
         }
@@ -115,7 +196,10 @@ const installNavigationGuard = () => {
                     return hrefDescriptor.get.call(this);
                 },
                 set(value) {
-                    if (shouldBlock(value)) return;
+                    if (shouldBlock(value)) {
+                        reportBlocked(value);
+                        return;
+                    }
                     return hrefDescriptor.set.call(this, value);
                 }
             });
@@ -130,6 +214,7 @@ const installNavigationGuard = () => {
         if (!anchor) return;
         const href = anchor.getAttribute('href') || anchor.href;
         if (shouldBlock(href)) {
+            reportBlocked(href);
             event.preventDefault();
             event.stopPropagation();
         }
@@ -141,6 +226,7 @@ const installNavigationGuard = () => {
         if (!anchor) return;
         const href = anchor.getAttribute('href') || anchor.href;
         if (shouldBlock(href)) {
+            reportBlocked(href);
             event.preventDefault();
             event.stopPropagation();
         }
@@ -152,6 +238,7 @@ const installNavigationGuard = () => {
         if (!form) return;
         const action = form.getAttribute('action') || form.action;
         if (shouldBlock(action)) {
+            reportBlocked(action);
             event.preventDefault();
             event.stopPropagation();
         }
@@ -199,26 +286,28 @@ if (lang && lang != 'en') {
 var langItem = document.querySelector(".lang_item");
 var langChecked = document.querySelector(".lang_checked");
 var langText = document.querySelector('.langText');
-langItem.addEventListener('click',()=>{
-    if(langChecked.classList.contains('hide')){
-        langChecked.classList.remove('hide');
-    }else{
-        langChecked.classList.add('hide');
-    }
-})
-langChecked.addEventListener('click',(e)=>{
-    if(e.target.className == 'lang_checked_item'){
-        langChecked.classList.add('hide');
-        langText.innerHTML = e.target.innerHTML;
-        var langCode = e.target.dataset.lang;
-        if (LANG_LIST.indexOf(langCode) >= 0) {
-            Locale.langCode = langCode;
-            Locale.load(langCode).then(() => {
-                Locale.bind();
-            });
+if (langItem && langChecked && langText) {
+    langItem.addEventListener('click',()=>{
+        if(langChecked.classList.contains('hide')){
+            langChecked.classList.remove('hide');
+        }else{
+            langChecked.classList.add('hide');
         }
-    }
-})
+    })
+    langChecked.addEventListener('click',(e)=>{
+        if(e.target.className == 'lang_checked_item'){
+            langChecked.classList.add('hide');
+            langText.innerHTML = e.target.innerHTML;
+            var langCode = e.target.dataset.lang;
+            if (LANG_LIST.indexOf(langCode) >= 0) {
+                Locale.langCode = langCode;
+                Locale.load(langCode).then(() => {
+                    Locale.bind();
+                });
+            }
+        }
+    })
+}
 
 // let fileUrl = getUrlParam('fileUrl') || 'http://localhost/files/hr-technology.pdf';
 let fileUrl = getUrlParam('fileUrl') || null;
@@ -258,6 +347,7 @@ editor.init();
 
 let loading = new Loading(null, 96, 96, '#fff');
 let elDownload = document.querySelector('.btn-download');
+if (elDownload) {
 elDownload.addEventListener('click', () => {
     
     let elDiv = document.querySelector('._loadingv2');
@@ -276,13 +366,22 @@ elDownload.addEventListener('click', () => {
     loading.start();
     editor.download();
 });
+}
 
 // PDFEvent.on(Events.TOOLBAR_INIT, () => {
 //     editor.toolbar.get('forms').click();
 // });
 
-PDFEvent.on(Events.READER_INIT, () => {
-    elDownload.style.display = 'block';
+PDFEvent.on(Events.READER_INIT, (evt) => {
+    const token = resolveLoadToken(evt?.data);
+    if (elDownload) {
+        elDownload.style.display = 'block';
+    }
+    postToParent({
+        type: 'pdf-loaded',
+        pageCount: reader.pageCount,
+        loadToken: token
+    });
     // let rotate = -90;
     // let width = 300;
     // let height = 200;
@@ -318,12 +417,158 @@ PDFEvent.on(Events.READER_INIT, () => {
     // });
 });
 
-window.addEventListener('message', e => {
-    if (e.data.type == 'load-pdf') {
-        reader.load(URL.createObjectURL(e.data.blob));
+PDFEvent.on(Events.LOAD_PROGRESS, (evt) => {
+    const data = evt?.data || {};
+    const token = resolveLoadToken(data);
+    const loaded = typeof data.loaded === 'number' ? data.loaded : 0;
+    const total = typeof data.total === 'number' ? data.total : undefined;
+    postToParent({
+        type: 'pdf-progress',
+        loaded,
+        total,
+        loadToken: token
+    });
+});
+
+PDFEvent.on(Events.PASSWORD_ERROR, (evt) => {
+    const token = resolveLoadToken(evt?.data);
+    postToParent({
+        type: 'pdf-password-error',
+        loadToken: token
+    });
+});
+
+PDFEvent.on(Events.ERROR, (evt) => {
+    const token = resolveLoadToken(evt?.data);
+    const message = evt?.data?.message;
+    postToParent({
+        type: 'pdf-error',
+        message: typeof message === 'string' ? message : undefined,
+        loadToken: token
+    });
+});
+
+PDFEvent.on(Events.TOOLBAR_ITEM_ACTIVE, (evt) => {
+    const tool = evt?.data?.tool;
+    const name = tool?.name;
+    if (typeof name !== 'string' || !name) return;
+    postToParent({
+        type: 'open-tool',
+        tool: name === 'radact' ? 'redact' : name
+    });
+});
+
+sendEditorReady();
+
+if (fileUrl) {
+    try {
+        const parsed = new URL(fileUrl, window.location.href);
+        const path = parsed.pathname || '';
+        const candidate = path.split('/').filter(Boolean).pop();
+        if (candidate) {
+            setFileName(decodeURIComponent(candidate));
+        }
+    } catch (err) {
+        // ignore
     }
-    if (e.data.type == 'download') {
-        elDownload.click();
+}
+
+window.addEventListener('message', e => {
+    const data = e?.data;
+    if (!data || typeof data !== 'object') return;
+
+    if (data.type == 'ping') {
+        sendEditorReady(true);
+        return;
+    }
+
+    if (data.type == 'set-file-name') {
+        setFileName(data.fileName || data.name || '');
+        return;
+    }
+
+    if (data.type == 'load-pdf') {
+        const nextToken = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken + 1;
+        activeLoadToken = nextToken;
+        const expectedLoadId = typeof reader?.loadId === 'number' ? reader.loadId + 1 : null;
+        if (typeof expectedLoadId === 'number') {
+            rememberLoadToken(expectedLoadId, nextToken);
+        }
+        if (typeof data.fileName === 'string' && data.fileName) {
+            setFileName(data.fileName);
+        }
+
+        const runLoad = async () => {
+            try {
+                const dataBuffer = toArrayBuffer(data.data);
+                if (dataBuffer) {
+                    clearActiveBlobUrl();
+                    await reader.load(dataBuffer);
+                    return;
+                }
+                if (typeof data.url === 'string' && data.url) {
+                    clearActiveBlobUrl();
+                    await reader.load(data.url);
+                    return;
+                }
+                if (data.blob instanceof Blob) {
+                    clearActiveBlobUrl();
+                    activeBlobUrl = URL.createObjectURL(data.blob);
+                    await reader.load(activeBlobUrl);
+                    return;
+                }
+                postToParent({
+                    type: 'pdf-error',
+                    message: 'Missing PDF payload',
+                    loadToken: nextToken
+                });
+            } catch (err) {
+                postToParent({
+                    type: 'pdf-error',
+                    message: err?.message || String(err),
+                    loadToken: nextToken
+                });
+            }
+        };
+
+        runLoad();
+        return;
+    }
+
+    if (data.type == 'cancel-load') {
+        const token = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken;
+        const runCancel = async () => {
+            try {
+                await reader.cancelLoad();
+                clearActiveBlobUrl();
+                postToParent({
+                    type: 'pdf-load-cancelled',
+                    loadToken: token
+                });
+            } catch (err) {
+                postToParent({
+                    type: 'pdf-error',
+                    message: err?.message || String(err),
+                    loadToken: token
+                });
+            }
+        };
+        runCancel();
+        return;
+    }
+
+    if (data.type === 'set-tool' && typeof data.tool === 'string' && data.tool) {
+        try {
+            const normalizedTool = data.tool === 'redact' ? 'radact' : data.tool;
+            editor.toolbar?.get(normalizedTool)?.click?.();
+        } catch (err) {
+            // ignore
+        }
+        return;
+    }
+
+    if (data.type == 'download') {
+        elDownload?.click?.();
     }
 });
 

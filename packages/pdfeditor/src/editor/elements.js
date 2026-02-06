@@ -13,6 +13,7 @@ import { RadioGroupElement } from './element/RadioGroupElement';
 import { TextFieldElement } from './element/TextFieldElement';
 import { DropdownElement } from './element/DropdownElement';
 import {TextArtElement} from './element/TextArtElement'
+import { applyOriginTextState } from './origin_text_state';
 
 const _ELEMENTS = {
     text: TextElement,
@@ -119,6 +120,12 @@ export class Elements {
 
     remove(id) {
         const element = this.get(id);
+        if (!element) {
+            return;
+        }
+
+        applyOriginTextState(element, false, this.page?.readerPage || null);
+
         element.remove();
         delete this.items[id];
         this.activeId = null;

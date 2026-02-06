@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { makePdfBytes } from "./utils";
+import { makePdfBytes, editorSaveDownloadButton } from "./utils";
 
 test("edit tool shows upload progress overlay while loading PDF", async ({ page }) => {
   test.setTimeout(180_000);
@@ -20,7 +20,7 @@ test("edit tool shows upload progress overlay while loading PDF", async ({ page 
   const overlayHeading = page.getByRole("heading", { name: "Loading, please wait..." });
   await expect(overlayHeading).toBeVisible({ timeout: 30_000 });
 
-  const exportButton = page.getByRole("button", { name: "Save & Download" });
+  const exportButton = editorSaveDownloadButton(page);
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
   await expect(overlayHeading).toHaveCount(0, { timeout: 60_000 });
 });

@@ -99,7 +99,7 @@ img {
     position: absolute;
     left: -7px;
     bottom: -4px;
-    background: url(/assets/img/tableleft.png) no-repeat;
+    background: url(../assets/img/tableleft.png) no-repeat;
     background-size: contain;
 }
 .pdf-header .tab-item.active::after {
@@ -109,7 +109,7 @@ img {
     position: absolute;
     right: -7px; 
     bottom: -4px;
-    background: url(/assets/img/tableright.png) no-repeat;
+    background: url(../assets/img/tableright.png) no-repeat;
     background-size: contain;
 }
 

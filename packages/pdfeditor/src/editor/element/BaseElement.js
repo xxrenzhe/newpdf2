@@ -242,7 +242,9 @@ class BaseElement {
     }
 
     remove() {
-        this.el.remove();
+        if (this.el && this.el.parentNode) {
+            this.el.remove();
+        }
     }
 
     appendChild(el) {
