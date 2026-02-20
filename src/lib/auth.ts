@@ -5,8 +5,11 @@ import { ensureCustomerForEmail } from "@/lib/stripe";
 const DEFAULT_DEV_SECRET = "your-development-secret-key";
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET?.trim() || "";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const IS_NEXT_BUILD =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.env.__NEXT_PRIVATE_BUILD_WORKER === "1";
 
-if (IS_PRODUCTION && (!NEXTAUTH_SECRET || NEXTAUTH_SECRET === DEFAULT_DEV_SECRET)) {
+if (IS_PRODUCTION && !IS_NEXT_BUILD && (!NEXTAUTH_SECRET || NEXTAUTH_SECRET === DEFAULT_DEV_SECRET)) {
   throw new Error(
     "FATAL: NEXTAUTH_SECRET must be set to a strong non-default value in production."
   );
