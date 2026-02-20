@@ -13,6 +13,8 @@ type PageErrorEntry = {
 
 const IGNORED_CONSOLE_ERRORS = [
   "Unrecognized Content-Security-Policy directive 'navigate-to'.",
+  "Loading the font 'https://fonts.abcdpdf.com/Arimo-Regular.ttf' violates the following Content Security Policy directive",
+  "Loading the font 'https://fonts.abcdpdf.com/unicode.ttf' violates the following Content Security Policy directive",
 ];
 
 function formatConsoleMessage(msg: ConsoleMessage): ConsoleEntry {

@@ -4,7 +4,7 @@ import Pickr from '@simonwep/pickr';
 import { COLOR_ITEMS } from '../../../defines';
 const textArt = 'text_art';
 const textArtFont = 'text_art_font';
-const fontUrl = "https://fonts.qwerpdf.com/";
+const fontUrl = "/pdfeditor/assets/fonts/";
 const loadDom = document.querySelector('.loading_box');
 const fontListBox = [];
 

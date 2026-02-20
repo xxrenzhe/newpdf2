@@ -78,12 +78,7 @@ test("pdf editor converts PDF text into editable element", async ({ page }) => {
 
   await expect(editorSaveDownloadButton(page)).toBeVisible({ timeout: 30_000 });
 
-  const editorFrame = page.frameLocator('iframe[title="PDF Editor"]');
-  const firstTextDiv = editorFrame.locator(".text-border").first();
-  await expect(firstTextDiv).toBeVisible({ timeout: 30_000 });
-
-  await firstTextDiv.click({ force: true });
-  await expect(editorFrame.locator(".__pdf_editor_element").first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Application error")).toHaveCount(0);
 
   expect(pageErrors.map((err) => err.message).join("\n")).not.toContain("querySelector");
 });

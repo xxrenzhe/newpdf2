@@ -245,7 +245,7 @@ const installNavigationGuard = () => {
     }, true);
 };
 // Font.fontUrl = 'https://localhost:3000/api/font/load';
-Font.fontUrl = 'https://genfont.qwerpdf.com/';
+Font.fontUrl = '/pdfeditor/assets/fonts/';
 // let fileUrl = 'http://localhost/files/150kb.pdf';
 // let fileUrl = 'http://localhost/files/TEST/d/EMRPUB_2012_EN_1362.pdf';
 // let fileUrl = 'http://localhost/files/E0300IUC22_Invoice.pdf';

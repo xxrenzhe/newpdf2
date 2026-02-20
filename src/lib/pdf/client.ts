@@ -1,12 +1,11 @@
 "use client";
 
-import { PDFDocument, degrees, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
 import JSZip from "jszip";
 import * as fabric from "fabric";
 import { getClientAuthStatus } from "@/lib/clientAuthState";
 import { consumeGuestDownload, getGuestQuotaState } from "@/lib/guestQuota";
 import { decryptPdfBytes, encryptPdfBytes } from "./qpdf";
-import { drawPreparedTextLines, prepareTextLinesWithFallback } from "./textFallback";
 
 export type PdfCompressPreset = "balanced" | "small" | "smallest";
 export type PdfRasterPreset = PdfCompressPreset;
@@ -139,7 +138,6 @@ export async function addTextWatermark(
   if (!opts.text) throw new Error("Watermark text is required");
   const bytes = await file.arrayBuffer();
   const pdf = await PDFDocument.load(bytes);
-  const fontCache = new Map();
 
   const opacity = Math.max(0, Math.min(1, opts.opacity));
   const fontSize = Math.max(8, Math.min(160, opts.fontSize));
@@ -147,19 +145,19 @@ export async function addTextWatermark(
 
   for (const page of pdf.getPages()) {
     const { width, height } = page.getSize();
-    const lines = await prepareTextLinesWithFallback(pdf, fontCache, opts.text, fontSize);
-    const maxWidth = lines.reduce((acc, line) => Math.max(acc, line.width), 0);
-    const x = (width - maxWidth) / 2;
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const textWidth = font.widthOfTextAtSize(opts.text, fontSize);
+    const x = (width - textWidth) / 2;
     const y = height / 2;
 
-    drawPreparedTextLines(page, lines, {
+    page.drawText(opts.text, {
       x,
       y,
-      fontSize,
-      lineHeight: fontSize * 1.2,
+      size: fontSize,
+      font,
       color: rgb(0.55, 0.55, 0.55),
       opacity,
-      rotationDegrees,
+      rotate: degrees(rotationDegrees),
     });
   }
 
