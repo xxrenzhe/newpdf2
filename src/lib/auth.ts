@@ -2,6 +2,16 @@ import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { ensureCustomerForEmail } from "@/lib/stripe";
 
+const DEFAULT_DEV_SECRET = "your-development-secret-key";
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET?.trim() || "";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+if (IS_PRODUCTION && (!NEXTAUTH_SECRET || NEXTAUTH_SECRET === DEFAULT_DEV_SECRET)) {
+  throw new Error(
+    "FATAL: NEXTAUTH_SECRET must be set to a strong non-default value in production."
+  );
+}
+
 export const authOptions: NextAuthOptions = {
   providers: (() => {
     const providers = [];
@@ -55,5 +65,5 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "your-development-secret-key",
+  secret: NEXTAUTH_SECRET || DEFAULT_DEV_SECRET,
 };

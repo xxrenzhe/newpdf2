@@ -69,7 +69,9 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
       const zip = await pdfToImagesZip(pdfFile, { format, dpi, quality });
       downloadBlob(zip, pdfFile.name.replace(/\.[^.]+$/, "") + `-${dpi}dpi-images.zip`);
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : t("convertFailed", "Conversion failed"));
+      const base = e instanceof Error ? e.message : t("convertFailed", "Conversion failed");
+      const hint = t("retryActionHint", "Please check the file and try again.");
+      setMessage(`${base} ${hint}`);
     } finally {
       setBusy(false);
     }

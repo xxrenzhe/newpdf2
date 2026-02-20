@@ -25,10 +25,13 @@ function parseAllowedDomains(raw) {
     .filter((domain) => domain.length > 0);
 }
 
+const NEXTAUTH_DEFAULT_SECRET = "your-development-secret-key";
+
 const missingRequired = requiredEnvVars.filter((key) => {
   const value = process.env[key];
   if (!value || value.trim().length === 0) return true;
   if (key === "NEXT_PUBLIC_ALLOWED_DOMAINS") return parseAllowedDomains(value).length === 0;
+  if (key === "NEXTAUTH_SECRET") return value.trim() === NEXTAUTH_DEFAULT_SECRET;
   return false;
 });
 

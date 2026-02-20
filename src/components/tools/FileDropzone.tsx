@@ -232,8 +232,9 @@ export default function FileDropzone({
             <path d="M15 9l-6 6M9 9l6 6" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-red-800">File too large</p>
+            <p className="text-sm font-medium text-red-800">{t("uploadValidationErrorTitle", "Upload failed")}</p>
             <p className="text-sm text-red-600 mt-1">{error}</p>
+            <p className="text-xs text-red-500 mt-1">{t("uploadValidationErrorHint", "Please choose a supported file and try again.")}</p>
           </div>
           <button
             type="button"
@@ -294,7 +295,7 @@ export default function FileDropzone({
             }}
             className="inline-flex items-center justify-center bg-primary hover:bg-[color:var(--brand-purple-dark)] text-white font-medium px-6 sm:px-10 py-3 rounded-lg transition-[background-color,box-shadow,transform] duration-200 hover:shadow-lg btn-press w-full sm:w-auto text-sm sm:text-base"
           >
-            Browse files
+            {t("browseFiles", "Browse files")}
           </label>
           )}
           <input
@@ -313,7 +314,10 @@ export default function FileDropzone({
 
           {/* File size info */}
           <p className="text-xs sm:text-sm text-[color:var(--brand-muted)] mt-6 max-w-sm">
-            Up to 100 MB for PDF and up to 20 MB for DOC, DOCX, PPT, PPTX, XLS, XLSX, BMP, JPG, JPEG, GIF, PNG, or TXT
+            {t(
+              "uploadLimit",
+              "Up to 100 MB for PDF and up to 20 MB for DOC, DOCX, PPT, PPTX, XLS, XLSX, BMP, JPG, JPEG, GIF, PNG, or TXT"
+            )}
           </p>
         </div>
       </div>

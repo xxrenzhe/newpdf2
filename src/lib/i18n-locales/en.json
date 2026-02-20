@@ -510,5 +510,8 @@
   "faqBilling5Q": "Can I change my plan?",
   "faqBilling5A": "Yes, you can upgrade or downgrade your plan at any time from your account settings.",
   "faqBilling6Q": "What are my payment options?",
-  "faqBilling6A": "We accept all major credit cards, PayPal, and other payment methods depending on your region."
+  "faqBilling6A": "We accept all major credit cards, PayPal, and other payment methods depending on your region.",
+  "uploadValidationErrorTitle": "Upload failed",
+  "uploadValidationErrorHint": "Please choose a supported file and try again.",
+  "retryActionHint": "Please check the file and try again."
 }

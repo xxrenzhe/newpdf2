@@ -510,5 +510,8 @@
   "faqBilling5Q": "我可以改变我的计划吗？",
   "faqBilling5A": "是的，您可以随时从帐户设置升级或降级您的计划。",
   "faqBilling6Q": "我的付款方式有哪些？",
-  "faqBilling6A": "我们接受所有主要信用卡、PayPal 和其他付款方式（具体取决于您所在的地区）。"
+  "faqBilling6A": "我们接受所有主要信用卡、PayPal 和其他付款方式（具体取决于您所在的地区）。",
+  "uploadValidationErrorTitle": "上传失败",
+  "uploadValidationErrorHint": "请选择受支持的文件后重试。",
+  "retryActionHint": "请检查文件后重试。"
 }
