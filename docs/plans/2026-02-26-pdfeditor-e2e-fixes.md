@@ -41,3 +41,8 @@ The following core PDF operations were verified against `public/2222.pdf` and co
 - **Issue:** The editor iframe failed to load entirely on the homepage resulting in a `403 Access Forbidden` page inside the iframe area.
 - **Root Cause:** A newly added security initialization logic (`src/components/SecurityInitializer.tsx`) applied `preventIframeEmbedding()` which rigorously checks `window.self !== window.top` across all routes. Since the legacy editor runs within an iframe `src=/pdfeditor/index.html`, this triggered the security anti-scraping block and forced a 403 redirect.
 - **Fix:** Updated `SecurityInitializer.tsx` to explicitly whitelist iframe embed protection if the pathname matches `/pdfeditor/*` or if running in E2E environments, restoring successful PDF loading.
+
+### 5. Content-Security-Policy Blocked Navigation Issue
+- **Issue:** Intermittently, loading the editor or clicking certain elements inside the PDF resulted in the Next.js parent wrapper throwing a "Editor navigation was blocked and reloaded" error with a generic "A link in this PDF tried to open a new page" toast message.
+- **Root Cause:** A strict Content-Security-Policy `<meta http-equiv="Content-Security-Policy" content="navigate-to 'self'">` tag existed in `packages/pdfeditor/src/pages/index.html`. This prevented the iframe from handling valid inner navigation loops required for initialization and URL-safe data blob loading. Any violation triggered the parent React `iframe.onLoad` error boundary, reloading the frame endlessly.
+- **Fix:** Removed the `navigate-to 'self'` CSP directive from the static HTML entrypoint of the PDF Editor to allow it to initialize correctly without self-blocking.
