@@ -4,6 +4,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, extractPdfPages, splitPdfToZip } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 function parsePageRanges(input: string, maxPages: number): number[] {
   const trimmed = input.trim();
@@ -82,10 +83,11 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
       const doc = await pdfjs.getDocument({ data }).promise;
       setMaxPages(doc.numPages);
       setRange(doc.numPages > 1 ? "1-2" : "1-1");
-    } catch {
+    } catch (e) {
+      notifyPdfToolError(e, t("loadPdfFailed", "Failed to load PDF"));
       setMaxPages(0);
     }
-  }, []);
+  }, [t]);
 
   const run = useCallback(async () => {
     if (!file || !isPdf) return;
@@ -106,7 +108,7 @@ export default function PdfSplitTool({ initialFile }: { initialFile?: File }) {
       const outName = file.name.replace(/\.[^.]+$/, "") + "-split.zip";
       downloadBlob(zip, outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("splitFailed", "Split failed"));
+      setError(notifyPdfToolError(e, t("splitFailed", "Split failed")));
     } finally {
       setBusy(false);
     }

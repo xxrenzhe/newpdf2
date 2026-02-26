@@ -4,6 +4,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, extractPdfText, imagesToPdf, pdfToImagesZip } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 type Mode = "auto" | "pdf-to-images" | "pdf-to-text" | "images-to-pdf" | "file-to-pdf";
 
@@ -69,7 +70,7 @@ export default function PdfConvertTool({ initialFiles }: { initialFiles?: File[]
       const zip = await pdfToImagesZip(pdfFile, { format, dpi, quality });
       downloadBlob(zip, pdfFile.name.replace(/\.[^.]+$/, "") + `-${dpi}dpi-images.zip`);
     } catch (e) {
-      const base = e instanceof Error ? e.message : t("convertFailed", "Conversion failed");
+      const base = notifyPdfToolError(e, t("convertFailed", "Conversion failed"));
       const hint = t("retryActionHint", "Please check the file and try again.");
       setMessage(`${base} ${hint}`);
     } finally {

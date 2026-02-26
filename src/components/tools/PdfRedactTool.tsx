@@ -8,6 +8,7 @@ import type { PdfRasterPreset } from "@/lib/pdf/client";
 import { downloadBlob, redactPdfRasterize } from "@/lib/pdf/client";
 import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 type Mode = "select" | "redact";
 
@@ -269,6 +270,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
   const [overlays, setOverlays] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
   const canvasHandleRef = useRef<RedactionCanvasHandle | null>(null);
   const { t } = useLanguage();
@@ -320,17 +322,21 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
     if (!file || !isPdf) return;
     setBusy(true);
     setError("");
+    setProgress({ current: 0, total: 0 });
     try {
       const sanitized = Object.fromEntries(
         Object.entries(overlays).filter(([, json]) => hasRedactionObjects(json))
       ) as Record<number, string>;
-      const bytes = await redactPdfRasterize(file, sanitized, preset);
+      const bytes = await redactPdfRasterize(file, sanitized, preset, {
+        onProgress: (current, total) => setProgress({ current, total }),
+      });
       const outName = file.name.replace(/\.[^.]+$/, "") + "-redacted.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("redactionFailed", "Redaction failed"));
+      setError(notifyPdfToolError(e, t("redactionFailed", "Redaction failed")));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }, [file, isPdf, overlays, preset, t]);
 
@@ -425,6 +431,21 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
       </div>
 
       {error && <div className="m-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">{error}</div>}
+      {busy && progress && progress.total > 0 && (
+        <div className="mx-4 mt-4">
+          <div className="h-2 w-full rounded-full bg-[color:var(--brand-cream)] overflow-hidden">
+            <div
+              className="h-full bg-primary transition-[width] duration-200"
+              style={{ width: `${Math.max(2, Math.round((progress.current / progress.total) * 100))}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-[color:var(--brand-muted)] text-center">
+            {t("processingProgress", "Processing {current} / {total}")
+              .replace("{current}", `${Math.min(progress.current, progress.total)}`)
+              .replace("{total}", `${progress.total}`)}
+          </p>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-4 py-2 border-b border-[color:var(--brand-line)] text-sm text-[color:var(--brand-muted)]">
         <div className="flex items-center gap-2">

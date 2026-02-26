@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import FileDropzone from "@/components/tools/FileDropzone";
 import { toolByKey, TOOLS } from "@/lib/tools";
 import { deleteUpload, loadUpload } from "@/lib/uploadStore";
-import { clearPdfEditorCache, loadPdfEditorInput, loadPdfEditorOutput } from "@/lib/pdfEditorCache";
+import { cleanupPdfEditorCache, clearPdfEditorCache, loadPdfEditorInput, loadPdfEditorOutput } from "@/lib/pdfEditorCache";
 import { createGuestDocument, loadGuestDocument, updateGuestDocumentFiles, updateGuestDocumentTool } from "@/lib/guestDocumentStore";
 import { chosenToolFromToolKey, displayToolKeyFromChosenTool, pdfEditorInitialTool, toolKeyFromChosenTool } from "@/lib/filesEditorCompat";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -171,6 +171,12 @@ export default function UnifiedToolPage({
     return () => {
       cancelled = true;
     };
+  }, [isGuest]);
+
+  // Quietly cleanup stale cache entries and relieve storage pressure.
+  useEffect(() => {
+    if (isGuest) return;
+    void cleanupPdfEditorCache().catch(() => {});
   }, [isGuest]);
 
   // Prefetch PDF editor resources

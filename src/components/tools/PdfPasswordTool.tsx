@@ -4,6 +4,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, protectPdfWithPassword } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 export default function PdfPasswordTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -66,7 +67,7 @@ export default function PdfPasswordTool({ initialFile }: { initialFile?: File })
       const outName = file.name.replace(/\.[^.]+$/, "") + "-protected.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("protectFailed", "Failed to protect PDF"));
+      setError(notifyPdfToolError(e, t("protectFailed", "Failed to protect PDF")));
     } finally {
       setBusy(false);
     }

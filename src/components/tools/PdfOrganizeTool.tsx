@@ -7,6 +7,7 @@ import { downloadBlob, rebuildPdfWithOps } from "@/lib/pdf/client";
 import { configurePdfJsWorkerV2, pdfjs } from "@/lib/pdf/pdfjsV2";
 import { safeRandomUUID } from "@/lib/safeRandomUUID";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 type PageItem = {
   id: string;
@@ -101,7 +102,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
       setSelected({});
     };
 
-    void run().catch((e) => setError(e instanceof Error ? e.message : t("loadPdfFailed", "Failed to load PDF")));
+    void run().catch((e) => setError(notifyPdfToolError(e, t("loadPdfFailed", "Failed to load PDF"))));
     return () => {
       cancelled = true;
     };
@@ -229,7 +230,7 @@ export default function PdfOrganizeTool({ initialFile }: { initialFile?: File })
         const outName = file.name.replace(/\.[^.]+$/, "") + `${suffix}.pdf`;
         downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
       } catch (e) {
-        setError(e instanceof Error ? e.message : t("exportFailed", "Export failed"));
+        setError(notifyPdfToolError(e, t("exportFailed", "Export failed")));
       } finally {
         setBusy(false);
       }

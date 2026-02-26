@@ -1,14 +1,295 @@
 "use client";
 
-import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
 import JSZip from "jszip";
-import * as fabric from "fabric";
 import { getClientAuthStatus } from "@/lib/clientAuthState";
 import { consumeGuestDownload, getGuestQuotaState } from "@/lib/guestQuota";
 import { decryptPdfBytes, encryptPdfBytes } from "./qpdf";
 
 export type PdfCompressPreset = "balanced" | "small" | "smallest";
 export type PdfRasterPreset = PdfCompressPreset;
+export type PdfProgressCallback = (current: number, total: number) => void;
+
+type PdfLibModule = typeof import("pdf-lib");
+type FabricModule = typeof import("fabric");
+type PdfTaskOptions = {
+  onProgress?: PdfProgressCallback;
+};
+
+let pdfLibPromise: Promise<PdfLibModule> | null = null;
+let fabricPromise: Promise<FabricModule> | null = null;
+let mergeJobId = 0;
+let rasterJobId = 0;
+
+function nextMergeJobId() {
+  mergeJobId += 1;
+  return mergeJobId;
+}
+
+function nextRasterJobId() {
+  rasterJobId += 1;
+  return rasterJobId;
+}
+
+async function loadPdfLib() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = import("pdf-lib");
+  }
+  return pdfLibPromise;
+}
+
+async function loadFabric() {
+  if (!fabricPromise) {
+    fabricPromise = import("fabric");
+  }
+  return fabricPromise;
+}
+
+type MergeWorkerInput = {
+  type: "merge";
+  jobId: number;
+  files: { name: string; bytes: ArrayBuffer }[];
+};
+
+type MergeWorkerProgress = {
+  type: "merge-progress";
+  jobId: number;
+  current: number;
+  total: number;
+};
+
+type MergeWorkerResult = {
+  type: "merge-result";
+  jobId: number;
+  bytes: ArrayBuffer;
+};
+
+type MergeWorkerError = {
+  type: "merge-error";
+  jobId: number;
+  message: string;
+};
+
+type RasterWorkerTaskInput =
+  | {
+      type: "compress";
+      jobId: number;
+      data: ArrayBuffer;
+      preset: PdfCompressPreset;
+    }
+  | {
+      type: "redact";
+      jobId: number;
+      data: ArrayBuffer;
+      preset: PdfRasterPreset;
+      overlays: Record<number, string>;
+    };
+
+type RasterWorkerProgress = {
+  type: "raster-progress";
+  jobId: number;
+  current: number;
+  total: number;
+};
+
+type RasterWorkerResult = {
+  type: "raster-result";
+  jobId: number;
+  bytes: ArrayBuffer;
+};
+
+type RasterWorkerError = {
+  type: "raster-error";
+  jobId: number;
+  message: string;
+};
+
+function isMergeWorkerProgress(value: unknown): value is MergeWorkerProgress {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return (
+    data.type === "merge-progress" &&
+    typeof data.jobId === "number" &&
+    typeof data.current === "number" &&
+    typeof data.total === "number"
+  );
+}
+
+function isMergeWorkerResult(value: unknown): value is MergeWorkerResult {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return data.type === "merge-result" && typeof data.jobId === "number" && data.bytes instanceof ArrayBuffer;
+}
+
+function isMergeWorkerError(value: unknown): value is MergeWorkerError {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return data.type === "merge-error" && typeof data.jobId === "number" && typeof data.message === "string";
+}
+
+function isRasterWorkerProgress(value: unknown): value is RasterWorkerProgress {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return (
+    data.type === "raster-progress" &&
+    typeof data.jobId === "number" &&
+    typeof data.current === "number" &&
+    typeof data.total === "number"
+  );
+}
+
+function isRasterWorkerResult(value: unknown): value is RasterWorkerResult {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return data.type === "raster-result" && typeof data.jobId === "number" && data.bytes instanceof ArrayBuffer;
+}
+
+function isRasterWorkerError(value: unknown): value is RasterWorkerError {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return data.type === "raster-error" && typeof data.jobId === "number" && typeof data.message === "string";
+}
+
+function isRasterWorkerManuallyDisabled() {
+  if (typeof window === "undefined") return false;
+  const runtime = window as Window & { __QWERPDF_DISABLE_RASTER_WORKER__?: boolean };
+  if (runtime.__QWERPDF_DISABLE_RASTER_WORKER__ === true) return true;
+  try {
+    return window.localStorage.getItem("qwerpdf:disable-raster-worker") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function supportsRasterWorker() {
+  if (isRasterWorkerManuallyDisabled()) return false;
+  return typeof Worker !== "undefined" && typeof OffscreenCanvas !== "undefined";
+}
+
+async function mergePdfsOnMainThread(files: File[], opts?: PdfTaskOptions) {
+  const { PDFDocument } = await loadPdfLib();
+  const merged = await PDFDocument.create();
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFDocument.load(bytes);
+    const copiedPages = await merged.copyPages(doc, doc.getPageIndices());
+    for (const page of copiedPages) merged.addPage(page);
+    opts?.onProgress?.(i + 1, files.length);
+  }
+
+  return merged.save();
+}
+
+async function mergePdfsWithWorker(files: File[], opts?: PdfTaskOptions): Promise<Uint8Array> {
+  if (typeof Worker === "undefined") {
+    return mergePdfsOnMainThread(files, opts);
+  }
+
+  const worker = new Worker(new URL("./merge.worker.ts", import.meta.url), {
+    type: "module",
+    name: "pdf-merge-worker",
+  });
+  const jobId = nextMergeJobId();
+
+  try {
+    const payloadFiles = await Promise.all(
+      files.map(async (file) => ({
+        name: file.name,
+        bytes: await file.arrayBuffer(),
+      }))
+    );
+
+    const payload: MergeWorkerInput = {
+      type: "merge",
+      jobId,
+      files: payloadFiles,
+    };
+    const transferables = payloadFiles.map((item) => item.bytes);
+
+    return await new Promise<Uint8Array>((resolve, reject) => {
+      const cleanup = () => {
+        worker.onmessage = null;
+        worker.onerror = null;
+        worker.terminate();
+      };
+
+      worker.onmessage = (evt: MessageEvent<unknown>) => {
+        if (isMergeWorkerProgress(evt.data)) {
+          if (evt.data.jobId !== jobId) return;
+          opts?.onProgress?.(evt.data.current, evt.data.total);
+          return;
+        }
+        if (isMergeWorkerResult(evt.data)) {
+          if (evt.data.jobId !== jobId) return;
+          cleanup();
+          resolve(new Uint8Array(evt.data.bytes));
+          return;
+        }
+        if (isMergeWorkerError(evt.data)) {
+          if (evt.data.jobId !== jobId) return;
+          cleanup();
+          reject(new Error(evt.data.message || "Failed to merge PDFs in worker"));
+        }
+      };
+
+      worker.onerror = () => {
+        cleanup();
+        reject(new Error("Failed to initialize PDF merge worker"));
+      };
+
+      worker.postMessage(payload, transferables);
+    });
+  } catch {
+    worker.terminate();
+    return mergePdfsOnMainThread(files, opts);
+  }
+}
+
+async function runRasterWorkerTask(task: RasterWorkerTaskInput, opts?: PdfTaskOptions): Promise<Uint8Array> {
+  if (!supportsRasterWorker()) {
+    throw new Error("Raster worker not supported");
+  }
+
+  const worker = new Worker(new URL("./raster.worker.ts", import.meta.url), {
+    type: "module",
+    name: "pdf-raster-worker",
+  });
+
+  return await new Promise<Uint8Array>((resolve, reject) => {
+    const cleanup = () => {
+      worker.onmessage = null;
+      worker.onerror = null;
+      worker.terminate();
+    };
+
+    worker.onmessage = (evt: MessageEvent<unknown>) => {
+      if (isRasterWorkerProgress(evt.data)) {
+        if (evt.data.jobId !== task.jobId) return;
+        opts?.onProgress?.(evt.data.current, evt.data.total);
+        return;
+      }
+      if (isRasterWorkerResult(evt.data)) {
+        if (evt.data.jobId !== task.jobId) return;
+        cleanup();
+        resolve(new Uint8Array(evt.data.bytes));
+        return;
+      }
+      if (isRasterWorkerError(evt.data)) {
+        if (evt.data.jobId !== task.jobId) return;
+        cleanup();
+        reject(new Error(evt.data.message || "Raster worker task failed"));
+      }
+    };
+
+    worker.onerror = () => {
+      cleanup();
+      reject(new Error("Failed to initialize raster worker"));
+    };
+
+    worker.postMessage(task, [task.data]);
+  });
+}
 
 export function downloadBlob(blob: Blob, filename: string) {
   const authed = getClientAuthStatus();
@@ -56,20 +337,19 @@ async function canvasToUint8Array(
   return dataUrlToUint8Array(canvas.toDataURL(type, quality));
 }
 
-export async function mergePdfs(files: File[]): Promise<Uint8Array> {
-  const merged = await PDFDocument.create();
-
-  for (const file of files) {
-    const bytes = await file.arrayBuffer();
-    const doc = await PDFDocument.load(bytes);
-    const copiedPages = await merged.copyPages(doc, doc.getPageIndices());
-    for (const page of copiedPages) merged.addPage(page);
+export async function mergePdfs(files: File[], opts: PdfTaskOptions = {}): Promise<Uint8Array> {
+  if (files.length <= 1) {
+    return mergePdfsOnMainThread(files, opts);
   }
-
-  return merged.save();
+  try {
+    return await mergePdfsWithWorker(files, opts);
+  } catch {
+    return mergePdfsOnMainThread(files, opts);
+  }
 }
 
 export async function splitPdfToZip(file: File, pageNumbers1Based?: number[]): Promise<Blob> {
+  const { PDFDocument } = await loadPdfLib();
   const bytes = await file.arrayBuffer();
   const source = await PDFDocument.load(bytes);
   const zip = new JSZip();
@@ -93,6 +373,7 @@ export async function splitPdfToZip(file: File, pageNumbers1Based?: number[]): P
 }
 
 export async function extractPdfPages(file: File, pageNumbers1Based: number[]): Promise<Uint8Array> {
+  const { PDFDocument } = await loadPdfLib();
   const bytes = await file.arrayBuffer();
   const source = await PDFDocument.load(bytes);
   const out = await PDFDocument.create();
@@ -111,6 +392,7 @@ export type PageOpItem = {
 };
 
 export async function rebuildPdfWithOps(file: File, items: PageOpItem[]): Promise<Uint8Array> {
+  const { PDFDocument, degrees } = await loadPdfLib();
   const bytes = await file.arrayBuffer();
   const source = await PDFDocument.load(bytes);
   const out = await PDFDocument.create();
@@ -135,6 +417,7 @@ export async function addTextWatermark(
   file: File,
   opts: { text: string; opacity: number; fontSize: number; rotationDegrees: number }
 ): Promise<Uint8Array> {
+  const { PDFDocument, StandardFonts, degrees, rgb } = await loadPdfLib();
   if (!opts.text) throw new Error("Watermark text is required");
   const bytes = await file.arrayBuffer();
   const pdf = await PDFDocument.load(bytes);
@@ -168,6 +451,7 @@ export async function cropPdf(
   file: File,
   opts: { marginLeft: number; marginRight: number; marginTop: number; marginBottom: number }
 ): Promise<Uint8Array> {
+  const { PDFDocument } = await loadPdfLib();
   const bytes = await file.arrayBuffer();
   const pdf = await PDFDocument.load(bytes);
   const pages = pdf.getPages();
@@ -189,6 +473,7 @@ export async function cropPdf(
 }
 
 export async function imagesToPdf(images: File[]): Promise<Uint8Array> {
+  const { PDFDocument } = await loadPdfLib();
   const pdf = await PDFDocument.create();
 
   for (const img of images) {
@@ -254,9 +539,10 @@ export async function extractPdfText(file: File): Promise<string> {
   return parts.join("\n\n");
 }
 
-export async function compressPdfRasterize(
+async function compressPdfRasterizeOnMainThread(
   file: File,
-  preset: PdfCompressPreset
+  preset: PdfCompressPreset,
+  opts: PdfTaskOptions = {}
 ): Promise<Uint8Array> {
   const presets: Record<PdfCompressPreset, { dpi: number; quality: number }> = {
     balanced: { dpi: 150, quality: 0.8 },
@@ -266,6 +552,7 @@ export async function compressPdfRasterize(
 
   const { dpi, quality } = presets[preset];
   const { configurePdfJsWorkerV2, pdfjs } = await import("./pdfjsV2");
+  const { PDFDocument } = await loadPdfLib();
   configurePdfJsWorkerV2();
 
   const data = new Uint8Array(await file.arrayBuffer());
@@ -298,9 +585,34 @@ export async function compressPdfRasterize(
       height: viewport1.height,
     });
     (page as { cleanup?: () => void }).cleanup?.();
+    opts.onProgress?.(pageNum, input.numPages);
   }
 
   return output.save();
+}
+
+export async function compressPdfRasterize(
+  file: File,
+  preset: PdfCompressPreset,
+  opts: PdfTaskOptions = {}
+): Promise<Uint8Array> {
+  if (supportsRasterWorker()) {
+    try {
+      const data = await file.arrayBuffer();
+      return await runRasterWorkerTask(
+        {
+          type: "compress",
+          jobId: nextRasterJobId(),
+          data,
+          preset,
+        },
+        opts
+      );
+    } catch {
+      // Fall through to main-thread implementation.
+    }
+  }
+  return compressPdfRasterizeOnMainThread(file, preset, opts);
 }
 
 function createCanvas(width: number, height: number) {
@@ -311,6 +623,7 @@ function createCanvas(width: number, height: number) {
 }
 
 async function renderFabricJsonToCanvasElement(json: string, size: { width: number; height: number }) {
+  const fabric = await loadFabric();
   const canvasEl = createCanvas(size.width, size.height);
   const canvas = new fabric.StaticCanvas(canvasEl, { width: size.width, height: size.height });
 
@@ -331,10 +644,11 @@ async function renderFabricJsonToCanvasElement(json: string, size: { width: numb
   return canvasEl;
 }
 
-export async function redactPdfRasterize(
+async function redactPdfRasterizeOnMainThread(
   file: File,
   overlays: Record<number, string>,
-  preset: PdfRasterPreset
+  preset: PdfRasterPreset,
+  opts: PdfTaskOptions = {}
 ): Promise<Uint8Array> {
   const presets: Record<PdfRasterPreset, { dpi: number; quality: number }> = {
     balanced: { dpi: 150, quality: 0.85 },
@@ -348,6 +662,7 @@ export async function redactPdfRasterize(
   if (!hasRedactions) return data;
 
   const { configurePdfJsWorkerV2, pdfjs } = await import("./pdfjsV2");
+  const { PDFDocument } = await loadPdfLib();
   configurePdfJsWorkerV2();
   const input = await pdfjs.getDocument({ data }).promise;
   const source = await PDFDocument.load(data);
@@ -362,6 +677,7 @@ export async function redactPdfRasterize(
     if (!overlayJson) {
       const [copied] = await output.copyPages(source, [pageNum - 1]);
       output.addPage(copied);
+      opts.onProgress?.(pageNum, totalPages);
       continue;
     }
 
@@ -392,9 +708,42 @@ export async function redactPdfRasterize(
       height: viewport1.height,
     });
     (page as { cleanup?: () => void }).cleanup?.();
+    opts.onProgress?.(pageNum, totalPages);
   }
 
   return output.save();
+}
+
+export async function redactPdfRasterize(
+  file: File,
+  overlays: Record<number, string>,
+  preset: PdfRasterPreset,
+  opts: PdfTaskOptions = {}
+): Promise<Uint8Array> {
+  const hasRedactions = Object.keys(overlays).length > 0;
+  if (!hasRedactions) {
+    return new Uint8Array(await file.arrayBuffer());
+  }
+
+  if (supportsRasterWorker()) {
+    try {
+      const data = await file.arrayBuffer();
+      return await runRasterWorkerTask(
+        {
+          type: "redact",
+          jobId: nextRasterJobId(),
+          data,
+          preset,
+          overlays,
+        },
+        opts
+      );
+    } catch {
+      // Fall through to main-thread implementation.
+    }
+  }
+
+  return redactPdfRasterizeOnMainThread(file, overlays, preset, opts);
 }
 
 export async function signPdfWithPng(
@@ -402,6 +751,7 @@ export async function signPdfWithPng(
   signaturePng: Uint8Array,
   opts: { pageNumber1Based: number; width: number; marginRight: number; marginBottom: number }
 ): Promise<Uint8Array> {
+  const { PDFDocument } = await loadPdfLib();
   const bytes = await file.arrayBuffer();
   const pdf = await PDFDocument.load(bytes);
   const pageIndex = Math.min(Math.max(opts.pageNumber1Based - 1, 0), pdf.getPageCount() - 1);
@@ -424,6 +774,7 @@ export async function renderFabricJsonToPngDataUrl(
   json: string,
   size: { width: number; height: number }
 ): Promise<string> {
+  const fabric = await loadFabric();
   const canvasEl = createCanvas(size.width, size.height);
   const canvas = new fabric.StaticCanvas(canvasEl, { width: size.width, height: size.height });
 
@@ -446,6 +797,7 @@ export async function renderFabricJsonToPngBytes(
   json: string,
   size: { width: number; height: number }
 ): Promise<Uint8Array> {
+  const fabric = await loadFabric();
   const canvasEl = createCanvas(size.width, size.height);
   const canvas = new fabric.StaticCanvas(canvasEl, { width: size.width, height: size.height });
 
@@ -472,6 +824,7 @@ export async function applyAnnotationOverlays(
   overlays: Record<number, string>,
   pageSize: { width: number; height: number }
 ): Promise<Uint8Array> {
+  const { PDFDocument } = await loadPdfLib();
   const pdfBytes = await file.arrayBuffer();
   const pdf = await PDFDocument.load(pdfBytes);
 

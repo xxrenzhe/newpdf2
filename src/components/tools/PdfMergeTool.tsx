@@ -4,10 +4,12 @@ import { useCallback, useId, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { mergePdfs, downloadBlob } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }) {
   const [files, setFiles] = useState<File[]>(initialFiles ?? []);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const { t } = useLanguage();
@@ -18,13 +20,19 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
   const merge = useCallback(async () => {
     if (!canMerge) return;
     setBusy(true);
+    setProgress({ current: 0, total: files.length });
     try {
-      const bytes = await mergePdfs(files);
+      const bytes = await mergePdfs(files, {
+        onProgress: (current, total) => setProgress({ current, total }),
+      });
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), "merged.pdf");
+    } catch (e) {
+      notifyPdfToolError(e, t("mergeFailed", "Merge failed. Please check your files and try again."));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
-  }, [canMerge, files]);
+  }, [canMerge, files, t]);
 
   const addMoreFiles = useCallback((newFiles: FileList | File[]) => {
     const fileArray = Array.from(newFiles);
@@ -199,6 +207,13 @@ export default function PdfMergeTool({ initialFiles }: { initialFiles?: File[] }
           </>
         )}
       </button>
+      {busy && progress && progress.total > 0 && (
+        <p className="mt-3 text-xs text-[color:var(--brand-muted)] text-center">
+          {t("processingProgress", "Processing {current} / {total}")
+            .replace("{current}", `${Math.min(progress.current, progress.total)}`)
+            .replace("{total}", `${progress.total}`)}
+        </p>
+      )}
     </div>
   );
 }

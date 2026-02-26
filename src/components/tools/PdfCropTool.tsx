@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { cropPdf, downloadBlob } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -29,7 +30,7 @@ export default function PdfCropTool({ initialFile }: { initialFile?: File }) {
       const outName = file.name.replace(/\.[^.]+$/, "") + "-cropped.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("cropFailed", "Crop failed"));
+      setError(notifyPdfToolError(e, t("cropFailed", "Crop failed")));
     } finally {
       setBusy(false);
     }

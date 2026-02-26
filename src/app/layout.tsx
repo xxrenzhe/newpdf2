@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { SecurityInitializer } from "@/components/SecurityInitializer";
+import GlobalToaster from "@/components/GlobalToaster";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pdftools.app";
 
@@ -112,7 +113,10 @@ export default function RootLayout({
       <body className={`${jakarta.variable} ${spaceGrotesk.variable} antialiased`} suppressHydrationWarning>
         <SecurityInitializer />
         <Providers>
-          <LanguageProvider>{children}</LanguageProvider>
+          <LanguageProvider>
+            {children}
+            <GlobalToaster />
+          </LanguageProvider>
         </Providers>
       </body>
     </html>

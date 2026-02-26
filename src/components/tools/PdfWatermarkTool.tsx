@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import FileDropzone from "./FileDropzone";
 import { addTextWatermark, downloadBlob } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }) {
   const { t } = useLanguage();
@@ -42,7 +43,7 @@ export default function PdfWatermarkTool({ initialFile }: { initialFile?: File }
       const outName = file.name.replace(/\.[^.]+$/, "") + "-watermarked.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("watermarkFailed", "Failed to add watermark"));
+      setError(notifyPdfToolError(e, t("watermarkFailed", "Failed to add watermark")));
     } finally {
       setBusy(false);
     }

@@ -5,12 +5,14 @@ import FileDropzone from "./FileDropzone";
 import type { PdfCompressPreset } from "@/lib/pdf/client";
 import { compressPdfRasterize, downloadBlob } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 export default function PdfCompressTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [preset, setPreset] = useState<PdfCompressPreset>("balanced");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string>("");
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const { t } = useLanguage();
 
   const presetInfo: Record<PdfCompressPreset, { label: string; desc: string; icon: React.ReactNode }> = {
@@ -50,8 +52,11 @@ export default function PdfCompressTool({ initialFile }: { initialFile?: File })
     if (!file || !isPdf) return;
     setBusy(true);
     setNote("");
+    setProgress({ current: 0, total: 0 });
     try {
-      const bytes = await compressPdfRasterize(file, preset);
+      const bytes = await compressPdfRasterize(file, preset, {
+        onProgress: (current, total) => setProgress({ current, total }),
+      });
       const outName = file.name.replace(/\.[^.]+$/, "") + `-compressed-${preset}.pdf`;
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
       setNote(
@@ -61,9 +66,10 @@ export default function PdfCompressTool({ initialFile }: { initialFile?: File })
         )
       );
     } catch (e) {
-      setNote(e instanceof Error ? e.message : t("compressionFailed", "Compression failed"));
+      setNote(notifyPdfToolError(e, t("compressionFailed", "Compression failed")));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }, [file, isPdf, preset, t]);
 
@@ -173,6 +179,21 @@ export default function PdfCompressTool({ initialFile }: { initialFile?: File })
           </>
         )}
       </button>
+      {busy && progress && progress.total > 0 && (
+        <div className="mt-3">
+          <div className="h-2 w-full rounded-full bg-[color:var(--brand-cream)] overflow-hidden">
+            <div
+              className="h-full bg-primary transition-[width] duration-200"
+              style={{ width: `${Math.max(2, Math.round((progress.current / progress.total) * 100))}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-[color:var(--brand-muted)] text-center">
+            {t("processingProgress", "Processing {current} / {total}")
+              .replace("{current}", `${Math.min(progress.current, progress.total)}`)
+              .replace("{total}", `${progress.total}`)}
+          </p>
+        </div>
+      )}
 
       {note && (
         <div className="mt-4 p-3 bg-[color:var(--brand-lilac)] border border-[color:var(--brand-line)] rounded-lg">

@@ -14,6 +14,8 @@ type StoredPdfEditorBlob = {
 const DB_NAME = "pdf-tools-cache";
 const DB_VERSION = 1;
 const STORE_NAME = "pdf-editor";
+const DEFAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_USAGE_RATIO_THRESHOLD = 0.9;
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -60,6 +62,19 @@ async function deleteRecord(key: CacheKey): Promise<void> {
   });
 }
 
+async function listRecords(): Promise<StoredPdfEditorBlob[]> {
+  const db = await openDb();
+  const rows = await new Promise<StoredPdfEditorBlob[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => {
+      resolve(Array.isArray(req.result) ? (req.result as StoredPdfEditorBlob[]) : []);
+    };
+    req.onerror = () => reject(req.error);
+  });
+  return rows;
+}
+
 export async function savePdfEditorInput(file: File): Promise<void> {
   await putRecord({
     key: "input",
@@ -103,3 +118,41 @@ export async function clearPdfEditorCache(): Promise<void> {
   await Promise.all([deleteRecord("input"), deleteRecord("output")]);
 }
 
+export async function cleanupPdfEditorCache(
+  options?: { maxAgeMs?: number; usageRatioThreshold?: number }
+): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+
+  const maxAgeMs = options?.maxAgeMs ?? DEFAULT_CACHE_TTL_MS;
+  const usageRatioThreshold = options?.usageRatioThreshold ?? DEFAULT_USAGE_RATIO_THRESHOLD;
+  const now = Date.now();
+
+  const records = await listRecords();
+  if (records.length === 0) return;
+
+  const stale = records.filter((row) => now - row.updatedAt > maxAgeMs);
+  if (stale.length > 0) {
+    await Promise.all(stale.map((row) => deleteRecord(row.key)));
+  }
+
+  if (typeof navigator === "undefined" || !navigator.storage?.estimate) return;
+
+  const estimate = await navigator.storage.estimate().catch(() => null);
+  const usage = typeof estimate?.usage === "number" ? estimate.usage : 0;
+  const quota = typeof estimate?.quota === "number" ? estimate.quota : 0;
+  if (!usage || !quota) return;
+
+  let projectedUsage = usage;
+  const currentRatio = projectedUsage / quota;
+  if (currentRatio < usageRatioThreshold) return;
+
+  const freshRecords = records
+    .filter((row) => !stale.some((expired) => expired.key === row.key))
+    .sort((a, b) => a.updatedAt - b.updatedAt);
+
+  for (const row of freshRecords) {
+    await deleteRecord(row.key);
+    projectedUsage = Math.max(0, projectedUsage - (row.blob.size || 0));
+    if (projectedUsage / quota < usageRatioThreshold) break;
+  }
+}

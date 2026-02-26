@@ -6,6 +6,7 @@ import FileDropzone from "@/components/tools/FileDropzone";
 import { downloadBlob, extractPdfPages } from "@/lib/pdf/client";
 import { configurePdfJsWorkerV2, pdfjs } from "@/lib/pdf/pdfjsV2";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 type ThumbEntry = {
   url: string;
@@ -196,7 +197,7 @@ export default function PdfDeletePagesTool({
       setNumPages(doc.numPages);
     };
 
-    void run().catch((e) => setError(e instanceof Error ? e.message : t("loadPdfFailed", "Failed to load PDF")));
+    void run().catch((e) => setError(notifyPdfToolError(e, t("loadPdfFailed", "Failed to load PDF"))));
     return () => {
       cancelled = true;
     };
@@ -234,7 +235,7 @@ export default function PdfDeletePagesTool({
       const outName = file.name.replace(/\.[^.]+$/, "") + "-deleted.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("exportFailed", "Export failed"));
+      setError(notifyPdfToolError(e, t("exportFailed", "Export failed")));
     } finally {
       setBusy(false);
     }

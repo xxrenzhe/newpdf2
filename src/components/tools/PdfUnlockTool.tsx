@@ -4,6 +4,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import { downloadBlob, unlockPdfWithPassword } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -28,7 +29,7 @@ export default function PdfUnlockTool({ initialFile }: { initialFile?: File }) {
       const outName = file.name.replace(/\.[^.]+$/, "") + "-unlocked.pdf";
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), outName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("unlockFailed", "Failed to unlock PDF"));
+      setError(notifyPdfToolError(e, t("unlockFailed", "Failed to unlock PDF")));
     } finally {
       setBusy(false);
     }

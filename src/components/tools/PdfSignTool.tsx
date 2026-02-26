@@ -5,6 +5,7 @@ import FileDropzone from "./FileDropzone";
 import SignaturePad, { type SignaturePadHandle } from "./SignaturePad";
 import { dataUrlToUint8Array, downloadBlob, signPdfWithPng } from "@/lib/pdf/client";
 import { useLanguage } from "@/components/LanguageProvider";
+import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
 
 export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -38,7 +39,7 @@ export default function PdfSignTool({ initialFile }: { initialFile?: File }) {
       });
       downloadBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), file.name.replace(/\.[^.]+$/, "") + "-signed.pdf");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("signFailed", "Signing failed"));
+      setError(notifyPdfToolError(e, t("signFailed", "Signing failed")));
     } finally {
       setBusy(false);
     }
