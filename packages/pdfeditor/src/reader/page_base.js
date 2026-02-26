@@ -34,6 +34,7 @@ export class PDFPageBase {
     elAnnotationLayer = null;
     elDrawLayer = null;
     content = null;
+    loadId = null;
     #canvasImage = null;
 
     constructor(pdfDocument, pageNum, scale) {
@@ -112,6 +113,8 @@ export class PDFPageBase {
         if (this.rendered) {
             return this.content;
         }
+        const renderLoadId = this.reader?.loadId;
+        this.loadId = Number.isFinite(renderLoadId) ? renderLoadId : null;
 
         switch (renderType) {
             case 'html':

@@ -23,6 +23,7 @@ interface PDFAnnotationCanvasProps {
   activeColor: string;
   strokeWidth: number;
   initialAnnotationsJson?: string;
+  disablePointerEvents?: boolean;
   onAnnotationsChange?: (annotations: string) => void;
 }
 
@@ -33,6 +34,7 @@ export default function PDFAnnotationCanvas({
   activeColor,
   strokeWidth,
   initialAnnotationsJson,
+  disablePointerEvents = false,
   onAnnotationsChange,
 }: PDFAnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,6 +42,7 @@ export default function PDFAnnotationCanvas({
   const initialSizeRef = useRef({ width, height });
   const initialToolRef = useRef(activeTool);
   const onAnnotationsChangeRef = useRef(onAnnotationsChange);
+  const suppressSaveRef = useRef(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const currentShapeRef = useRef<fabric.Object | null>(null);
@@ -52,7 +55,7 @@ export default function PDFAnnotationCanvas({
   }, [onAnnotationsChange]);
 
   const saveAnnotations = useCallback(() => {
-    if (!fabricCanvasRef.current || !onAnnotationsChangeRef.current) return;
+    if (suppressSaveRef.current || !fabricCanvasRef.current || !onAnnotationsChangeRef.current) return;
     const json = JSON.stringify(fabricCanvasRef.current.toJSON());
     onAnnotationsChangeRef.current(json);
   }, []);
@@ -92,27 +95,32 @@ export default function PDFAnnotationCanvas({
     const canvas = fabricCanvasRef.current;
 
     const load = async () => {
-      canvas.clear();
-      if (!initialAnnotationsJson) {
-        canvas.renderAll();
-        return;
-      }
+      suppressSaveRef.current = true;
+      try {
+        canvas.clear();
+        if (!initialAnnotationsJson || initialAnnotationsJson.trim() === "{}") {
+          canvas.renderAll();
+          return;
+        }
 
-      const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(
-        initialAnnotationsJson,
-        () => {}
-      );
-      if (loadResult instanceof Promise) {
-        await loadResult;
-      } else {
-        await new Promise<void>((resolve) => {
-          (canvas as unknown as { loadFromJSON: (json: string, cb: () => void) => void }).loadFromJSON(
-            initialAnnotationsJson,
-            () => resolve()
-          );
-        });
+        const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(
+          initialAnnotationsJson,
+          () => {}
+        );
+        if (loadResult instanceof Promise) {
+          await loadResult;
+        } else {
+          await new Promise<void>((resolve) => {
+            (canvas as unknown as { loadFromJSON: (json: string, cb: () => void) => void }).loadFromJSON(
+              initialAnnotationsJson,
+              () => resolve()
+            );
+          });
+        }
+        canvas.renderAll();
+      } finally {
+        suppressSaveRef.current = false;
       }
-      canvas.renderAll();
     };
 
     void load();
@@ -366,7 +374,7 @@ export default function PDFAnnotationCanvas({
     <canvas
       ref={canvasRef}
       className="absolute inset-0 pointer-events-auto"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none", pointerEvents: disablePointerEvents ? "none" : "auto" }}
     />
   );
 }

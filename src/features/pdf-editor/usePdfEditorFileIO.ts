@@ -9,6 +9,15 @@ type UsePdfEditorFileIOOptions = {
   transferPdfBytesLimit: number;
 };
 
+function revokeObjectUrl(url: string | null) {
+  if (!url) return;
+  try {
+    URL.revokeObjectURL(url);
+  } catch {
+    // ignore
+  }
+}
+
 export function usePdfEditorFileIO({
   file,
   pdfLoaded,
@@ -21,12 +30,9 @@ export function usePdfEditorFileIO({
     const useTransfer = file.size <= transferPdfBytesLimit;
 
     if (useTransfer) {
-      if (fileObjectUrlRef.current) {
-        try {
-          URL.revokeObjectURL(fileObjectUrlRef.current);
-        } catch {
-          // ignore
-        }
+      const active = fileObjectUrlRef.current;
+      if (active) {
+        revokeObjectUrl(active);
         fileObjectUrlRef.current = null;
       }
       fileBytesPromiseRef.current = file.arrayBuffer();
@@ -35,26 +41,33 @@ export function usePdfEditorFileIO({
 
     fileBytesPromiseRef.current = null;
     const url = URL.createObjectURL(file);
-    if (fileObjectUrlRef.current) {
-      try {
-        URL.revokeObjectURL(fileObjectUrlRef.current);
-      } catch {
-        // ignore
-      }
+    const active = fileObjectUrlRef.current;
+    if (active) {
+      revokeObjectUrl(active);
+      fileObjectUrlRef.current = null;
     }
     fileObjectUrlRef.current = url;
 
     return () => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch {
-        // ignore
-      }
       if (fileObjectUrlRef.current === url) {
+        revokeObjectUrl(fileObjectUrlRef.current);
         fileObjectUrlRef.current = null;
+        return;
       }
+      revokeObjectUrl(url);
     };
   }, [file, transferPdfBytesLimit]);
+
+  useEffect(() => {
+    return () => {
+      const active = fileObjectUrlRef.current;
+      if (active) {
+        revokeObjectUrl(active);
+        fileObjectUrlRef.current = null;
+      }
+      fileBytesPromiseRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!pdfLoaded) return;

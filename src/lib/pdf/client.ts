@@ -8,15 +8,31 @@ import { decryptPdfBytes, encryptPdfBytes } from "./qpdf";
 export type PdfCompressPreset = "balanced" | "small" | "smallest";
 export type PdfRasterPreset = PdfCompressPreset;
 export type PdfProgressCallback = (current: number, total: number) => void;
+export type PdfTextReplacementItem = {
+  id?: string;
+  sourceKey?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  fontSize: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  color?: string;
+};
 
 type PdfLibModule = typeof import("pdf-lib");
 type FabricModule = typeof import("fabric");
+type TextFallbackModule = typeof import("./textFallback");
 type PdfTaskOptions = {
   onProgress?: PdfProgressCallback;
 };
 
 let pdfLibPromise: Promise<PdfLibModule> | null = null;
 let fabricPromise: Promise<FabricModule> | null = null;
+let textFallbackPromise: Promise<TextFallbackModule> | null = null;
 let mergeJobId = 0;
 let rasterJobId = 0;
 
@@ -42,6 +58,13 @@ async function loadFabric() {
     fabricPromise = import("fabric");
   }
   return fabricPromise;
+}
+
+async function loadTextFallback() {
+  if (!textFallbackPromise) {
+    textFallbackPromise = import("./textFallback");
+  }
+  return textFallbackPromise;
 }
 
 type MergeWorkerInput = {
@@ -819,26 +842,472 @@ export async function renderFabricJsonToPngBytes(
   return bytes;
 }
 
+type ApplyAnnotationOverlayOptions = {
+  onProgress?: PdfProgressCallback;
+  yieldEveryPages?: number;
+  pageSizesByPage?: Record<number, { width: number; height: number }>;
+  textReplacementsByPage?: Record<number, PdfTextReplacementItem[]>;
+};
+
+type NormalizedTextReplacementItem = Omit<PdfTextReplacementItem, "sourceKey"> & {
+  sourceKey: string;
+};
+
+type StandardFontKey =
+  | "Helvetica"
+  | "HelveticaBold"
+  | "HelveticaOblique"
+  | "HelveticaBoldOblique"
+  | "Courier"
+  | "CourierBold"
+  | "CourierOblique"
+  | "CourierBoldOblique"
+  | "TimesRoman"
+  | "TimesRomanBold"
+  | "TimesRomanItalic"
+  | "TimesRomanBoldItalic";
+
+function isValidPageSize(size: { width: number; height: number } | undefined): size is { width: number; height: number } {
+  return Boolean(
+    size &&
+      Number.isFinite(size.width) &&
+      Number.isFinite(size.height) &&
+      size.width > 0 &&
+      size.height > 0
+  );
+}
+
+function normalizePageNumber(pageNumberLike: string): number | null {
+  const pageNumber = Number(pageNumberLike);
+  if (!Number.isInteger(pageNumber) || pageNumber <= 0) return null;
+  return pageNumber;
+}
+
+function normalizeTextReplacementItem(
+  item: PdfTextReplacementItem,
+  fallbackSourceKey: string
+): NormalizedTextReplacementItem | null {
+  const text = typeof item.text === "string" ? item.text : "";
+  if (text.trim().length === 0) return null;
+
+  const x = Number(item.x);
+  const y = Number(item.y);
+  const width = Number(item.width);
+  const height = Number(item.height);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+    return null;
+  }
+  if (width <= 0 || height <= 0) return null;
+
+  const fontSizeRaw = Number(item.fontSize);
+  const fontSize =
+    Number.isFinite(fontSizeRaw) && fontSizeRaw > 0 ? fontSizeRaw : Math.max(8, Math.min(width, height) * 0.8);
+
+  const sourceKey =
+    typeof item.sourceKey === "string" && item.sourceKey.trim().length > 0
+      ? item.sourceKey
+      : fallbackSourceKey;
+  const id = typeof item.id === "string" && item.id.trim().length > 0 ? item.id : sourceKey;
+
+  return {
+    id,
+    sourceKey,
+    x,
+    y,
+    width,
+    height,
+    text,
+    fontSize,
+    fontFamily: item.fontFamily,
+    fontWeight: item.fontWeight,
+    fontStyle: item.fontStyle,
+    color: item.color,
+  };
+}
+
+function normalizeTextReplacementsByPage(
+  input: Record<number, PdfTextReplacementItem[]> | undefined
+): Map<number, NormalizedTextReplacementItem[]> {
+  const result = new Map<number, NormalizedTextReplacementItem[]>();
+  if (!input) return result;
+
+  for (const [pageNumStr, items] of Object.entries(input)) {
+    const pageNumber1Based = normalizePageNumber(pageNumStr);
+    if (!pageNumber1Based || !Array.isArray(items) || items.length === 0) continue;
+
+    const deduped = new Map<string, NormalizedTextReplacementItem>();
+    for (let index = 0; index < items.length; index += 1) {
+      const normalized = normalizeTextReplacementItem(items[index], `${pageNumber1Based}-${index}`);
+      if (!normalized) continue;
+      deduped.set(normalized.sourceKey, normalized);
+    }
+
+    if (deduped.size > 0) {
+      result.set(pageNumber1Based, Array.from(deduped.values()));
+    }
+  }
+
+  return result;
+}
+
+function isBoldFont(fontWeight: string | undefined) {
+  if (!fontWeight) return false;
+  const normalized = fontWeight.toLowerCase();
+  if (normalized.includes("bold")) return true;
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isFinite(parsed) && parsed >= 600;
+}
+
+function isItalicFont(fontStyle: string | undefined) {
+  if (!fontStyle) return false;
+  const normalized = fontStyle.toLowerCase();
+  return normalized.includes("italic") || normalized.includes("oblique");
+}
+
+function resolveStandardFontKey(
+  fontFamily: string | undefined,
+  fontWeight: string | undefined,
+  fontStyle: string | undefined
+): StandardFontKey {
+  const normalizedFamily = (fontFamily || "").toLowerCase();
+  const bold = isBoldFont(fontWeight);
+  const italic = isItalicFont(fontStyle);
+  const isMono = normalizedFamily.includes("courier") || normalizedFamily.includes("mono");
+  const isSerif = normalizedFamily.includes("times") || normalizedFamily.includes("serif");
+
+  if (isMono) {
+    if (bold && italic) return "CourierBoldOblique";
+    if (bold) return "CourierBold";
+    if (italic) return "CourierOblique";
+    return "Courier";
+  }
+
+  if (isSerif) {
+    if (bold && italic) return "TimesRomanBoldItalic";
+    if (bold) return "TimesRomanBold";
+    if (italic) return "TimesRomanItalic";
+    return "TimesRoman";
+  }
+
+  if (bold && italic) return "HelveticaBoldOblique";
+  if (bold) return "HelveticaBold";
+  if (italic) return "HelveticaOblique";
+  return "Helvetica";
+}
+
+function clampByte(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  if (value <= 0) return 0;
+  if (value >= 255) return 255;
+  return Math.round(value);
+}
+
+function parseRgbComponent(component: string): number | null {
+  const normalized = component.trim();
+  if (!normalized) return null;
+  const parsed = Number.parseFloat(normalized);
+  if (!Number.isFinite(parsed)) return null;
+  if (normalized.endsWith("%")) {
+    return clampByte((parsed / 100) * 255);
+  }
+  return clampByte(parsed);
+}
+
+function parseCssColorToRgb(color: string | undefined): { r: number; g: number; b: number } {
+  if (!color) return { r: 0, g: 0, b: 0 };
+  const normalized = color.trim().toLowerCase();
+  if (!normalized) return { r: 0, g: 0, b: 0 };
+
+  if (normalized.startsWith("#")) {
+    const hex = normalized.slice(1);
+    if (hex.length === 3 || hex.length === 4) {
+      const r = Number.parseInt(`${hex[0]}${hex[0]}`, 16);
+      const g = Number.parseInt(`${hex[1]}${hex[1]}`, 16);
+      const b = Number.parseInt(`${hex[2]}${hex[2]}`, 16);
+      if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+        return { r, g, b };
+      }
+    }
+    if (hex.length === 6 || hex.length === 8) {
+      const r = Number.parseInt(hex.slice(0, 2), 16);
+      const g = Number.parseInt(hex.slice(2, 4), 16);
+      const b = Number.parseInt(hex.slice(4, 6), 16);
+      if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+        return { r, g, b };
+      }
+    }
+  }
+
+  const rgbMatch = normalized.match(/^rgba?\((.+)\)$/);
+  if (rgbMatch) {
+    const rawChannels = rgbMatch[1].split("/")[0]?.trim() || "";
+    const parts = rawChannels.includes(",")
+      ? rawChannels.split(",").map((part) => part.trim()).filter(Boolean)
+      : rawChannels.split(/\s+/).map((part) => part.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      const r = parseRgbComponent(parts[0]);
+      const g = parseRgbComponent(parts[1]);
+      const b = parseRgbComponent(parts[2]);
+      if (r !== null && g !== null && b !== null) {
+        return { r, g, b };
+      }
+    }
+  }
+
+  switch (normalized) {
+    case "white":
+      return { r: 255, g: 255, b: 255 };
+    case "red":
+      return { r: 255, g: 0, b: 0 };
+    case "green":
+      return { r: 0, g: 128, b: 0 };
+    case "blue":
+      return { r: 0, g: 0, b: 255 };
+    case "gray":
+    case "grey":
+      return { r: 128, g: 128, b: 128 };
+    default:
+      return { r: 0, g: 0, b: 0 };
+  }
+}
+
+async function drawTextReplacementsOnPage(
+  pdf: import("pdf-lib").PDFDocument,
+  page: import("pdf-lib").PDFPage,
+  replacements: NormalizedTextReplacementItem[],
+  overlaySize: { width: number; height: number },
+  standardFonts: PdfLibModule["StandardFonts"],
+  rgb: PdfLibModule["rgb"],
+  fontCache: Map<StandardFontKey, Promise<import("pdf-lib").PDFFont>>,
+  fallbackFontCache: Map<string, import("pdf-lib").PDFFont>
+) {
+  const pageWidth = page.getWidth();
+  const pageHeight = page.getHeight();
+  const scaleX = pageWidth / Math.max(overlaySize.width, 0.001);
+  const scaleY = pageHeight / Math.max(overlaySize.height, 0.001);
+
+  for (const replacement of replacements) {
+    const text = replacement.text.replace(/\r\n/g, "\n");
+    if (text.trim().length === 0) continue;
+
+    const mappedX = replacement.x * scaleX;
+    const mappedYTop = replacement.y * scaleY;
+    const mappedWidth = Math.max(replacement.width * scaleX, 1);
+    const mappedHeight = Math.max(replacement.height * scaleY, 1);
+    if (![mappedX, mappedYTop, mappedWidth, mappedHeight].every((value) => Number.isFinite(value))) {
+      continue;
+    }
+
+    if (mappedX >= pageWidth || mappedX + mappedWidth <= 0) continue;
+    const fontSize = Math.max(4, replacement.fontSize * scaleY);
+    if (!Number.isFinite(fontSize)) continue;
+
+    const lines = text.split("\n");
+    const lineHeight = Math.max(fontSize * 1.2, 4);
+    const drawHeight = Math.max(mappedHeight, lineHeight * lines.length);
+    const rawRectY = pageHeight - mappedYTop - drawHeight;
+    if (!Number.isFinite(rawRectY) || rawRectY >= pageHeight || rawRectY + drawHeight <= 0) {
+      continue;
+    }
+
+    const x = Math.max(0, mappedX);
+    const width = Math.min(mappedWidth, pageWidth - x);
+    if (width <= 0) continue;
+
+    const rectY = Math.max(0, rawRectY);
+    const rectHeight = Math.min(drawHeight, pageHeight - rectY);
+    if (rectHeight <= 0) continue;
+
+    const fontKey = resolveStandardFontKey(replacement.fontFamily, replacement.fontWeight, replacement.fontStyle);
+    let fontPromise = fontCache.get(fontKey);
+    if (!fontPromise) {
+      fontPromise = pdf.embedFont(standardFonts[fontKey]);
+      fontCache.set(fontKey, fontPromise);
+    }
+
+    let font: import("pdf-lib").PDFFont | null = null;
+    try {
+      font = await fontPromise;
+    } catch {
+      font = null;
+    }
+
+    let fallbackModule: TextFallbackModule | null = null;
+    let fallbackLines: Awaited<ReturnType<TextFallbackModule["prepareTextLinesWithFallback"]>> | null = null;
+    let useStandardFont = Boolean(font);
+
+    if (font) {
+      for (const line of lines) {
+        if (line.length === 0) continue;
+        try {
+          font.encodeText(line);
+        } catch {
+          useStandardFont = false;
+          break;
+        }
+      }
+    }
+
+    if (!useStandardFont) {
+      try {
+        fallbackModule = await loadTextFallback();
+        const prepared = await fallbackModule.prepareTextLinesWithFallback(
+          pdf,
+          fallbackFontCache,
+          text,
+          fontSize
+        );
+        const hasDrawableRun = prepared.some((line) => line.runs.length > 0);
+        if (!hasDrawableRun) {
+          continue;
+        }
+        fallbackLines = prepared;
+      } catch {
+        continue;
+      }
+    }
+
+    const textColor = parseCssColorToRgb(replacement.color);
+    const pdfTextColor = rgb(textColor.r / 255, textColor.g / 255, textColor.b / 255);
+    page.drawRectangle({
+      x,
+      y: rectY,
+      width,
+      height: rectHeight,
+      color: rgb(1, 1, 1),
+    });
+
+    const textStartY = rectY + rectHeight - lineHeight + Math.max((lineHeight - fontSize) * 0.4, 0);
+    if (useStandardFont && font) {
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+        const line = lines[lineIndex] ?? "";
+        if (line.length === 0) continue;
+        const y = textStartY - lineIndex * lineHeight;
+        if (y < rectY - lineHeight) break;
+        page.drawText(line, {
+          x,
+          y,
+          maxWidth: width,
+          size: fontSize,
+          font,
+          color: pdfTextColor,
+        });
+      }
+      continue;
+    }
+
+    if (fallbackModule && fallbackLines) {
+      fallbackModule.drawPreparedTextLines(page, fallbackLines, {
+        x,
+        y: textStartY,
+        fontSize,
+        lineHeight,
+        color: pdfTextColor,
+        opacity: 1,
+        rotationDegrees: 0,
+      });
+    }
+  }
+}
+
+function isEmptyOverlayJson(json: string | undefined) {
+  if (!json) return true;
+  const trimmed = json.trim();
+  if (!trimmed || trimmed === "{}") return true;
+  try {
+    const parsed = JSON.parse(trimmed) as { objects?: unknown[] };
+    return Array.isArray(parsed.objects) && parsed.objects.length === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function yieldToMainThread() {
+  await new Promise<void>((resolve) => {
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => resolve());
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
+}
+
 export async function applyAnnotationOverlays(
   file: File,
   overlays: Record<number, string>,
-  pageSize: { width: number; height: number }
+  pageSize: { width: number; height: number },
+  opts: ApplyAnnotationOverlayOptions = {}
 ): Promise<Uint8Array> {
-  const { PDFDocument } = await loadPdfLib();
   const pdfBytes = await file.arrayBuffer();
-  const pdf = await PDFDocument.load(pdfBytes);
 
+  const overlayByPage = new Map<number, string>();
   for (const [pageNumStr, json] of Object.entries(overlays)) {
-    const pageNumber1Based = Number(pageNumStr);
-    if (!json) continue;
-    if (!Number.isFinite(pageNumber1Based)) continue;
-    const pageIndex = pageNumber1Based - 1;
-    if (pageIndex < 0 || pageIndex >= pdf.getPageCount()) continue;
+    const pageNumber1Based = normalizePageNumber(pageNumStr);
+    if (!pageNumber1Based) continue;
+    const normalizedJson = json ?? "";
+    if (isEmptyOverlayJson(normalizedJson)) continue;
+    overlayByPage.set(pageNumber1Based, normalizedJson);
+  }
 
-    const pngBytes = await renderFabricJsonToPngBytes(json, pageSize);
-    const png = await pdf.embedPng(pngBytes);
+  const textReplacementsByPage = normalizeTextReplacementsByPage(opts.textReplacementsByPage);
+  const targetPages = Array.from(new Set<number>([...overlayByPage.keys(), ...textReplacementsByPage.keys()])).sort(
+    (a, b) => a - b
+  );
+  if (targetPages.length === 0) {
+    return new Uint8Array(pdfBytes);
+  }
+
+  const { PDFDocument, StandardFonts, rgb } = await loadPdfLib();
+  const pdf = await PDFDocument.load(pdfBytes);
+  const total = targetPages.length;
+  const chunkSize =
+    typeof opts.yieldEveryPages === "number" && Number.isFinite(opts.yieldEveryPages)
+      ? Math.max(1, Math.floor(opts.yieldEveryPages))
+      : 2;
+  const fontCache = new Map<StandardFontKey, Promise<import("pdf-lib").PDFFont>>();
+  const fallbackFontCache = new Map<string, import("pdf-lib").PDFFont>();
+
+  for (let index = 0; index < targetPages.length; index += 1) {
+    const pageNumber1Based = targetPages[index];
+    const pageIndex = pageNumber1Based - 1;
+    if (pageIndex < 0 || pageIndex >= pdf.getPageCount()) {
+      opts.onProgress?.(index + 1, total);
+      continue;
+    }
+
     const page = pdf.getPage(pageIndex);
-    page.drawImage(png, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
+    const pageSizeFromMap = opts.pageSizesByPage?.[pageNumber1Based];
+    const targetPageSize = isValidPageSize(pageSizeFromMap) ? pageSizeFromMap : pageSize;
+    const overlaySize =
+      isValidPageSize(targetPageSize)
+        ? targetPageSize
+        : { width: page.getWidth(), height: page.getHeight() };
+
+    const textReplacements = textReplacementsByPage.get(pageNumber1Based);
+    if (textReplacements && textReplacements.length > 0) {
+      await drawTextReplacementsOnPage(
+        pdf,
+        page,
+        textReplacements,
+        overlaySize,
+        StandardFonts,
+        rgb,
+        fontCache,
+        fallbackFontCache
+      );
+    }
+
+    const overlayJson = overlayByPage.get(pageNumber1Based);
+    if (overlayJson) {
+      const pngBytes = await renderFabricJsonToPngBytes(overlayJson, overlaySize);
+      const png = await pdf.embedPng(pngBytes);
+      page.drawImage(png, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
+    }
+
+    opts.onProgress?.(index + 1, total);
+    if ((index + 1) % chunkSize === 0 && index < targetPages.length - 1) {
+      await yieldToMainThread();
+    }
   }
 
   return pdf.save();

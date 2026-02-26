@@ -53,6 +53,9 @@ let activeLoadToken = 0;
 let readySent = false;
 let fileNameState = '';
 let activeBlobUrl = null;
+let pendingRenderCompleteLoadId = null;
+let pendingRenderCompleteToken = null;
+let renderCompletePollTimer = null;
 const loadTokenTracker = createLoadTokenTracker(24);
 
 const clearActiveBlobUrl = () => {
@@ -63,6 +66,59 @@ const clearActiveBlobUrl = () => {
         // ignore
     }
     activeBlobUrl = null;
+};
+
+const clearRenderCompleteWait = () => {
+    pendingRenderCompleteLoadId = null;
+    pendingRenderCompleteToken = null;
+    if (renderCompletePollTimer) {
+        window.clearInterval(renderCompletePollTimer);
+        renderCompletePollTimer = null;
+    }
+};
+
+const isFirstPageRendered = () => {
+    const page = document.querySelector('#pdf-main .__pdf_page_preview[data-page="1"]');
+    if (!page) return false;
+    return !!page.querySelector('.__pdf_item_render');
+};
+
+const postRenderComplete = (loadId, fallbackToken = activeLoadToken) => {
+    const resolvedLoadId = typeof loadId === 'number' ? loadId : pendingRenderCompleteLoadId;
+    if (typeof resolvedLoadId !== 'number') return;
+    const tokenHint =
+        typeof pendingRenderCompleteToken === 'number' ? pendingRenderCompleteToken : fallbackToken;
+    const token = resolveLoadToken({ loadId: resolvedLoadId }, tokenHint);
+    postToParent({
+        type: 'pdf-render-complete',
+        loadToken: token
+    });
+    clearRenderCompleteWait();
+};
+
+const watchForFirstPageRender = () => {
+    if (renderCompletePollTimer) {
+        window.clearInterval(renderCompletePollTimer);
+        renderCompletePollTimer = null;
+    }
+    if (typeof pendingRenderCompleteLoadId !== 'number') return;
+    let checks = 0;
+    renderCompletePollTimer = window.setInterval(() => {
+        checks += 1;
+        if (typeof pendingRenderCompleteLoadId !== 'number') {
+            window.clearInterval(renderCompletePollTimer);
+            renderCompletePollTimer = null;
+            return;
+        }
+        if (isFirstPageRendered()) {
+            postRenderComplete(pendingRenderCompleteLoadId);
+            return;
+        }
+        if (checks >= 240) {
+            window.clearInterval(renderCompletePollTimer);
+            renderCompletePollTimer = null;
+        }
+    }, 100);
 };
 
 const rememberLoadToken = (loadId, token) => {
@@ -373,7 +429,13 @@ elDownload.addEventListener('click', () => {
 // });
 
 PDFEvent.on(Events.READER_INIT, (evt) => {
+    const loadId =
+        typeof evt?.data?.loadId === 'number'
+            ? evt.data.loadId
+            : (typeof reader?.loadId === 'number' ? reader.loadId : null);
     const token = resolveLoadToken(evt?.data);
+    pendingRenderCompleteLoadId = loadId;
+    pendingRenderCompleteToken = token;
     if (elDownload) {
         elDownload.style.display = 'block';
     }
@@ -382,6 +444,15 @@ PDFEvent.on(Events.READER_INIT, (evt) => {
         pageCount: reader.pageCount,
         loadToken: token
     });
+    if (reader.pageCount <= 0) {
+        postRenderComplete(loadId, token);
+        return;
+    }
+    if (isFirstPageRendered()) {
+        postRenderComplete(loadId, token);
+        return;
+    }
+    watchForFirstPageRender();
     // let rotate = -90;
     // let width = 300;
     // let height = 200;
@@ -417,6 +488,17 @@ PDFEvent.on(Events.READER_INIT, (evt) => {
     // });
 });
 
+PDFEvent.on(Events.PAGE_RENDERED, (evt) => {
+    const page = evt?.data;
+    const pageNum = Number.parseInt(page?.pageNum, 10);
+    if (!Number.isFinite(pageNum) || pageNum !== 1) return;
+    const loadId = typeof page?.loadId === 'number' ? page.loadId : null;
+    if (typeof pendingRenderCompleteLoadId === 'number' && typeof loadId === 'number' && pendingRenderCompleteLoadId !== loadId) {
+        return;
+    }
+    postRenderComplete(loadId);
+});
+
 PDFEvent.on(Events.LOAD_PROGRESS, (evt) => {
     const data = evt?.data || {};
     const token = resolveLoadToken(data);
@@ -431,6 +513,7 @@ PDFEvent.on(Events.LOAD_PROGRESS, (evt) => {
 });
 
 PDFEvent.on(Events.PASSWORD_ERROR, (evt) => {
+    clearRenderCompleteWait();
     const token = resolveLoadToken(evt?.data);
     postToParent({
         type: 'pdf-password-error',
@@ -439,6 +522,7 @@ PDFEvent.on(Events.PASSWORD_ERROR, (evt) => {
 });
 
 PDFEvent.on(Events.ERROR, (evt) => {
+    clearRenderCompleteWait();
     const token = resolveLoadToken(evt?.data);
     const message = evt?.data?.message;
     postToParent({
@@ -488,6 +572,7 @@ window.addEventListener('message', e => {
     }
 
     if (data.type == 'load-pdf') {
+        clearRenderCompleteWait();
         const nextToken = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken + 1;
         activeLoadToken = nextToken;
         const expectedLoadId = typeof reader?.loadId === 'number' ? reader.loadId + 1 : null;
@@ -536,6 +621,7 @@ window.addEventListener('message', e => {
     }
 
     if (data.type == 'cancel-load') {
+        clearRenderCompleteWait();
         const token = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken;
         const runCancel = async () => {
             try {

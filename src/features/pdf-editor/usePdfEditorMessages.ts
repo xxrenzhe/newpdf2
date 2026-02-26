@@ -7,6 +7,7 @@ import { savePdfEditorOutput } from "@/lib/pdfEditorCache";
 
 type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
 type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number; loadToken?: number };
+type PdfRenderCompleteMessage = { type: "pdf-render-complete"; loadToken?: number };
 type PdfProgressMessage = { type: "pdf-progress"; loaded: number; total?: number; loadToken?: number };
 type PdfPasswordErrorMessage = { type: "pdf-password-error"; loadToken?: number };
 type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number };
@@ -22,6 +23,7 @@ type PdfEditorReadyMessage = { type: "pdf-editor-ready" };
 type PdfEditorMessage =
   | PdfDownloadMessage
   | PdfLoadedMessage
+  | PdfRenderCompleteMessage
   | PdfProgressMessage
   | PdfPasswordErrorMessage
   | PdfErrorMessage
@@ -83,6 +85,11 @@ function parseEditorMessage(value: unknown): PdfEditorMessage | null {
       return {
         type: "pdf-loaded",
         pageCount: typeof record.pageCount === "number" ? record.pageCount : undefined,
+        loadToken,
+      };
+    case "pdf-render-complete":
+      return {
+        type: "pdf-render-complete",
         loadToken,
       };
     case "pdf-progress": {
@@ -190,6 +197,18 @@ export function usePdfEditorMessages({
         case "pdf-loaded":
           if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) return;
           hasRealProgressRef.current = false;
+          setEditorReady(true);
+          setEditorBooted(true);
+          setUploadProgress((prev) => Math.max(prev, 98));
+          return;
+        case "pdf-render-complete":
+          if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) return;
+          hasRealProgressRef.current = false;
+          if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
+          uploadProgressStartTimeoutRef.current = null;
+          if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
+          uploadProgressTimerRef.current = null;
+          setUploadProgress(100);
           setPdfLoaded(true);
           setEditorReady(true);
           setEditorBooted(true);

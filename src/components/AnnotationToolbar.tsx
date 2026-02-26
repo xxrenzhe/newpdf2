@@ -30,6 +30,8 @@ interface AnnotationToolbarProps {
   onStrokeWidthChange: (width: number) => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   onClear?: () => void;
 }
 
@@ -55,6 +57,8 @@ export default function AnnotationToolbar({
   onStrokeWidthChange,
   onUndo,
   onRedo,
+  canUndo = true,
+  canRedo = true,
   onClear,
 }: AnnotationToolbarProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -254,8 +258,9 @@ export default function AnnotationToolbar({
         {onUndo && (
           <button
             onClick={onUndo}
+            disabled={!canUndo}
             aria-label={t("undo", "Undo")}
-            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
+            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[color:var(--brand-muted)]"
             title={t("undo", "Undo")}
           >
             <RotateCcw className="w-5 h-5" />
@@ -264,8 +269,9 @@ export default function AnnotationToolbar({
         {onRedo && (
           <button
             onClick={onRedo}
+            disabled={!canRedo}
             aria-label={t("redo", "Redo")}
-            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors"
+            className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[color:var(--brand-cream)] text-[color:var(--brand-muted)] hover:text-[color:var(--brand-ink)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[color:var(--brand-muted)]"
             title={t("redo", "Redo")}
           >
             <RotateCw className="w-5 h-5" />
