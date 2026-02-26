@@ -43,6 +43,7 @@ export default function EmbeddedPdfEditor({
         try {
           const href = frame.contentWindow?.location.href ?? "";
           const url = new URL(href, window.location.href);
+          console.log("Iframe href:", href);
           const isEditorPath =
             url.origin === window.location.origin &&
             (url.pathname === "/pdfeditor" ||
