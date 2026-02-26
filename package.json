@@ -5,8 +5,8 @@
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs",
     "clean:next": "node scripts/clean-next.mjs",
-    "dev": "npm run clean:next && npm run build:pdfeditor && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0",
-    "dev:turbopack": "npm run clean:next && npm run build:pdfeditor && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0 --turbopack",
+    "dev": "npm run clean:next && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0",
+    "dev:turbopack": "npm run clean:next && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0 --turbopack",
     "build:pdfeditor": "node scripts/sync-pdfjs-worker.mjs && NODE_ENV=production BASE_URL=/pdfeditor/ webpack --config packages/pdfeditor/webpack.build.js",
     "build": "node scripts/build.mjs",
     "start": "node scripts/validate-prod-env.mjs && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next start",
@@ -59,6 +59,7 @@
     "@types/node": "^20.17.50",
     "@types/react": "^18.3.22",
     "@types/react-dom": "^18.3.7",
+    "chrome-devtools-mcp": "^0.18.1",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.11.0",
     "css-minimizer-webpack-plugin": "^5.0.1",

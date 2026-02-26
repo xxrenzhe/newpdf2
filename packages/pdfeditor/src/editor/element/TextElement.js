@@ -59,10 +59,10 @@ class TextElement extends BaseElement {
         }
         switch (this.attrs.lineStyle) {
             case 'underline':
-                this.elText.style.textDecoration = 'underline #ff0000';
+                this.elText.style.textDecoration = 'underline ' + (this.attrs.color || '');
                 break;
             case 'strike':
-                this.elText.style.textDecoration = 'line-through #ff0000';
+                this.elText.style.textDecoration = 'line-through ' + (this.attrs.color || '');
                 break;
         }
         if (this.elText.isConnected) {
@@ -160,7 +160,7 @@ class TextElement extends BaseElement {
         const nextWidth = Math.max(width, minWidth);
         const nextHeight = Math.max(height, minHeight);
         if (Number.isFinite(nextWidth) && nextWidth > 0) {
-            this.el.style.width = nextWidth + 'px';
+            if (this.dataType !== 'textbox') { this.el.style.width = nextWidth + 'px'; }
         }
         if (Number.isFinite(nextHeight) && nextHeight > 0) {
             this.el.style.height = nextHeight + 'px';

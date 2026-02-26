@@ -46,6 +46,7 @@
         "@types/node": "^20.17.50",
         "@types/react": "^18.3.22",
         "@types/react-dom": "^18.3.7",
+        "chrome-devtools-mcp": "^0.18.1",
         "copy-webpack-plugin": "^11.0.0",
         "css-loader": "^6.11.0",
         "css-minimizer-webpack-plugin": "^5.0.1",
@@ -637,6 +638,8 @@
     "chokidar": ["chokidar@3.6.0", "", { "dependencies": { "anymatch": "~3.1.2", "braces": "~3.0.2", "glob-parent": "~5.1.2", "is-binary-path": "~2.1.0", "is-glob": "~4.0.1", "normalize-path": "~3.0.0", "readdirp": "~3.6.0" }, "optionalDependencies": { "fsevents": "~2.3.2" } }, "sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw=="],
 
     "chownr": ["chownr@1.1.4", "", {}, "sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg=="],
+
+    "chrome-devtools-mcp": ["chrome-devtools-mcp@0.18.1", "", { "bin": { "chrome-devtools-mcp": "build/src/index.js" } }, "sha512-foYSH4oXtMCteFaKOggpcwYcU1R3RYvU1Bq8qNIOWjpP4GyroNn8mLKSYo+u1kcuujmoJ80sgBBIibRo68w3aQ=="],
 
     "chrome-trace-event": ["chrome-trace-event@1.0.4", "", {}, "sha512-rNjApaLzuwaOTjCiT8lSDdGN1APCiqkChLMJxJPWLunPAt5fy8xgU9/jNOchV84wfIxrA0lRQB7oCT8jrn/wrQ=="],
 

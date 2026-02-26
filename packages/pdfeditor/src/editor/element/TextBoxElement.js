@@ -60,10 +60,10 @@ class TextBoxElement extends TextElement {
         this.elText.style.opacity = this.attrs.textOpacity;
         switch (this.attrs.lineStyle) {
             case 'underline':
-                this.elText.style.textDecoration = 'underline #ff0000';
+                this.elText.style.textDecoration = 'underline ' + (this.attrs.color || '');
                 break;
             case 'strike':
-                this.elText.style.textDecoration = 'line-through #ff0000';
+                this.elText.style.textDecoration = 'line-through ' + (this.attrs.color || '');
                 break;
         }
 
