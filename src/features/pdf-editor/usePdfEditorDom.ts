@@ -22,6 +22,12 @@ export function usePdfEditorDom({ editorFrameRef }: UsePdfEditorDomOptions) {
     return Boolean(doc.querySelector("#pdf-main"));
   }, [getEditorDocument]);
 
+  const detectFirstPageRendered = useCallback(() => {
+    const doc = getEditorDocument();
+    if (!doc) return false;
+    return Boolean(doc.querySelector('#pdf-main .__pdf_page_preview[data-page="1"] .__pdf_item_render'));
+  }, [getEditorDocument]);
+
   const injectMobileOverrides = useCallback(() => {
     const doc = getEditorDocument();
     if (!doc) return;
@@ -31,6 +37,7 @@ export function usePdfEditorDom({ editorFrameRef }: UsePdfEditorDomOptions) {
 
   return {
     detectEditorBooted,
+    detectFirstPageRendered,
     injectMobileOverrides,
   };
 }

@@ -4,6 +4,8 @@ import { trimSpace } from './misc';
 const CHARS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 's', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'S', 'Y', 'Z', ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '~', '!', '@', '#', '$', '%', '^', '&', '(', ')', '_', '+', '-', '=', '{', '}', '|', '[', ']', ';', "'", ':', '"', ',', '.', '/', '<', '>', '?', '*'];
 const UNICODE_FONT = 'unicode.ttf';
 const CJK_RANGE = '[\u4E00-\u9FFF]';
+const FONT_REQUEST_TIMEOUT_MS = 12000;
+const FALLBACK_FONT_TIMEOUT_MS = 12000;
 
 export class Font {
     static #cache = {};
@@ -14,6 +16,38 @@ export class Font {
     static CHARS = CHARS;
     static UNICODE_FONT = UNICODE_FONT;
     static CJK_RANGE = CJK_RANGE;
+    static FONT_REQUEST_TIMEOUT_MS = FONT_REQUEST_TIMEOUT_MS;
+    static FALLBACK_FONT_TIMEOUT_MS = FALLBACK_FONT_TIMEOUT_MS;
+
+    static async #fetchWithTimeout(url, options = {}, timeoutMs = FONT_REQUEST_TIMEOUT_MS) {
+        const requestOptions = {
+            ...options
+        };
+        const canAbort = typeof AbortController === 'function';
+        const controller = canAbort ? new AbortController() : null;
+        let timeoutId = null;
+
+        if (controller) {
+            requestOptions.signal = controller.signal;
+            if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+                timeoutId = setTimeout(() => {
+                    try {
+                        controller.abort();
+                    } catch (err) {
+                        // ignore
+                    }
+                }, timeoutMs);
+            }
+        }
+
+        try {
+            return await fetch(url, requestOptions);
+        } finally {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        }
+    }
 
     static async fetchFallbackFont() {
         if (Font.#fallbackFontBytes) {
@@ -21,7 +55,11 @@ export class Font {
         }
         if (!Font.#fallbackFontPromise) {
             let url = ASSETS_URL + 'temp.otf';
-            Font.#fallbackFontPromise = fetch(url).then(async res => {
+            Font.#fallbackFontPromise = Font.#fetchWithTimeout(
+                url,
+                {},
+                Font.FALLBACK_FONT_TIMEOUT_MS
+            ).then(async res => {
                 if (!res.ok) {
                     throw new Error('failed to fetch fallback font');
                 }
@@ -30,6 +68,9 @@ export class Font {
                 return Font.#fallbackFontBytes;
             }).catch(error => {
                 Font.#fallbackFontPromise = null;
+                if (error?.name === 'AbortError') {
+                    throw new Error('fallback font request timeout');
+                }
                 throw error;
             });
         }
@@ -103,18 +144,18 @@ export class Font {
             text: this.text2point(text),
             fontFile: fontFile
         });
-        let res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
+        let res = await Font.#fetchWithTimeout(
+            url,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: postData
             },
-            body: postData
-        }).catch(e => {
-            return {
-                status: 500
-            }
-        });
-        if (res.status != 200 || !res.ok) {
+            Font.FONT_REQUEST_TIMEOUT_MS
+        ).catch(() => false);
+        if (!res || res.status != 200 || !res.ok) {
             return false;
         }
 

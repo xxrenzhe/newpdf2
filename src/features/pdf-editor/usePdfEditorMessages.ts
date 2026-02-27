@@ -140,6 +140,67 @@ function matchesLoadToken(loadToken: number | undefined, expectedToken: number) 
   return loadToken === expectedToken;
 }
 
+function normalizePdfEditorError(rawMessage: string | undefined, t: TranslateFn) {
+  const text = typeof rawMessage === "string" ? rawMessage.trim() : "";
+  if (!text) {
+    return t("pdfEditorFailed", "Something went wrong in the PDF editor. Please try again.");
+  }
+
+  const lower = text.toLowerCase();
+
+  if (
+    lower.includes("out of memory") ||
+    lower.includes("allocation failed") ||
+    lower.includes("array buffer allocation failed")
+  ) {
+    return t(
+      "pdfEditorOutOfMemory",
+      "This PDF is too large for available browser memory. Try closing other tabs or using a smaller file."
+    );
+  }
+
+  if (
+    lower.includes("password") ||
+    lower.includes("encrypted") ||
+    lower.includes("passwordexception")
+  ) {
+    return t(
+      "pdfPasswordProtected",
+      "This PDF is password protected. Please unlock it first, then re-open in the editor."
+    );
+  }
+
+  if (
+    lower.includes("invalid pdf") ||
+    lower.includes("formaterror") ||
+    lower.includes("xref") ||
+    lower.includes("corrupt")
+  ) {
+    return t(
+      "pdfEditorCorrupted",
+      "This PDF appears damaged or unsupported. Please repair the file or try another document."
+    );
+  }
+
+  if (
+    lower.includes("failed to fetch") ||
+    lower.includes("networkerror") ||
+    lower.includes("network request failed") ||
+    lower.includes("fallback font request timeout")
+  ) {
+    return t("pdfEditorNetworkError", "Network error while loading editor resources. Please try again.");
+  }
+
+  if (
+    lower.includes("font worker") ||
+    lower.includes("font subset worker")
+  ) {
+    return t("pdfEditorFontWorkerError", "Font processing failed while saving. Please try again.");
+  }
+
+  return text;
+}
+
 export function usePdfEditorMessages({
   editorFrameRef,
   outName,
@@ -270,10 +331,10 @@ export function usePdfEditorMessages({
           if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) return;
           onDownloadTerminal?.();
           hasRealProgressRef.current = false;
-          const text =
-            typeof message.message === "string" && message.message.trim().length > 0
-              ? message.message.trim()
-              : t("pdfEditorFailed", "Something went wrong in the PDF editor. Please try again.");
+          const text = normalizePdfEditorError(message.message, t);
+          if (message.message && text !== message.message.trim()) {
+            console.error("[pdfeditor] runtime error", message.message);
+          }
           notifyError(text);
           setBusy(false);
           setLoadCancelled(false);

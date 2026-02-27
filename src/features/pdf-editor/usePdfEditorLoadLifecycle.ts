@@ -24,6 +24,7 @@ type UsePdfEditorLoadLifecycleOptions = {
   uploadProgressStartTimeoutRef: MutableRefObject<number | null>;
   uploadProgressTimerRef: MutableRefObject<number | null>;
   postToEditor: (message: unknown) => void;
+  isRenderedInIframe?: () => boolean;
   setBusy: Setter<boolean>;
   setLoadCancelled: Setter<boolean>;
   setError: Setter<string>;
@@ -53,6 +54,7 @@ export function usePdfEditorLoadLifecycle({
   uploadProgressStartTimeoutRef,
   uploadProgressTimerRef,
   postToEditor,
+  isRenderedInIframe,
   setBusy,
   setLoadCancelled,
   setError,
@@ -152,13 +154,34 @@ export function usePdfEditorLoadLifecycle({
   useEffect(() => {
     if (!busy || pdfLoaded || error) return;
     const timeoutId = window.setTimeout(() => {
+      if (isRenderedInIframe?.()) {
+        setUploadProgress(100);
+        setPdfLoaded(true);
+        setBusy(false);
+        setLoadCancelled(false);
+        setError("");
+        return;
+      }
       abortActiveLoad();
       setError(
         t("pdfLoadTimeout", "This PDF is taking too long to load. Please try again.")
       );
     }, pdfLoadTimeoutMs);
     return () => window.clearTimeout(timeoutId);
-  }, [abortActiveLoad, busy, error, pdfLoaded, pdfLoadTimeoutMs, setError, t]);
+  }, [
+    abortActiveLoad,
+    busy,
+    error,
+    isRenderedInIframe,
+    pdfLoaded,
+    pdfLoadTimeoutMs,
+    setBusy,
+    setError,
+    setLoadCancelled,
+    setPdfLoaded,
+    setUploadProgress,
+    t,
+  ]);
 
   const cancelLoading = useCallback(() => {
     abortActiveLoad({ markCancelled: true, clearError: true });

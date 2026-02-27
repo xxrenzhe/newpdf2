@@ -69,7 +69,9 @@ export class PDFEditor {
     pdfData = null;
     PDFLib = null;
     history = null;
-    fontWorker = new Worker(new URL('./font_worker.js', import.meta.url));
+    fontWorker = null;
+    fontWorkerErrorHandler = null;
+    fontWorkerMessageErrorHandler = null;
     isSaving = false;
 
     constructor(options, pdfData, reader) {
@@ -80,6 +82,7 @@ export class PDFEditor {
         this.reader = reader;
         this.PDFLib = PDFLib;
         Font.fontkit = fontkit;
+        this.recreateFontWorker();
         if (this.options.history) {
             this.history = new History(this);
         }
@@ -211,6 +214,55 @@ export class PDFEditor {
         return true;
     }
 
+    emitFontWorkerError(error) {
+        PDFEvent.dispatch(Events.ERROR, {
+            message: error?.message || String(error)
+        });
+    }
+
+    createFontWorker() {
+        return new Worker(new URL('./font_worker.js', import.meta.url));
+    }
+
+    destroyFontWorker() {
+        if (!this.fontWorker) {
+            return;
+        }
+        if (this.fontWorkerErrorHandler) {
+            this.fontWorker.removeEventListener('error', this.fontWorkerErrorHandler);
+        }
+        if (this.fontWorkerMessageErrorHandler) {
+            this.fontWorker.removeEventListener('messageerror', this.fontWorkerMessageErrorHandler);
+        }
+        try {
+            this.fontWorker.terminate();
+        } catch (err) {
+            // ignore
+        }
+        this.fontWorker = null;
+        this.fontWorkerErrorHandler = null;
+        this.fontWorkerMessageErrorHandler = null;
+    }
+
+    recreateFontWorker() {
+        this.destroyFontWorker();
+        try {
+            const worker = this.createFontWorker();
+            this.fontWorkerErrorHandler = (event) => {
+                const message = event?.message || 'font worker failed';
+                this.emitFontWorkerError(new Error(message));
+            };
+            this.fontWorkerMessageErrorHandler = () => {
+                this.emitFontWorkerError(new Error('font worker message error'));
+            };
+            worker.addEventListener('error', this.fontWorkerErrorHandler);
+            worker.addEventListener('messageerror', this.fontWorkerMessageErrorHandler);
+            this.fontWorker = worker;
+        } catch (error) {
+            this.emitFontWorkerError(error);
+        }
+    }
+
     /**
      * 
      * @param {Base64String | Uint8Array | ArrayBuffer} data
@@ -293,10 +345,12 @@ export class PDFEditor {
 
     async reset() {
         this.isSaving = false;
+        this.pdfData = null;
         this.pdfDocument.embedFonts = {};
         this.pdfDocument.pageRemoved = [];
         this.pdfDocument.destroyDocumentProxy();
         this.pdfDocument.fontSubsetRequestId = 0;
+        this.recreateFontWorker();
         this.resetHistoryUi();
         // this.reader.pdfjsLib.getDocument(this.pdfData).promise.then(documentProxy => {
         //     this.reader.pdfDocument.documentProxy = documentProxy;
@@ -318,6 +372,8 @@ export class PDFEditor {
 
     prepareForNewLoad() {
         this.isSaving = false;
+        this.pdfData = null;
+        this.recreateFontWorker();
         this.resetHistoryUi();
         this.pdfDocument?.resetForNewSource?.();
     }

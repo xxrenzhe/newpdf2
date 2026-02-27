@@ -61,9 +61,8 @@ export class PDFDocument {
                 try {
                     await this.getFont(pageId, text, fontFile);
                 } catch(e) {
-                    console.log('error');
-                    console.log(e);
-                    await this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                    console.error('[pdfeditor] getFont failed, fallback to Helvetica', e);
+                    await this.setFontFallback(pageId, fontFile, e);
                 }
             }
         }
@@ -160,6 +159,10 @@ export class PDFDocument {
         let arrayBuffer = Font.getCache(pageId, fontFile);
         if (!arrayBuffer) {
             const page = this.getPageForId(pageId);
+            if (!page?.readerPage?.pageProxy?.commonObjs) {
+                await this.setFontFallback(pageId, fontFile, new Error('missing page font context'));
+                return this.embedFonts[pageId][fontFile];
+            }
             let commonObjs = page.readerPage.pageProxy.commonObjs;
             if (commonObjs.has(fontFile)) {
                 let fontFace = commonObjs.get(fontFile);
@@ -193,7 +196,8 @@ export class PDFDocument {
                                 });
                                 await this.setFont(pageId, fontFile, subsetBuffer);
                             } catch (e) {
-                                await this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                                console.warn('[pdfeditor] font subset fallback failed, use Helvetica', e);
+                                await this.setFontFallback(pageId, fontFile, e);
                             }
                         } else {
                             await this.setFont(pageId, fontFile, arrayBuffer);
@@ -215,6 +219,19 @@ export class PDFDocument {
             await this.setFont(pageId, fontFile, arrayBuffer);
         }
         return this.embedFonts[pageId][fontFile];
+    }
+
+    async setFontFallback(pageId, fontFile, error) {
+        try {
+            await this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+        } catch (fallbackError) {
+            const baseMessage =
+                (error && typeof error.message === 'string' && error.message) || String(error);
+            const fallbackMessage =
+                (fallbackError && typeof fallbackError.message === 'string' && fallbackError.message)
+                    || String(fallbackError);
+            throw new Error('setFont fallback failed: ' + baseMessage + '; ' + fallbackMessage);
+        }
     }
 
     async setFont(pageId, fontFile, arrayBuffer) {

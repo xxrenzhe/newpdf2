@@ -17,7 +17,9 @@ const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 const EDITOR_READY_TIMEOUT_MS = 12000;
 const PDF_LOAD_TIMEOUT_MS = 60000;
 const IFRAME_LOAD_TIMEOUT_MS = 15000;
-const PDF_DOWNLOAD_TIMEOUT_MS = 45000;
+const PDF_DOWNLOAD_TIMEOUT_MS = 30000;
+const PDF_DOWNLOAD_TIMEOUT_QUERY_KEY = "__pdfDownloadTimeoutMs";
+const PDF_DOWNLOAD_TIMEOUT_MIN_MS = 500;
 const PDFEDITOR_BUILD_ID = (process.env.NEXT_PUBLIC_PDFEDITOR_BUILD_ID ?? "").trim();
 const BLOCKED_NAVIGATION_MESSAGE = "Editor navigation was blocked and reloaded.";
 const ENABLE_EDITOR_LEGACY_FALLBACK = process.env.NEXT_PUBLIC_EDITOR_LEGACY_FALLBACK === "true";
@@ -257,7 +259,7 @@ export default function PdfEditorTool({
     transferPdfBytesLimit: TRANSFER_PDF_BYTES_LIMIT,
   });
 
-  const { detectEditorBooted, injectMobileOverrides } = usePdfEditorDom({
+  const { detectEditorBooted, detectFirstPageRendered, injectMobileOverrides } = usePdfEditorDom({
     editorFrameRef,
   });
 
@@ -280,6 +282,7 @@ export default function PdfEditorTool({
     uploadProgressStartTimeoutRef,
     uploadProgressTimerRef,
     postToEditor,
+    isRenderedInIframe: detectFirstPageRendered,
     setBusy,
     setLoadCancelled,
     setError,
@@ -328,6 +331,14 @@ export default function PdfEditorTool({
 
   const requestDownload = useCallback(() => {
     if (!pdfLoaded) return;
+    let timeoutMs = PDF_DOWNLOAD_TIMEOUT_MS;
+    if (typeof window !== "undefined") {
+      const rawTimeout = new URLSearchParams(window.location.search).get(PDF_DOWNLOAD_TIMEOUT_QUERY_KEY);
+      const parsedTimeout = rawTimeout ? Number.parseInt(rawTimeout, 10) : NaN;
+      if (Number.isFinite(parsedTimeout) && parsedTimeout >= PDF_DOWNLOAD_TIMEOUT_MIN_MS) {
+        timeoutMs = parsedTimeout;
+      }
+    }
     clearDownloadTimeout();
     setError("");
     setBusy(true);
@@ -337,7 +348,7 @@ export default function PdfEditorTool({
       toast.error(timeoutMessage);
       setBusy(false);
       setError(timeoutMessage);
-    }, PDF_DOWNLOAD_TIMEOUT_MS);
+    }, timeoutMs);
     postToEditor({ type: "download" });
   }, [clearDownloadTimeout, pdfLoaded, postToEditor, t]);
 
@@ -479,13 +490,16 @@ export default function PdfEditorTool({
       </div>
 
       {error && (
-        <div className="m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+        <div data-testid="pdf-editor-error" className="m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
           {error}
         </div>
       )}
 
       {externalEmbedWarning && !error && (
-        <div className="mx-5 mb-5 text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-3">
+        <div
+          data-testid="pdf-editor-warning"
+          className="mx-5 mb-5 text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-3"
+        >
           {externalEmbedWarning}
         </div>
       )}

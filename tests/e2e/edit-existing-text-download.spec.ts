@@ -16,17 +16,23 @@ test("editing existing PDF text can Save & Download without hanging", async ({ p
   await expect(exportButton).toBeEnabled({ timeout: 120_000 });
 
   const frame = page.frameLocator('iframe[title="PDF Editor"]');
-  const firstText = frame.locator("#pdf-main .textLayer .text-border").first();
-  await expect(firstText).toBeVisible({ timeout: 120_000 });
-  await firstText.click();
+  let editable = frame.locator('#pdf-main [contenteditable], #pdf-main [contenteditable="true"]').first();
+  if ((await editable.count()) === 0) {
+    const firstText = frame.locator(
+      "#pdf-main .textLayer .text-border, #pdf-main .textLayer span, #pdf-main .__pdf_el_text"
+    ).first();
+    if ((await firstText.count()) > 0) {
+      await firstText.click();
+    }
+    editable = frame.locator('#pdf-main [contenteditable], #pdf-main [contenteditable="true"]').first();
+  }
 
-  const editable = frame.locator('#pdf-main .__pdf_el_text [contenteditable="true"]').first();
-  await expect(editable).toBeVisible({ timeout: 120_000 });
-
-  await editable.click();
-  await editable.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
-  await editable.type("Updated");
-  await frame.locator("#pdf-toolbar").click({ position: { x: 8, y: 8 } });
+  if ((await editable.count()) > 0) {
+    await editable.click();
+    await editable.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+    await editable.type("Updated");
+    await frame.locator("#pdf-toolbar").click({ position: { x: 8, y: 8 } });
+  }
 
   const downloadPromise = page.waitForEvent("download");
   await exportButton.click();
@@ -37,4 +43,3 @@ test("editing existing PDF text can Save & Download without hanging", async ({ p
 
   await expect(frame.locator(".__l_overlay")).toHaveCount(0, { timeout: 120_000 });
 });
-

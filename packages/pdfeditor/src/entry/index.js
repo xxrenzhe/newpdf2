@@ -545,6 +545,7 @@ PDFEvent.on(Events.LOAD_PROGRESS, (evt) => {
 
 PDFEvent.on(Events.PASSWORD_ERROR, (evt) => {
     clearRenderCompleteWait();
+    setTouchGestureLock(false);
     const token = resolveLoadToken(evt?.data);
     postToParent({
         type: 'pdf-password-error',
@@ -554,6 +555,7 @@ PDFEvent.on(Events.PASSWORD_ERROR, (evt) => {
 
 PDFEvent.on(Events.ERROR, (evt) => {
     clearRenderCompleteWait();
+    setTouchGestureLock(false);
     const token = resolveLoadToken(evt?.data);
     const message = evt?.data?.message;
     postToParent({
@@ -638,12 +640,34 @@ window.addEventListener('message', e => {
                     await reader.load(activeBlobUrl);
                     return;
                 }
+                try {
+                    await reader.cancelLoad(false);
+                } catch (cancelErr) {
+                    // ignore
+                }
+                try {
+                    editor.prepareForNewLoad?.();
+                } catch (resetErr) {
+                    // ignore
+                }
+                clearActiveBlobUrl();
                 postToParent({
                     type: 'pdf-error',
                     message: 'Missing PDF payload',
                     loadToken: nextToken
                 });
             } catch (err) {
+                try {
+                    await reader.cancelLoad(false);
+                } catch (cancelErr) {
+                    // ignore
+                }
+                try {
+                    editor.prepareForNewLoad?.();
+                } catch (resetErr) {
+                    // ignore
+                }
+                clearActiveBlobUrl();
                 postToParent({
                     type: 'pdf-error',
                     message: err?.message || String(err),
@@ -663,12 +687,24 @@ window.addEventListener('message', e => {
         const runCancel = async () => {
             try {
                 await reader.cancelLoad();
+                editor.prepareForNewLoad?.();
                 clearActiveBlobUrl();
                 postToParent({
                     type: 'pdf-load-cancelled',
                     loadToken: token
                 });
             } catch (err) {
+                try {
+                    await reader.cancelLoad(false);
+                } catch (cancelErr) {
+                    // ignore
+                }
+                try {
+                    editor.prepareForNewLoad?.();
+                } catch (resetErr) {
+                    // ignore
+                }
+                clearActiveBlobUrl();
                 postToParent({
                     type: 'pdf-error',
                     message: err?.message || String(err),

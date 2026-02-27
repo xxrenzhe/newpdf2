@@ -2,6 +2,10 @@ import { defineConfig, devices } from "playwright/test";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+const e2eNextAuthSecret =
+  process.env.PLAYWRIGHT_NEXTAUTH_SECRET ??
+  process.env.NEXTAUTH_SECRET ??
+  "playwright-e2e-secret-change-me";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -49,7 +53,13 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: `NEXT_PUBLIC_E2E=1 npm run build && node scripts/start-standalone.mjs --port ${port}`,
+        command: `npm run build && node scripts/start-standalone.mjs --port ${port}`,
+        env: {
+          ...process.env,
+          NEXT_PUBLIC_E2E: "1",
+          NEXTAUTH_SECRET: e2eNextAuthSecret,
+          NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? baseURL,
+        },
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 240_000,

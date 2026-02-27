@@ -198,5 +198,6 @@ export class PDFDocument {
         this.pages = [];
         this.pageActive = null;
         this.documentProxy = null;
+        this.reader = null;
     }
 };
