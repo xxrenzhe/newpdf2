@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "react";
+import { toast } from "sonner";
 import { downloadBlob } from "@/lib/pdf/client";
 import { savePdfEditorOutput } from "@/lib/pdfEditorCache";
 
@@ -49,6 +50,7 @@ type UsePdfEditorMessagesOptions = {
   editorReady: boolean;
   editorBooted: boolean;
   onOpenTool?: (toolKey: string) => void;
+  onDownloadTerminal?: () => void;
   setIframeReady: Setter<boolean>;
   setEditorReady: Setter<boolean>;
   setEditorBooted: Setter<boolean>;
@@ -152,6 +154,7 @@ export function usePdfEditorMessages({
   editorReady,
   editorBooted,
   onOpenTool,
+  onDownloadTerminal,
   setIframeReady,
   setEditorReady,
   setEditorBooted,
@@ -162,12 +165,27 @@ export function usePdfEditorMessages({
   setExternalEmbedWarning,
   setUploadProgress,
 }: UsePdfEditorMessagesOptions) {
+  const lastErrorToastRef = useRef<{ message: string; timestamp: number } | null>(null);
+
+  const notifyError = useCallback((message: string) => {
+    const text = message.trim();
+    if (!text) return;
+    const now = Date.now();
+    const previous = lastErrorToastRef.current;
+    if (previous && previous.message === text && now - previous.timestamp < 1500) {
+      return;
+    }
+    lastErrorToastRef.current = { message: text, timestamp: now };
+    toast.error(text);
+  }, []);
+
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
       const source = editorFrameRef.current?.contentWindow;
       if (!source || evt.source !== source) return;
       const message = parseEditorMessage(evt.data);
       if (!message || message.type !== "pdf-download") return;
+      onDownloadTerminal?.();
       setBusy(false);
       downloadBlob(message.blob, outName);
       void savePdfEditorOutput(message.blob, outName).catch(() => {});
@@ -175,7 +193,7 @@ export function usePdfEditorMessages({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [editorFrameRef, outName, setBusy]);
+  }, [editorFrameRef, onDownloadTerminal, outName, setBusy]);
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
@@ -236,24 +254,27 @@ export function usePdfEditorMessages({
         }
         case "pdf-password-error":
           if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) return;
+          onDownloadTerminal?.();
           hasRealProgressRef.current = false;
           manualCancelTokenRef.current = null;
+          const passwordErrorText = t(
+            "pdfPasswordProtected",
+            "This PDF is password protected. Please unlock it first, then re-open in the editor."
+          );
+          notifyError(passwordErrorText);
           setBusy(false);
           setLoadCancelled(false);
-          setError(
-            t(
-              "pdfPasswordProtected",
-              "This PDF is password protected. Please unlock it first, then re-open in the editor."
-            )
-          );
+          setError(passwordErrorText);
           return;
         case "pdf-error": {
           if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) return;
+          onDownloadTerminal?.();
           hasRealProgressRef.current = false;
           const text =
             typeof message.message === "string" && message.message.trim().length > 0
               ? message.message.trim()
               : t("pdfEditorFailed", "Something went wrong in the PDF editor. Please try again.");
+          notifyError(text);
           setBusy(false);
           setLoadCancelled(false);
           setError(text);
@@ -319,6 +340,8 @@ export function usePdfEditorMessages({
     hasRealProgressRef,
     manualCancelTokenRef,
     onOpenTool,
+    onDownloadTerminal,
+    notifyError,
     setBusy,
     setEditorBooted,
     setEditorReady,

@@ -15,6 +15,12 @@ import Loading from '../components/loading';
 import { getUrlParam,downloadLoad } from '../misc';
 import { Locale } from '../locale';
 import { createLoadTokenTracker, toArrayBuffer } from './load_token_tracker';
+import {
+    getErrorMessage,
+    normalizeToolName,
+    shouldLockTouchGestures,
+    TOUCH_GESTURE_LOCK_CLASS
+} from './runtime_safety';
 let baseUrl = ASSETS_URL + 'js/pdfjs/';
 const workerVersion = typeof pdfjsLib.version === 'string' ? pdfjsLib.version : '2.15.349';
 pdfjsLib.GlobalWorkerOptions.workerSrc = baseUrl + 'pdf.worker.min.js?v=' + encodeURIComponent(workerVersion);
@@ -138,6 +144,30 @@ const postToParent = (payload) => {
     } catch (err) {
         // ignore
     }
+};
+
+const setTouchGestureLock = (enabled) => {
+    if (!document?.body) return;
+    document.body.classList.toggle(TOUCH_GESTURE_LOCK_CLASS, !!enabled);
+};
+
+const postRuntimeError = (error) => {
+    const message = getErrorMessage(error);
+    if (!message) return;
+    postToParent({
+        type: 'pdf-error',
+        message,
+        loadToken: activeLoadToken
+    });
+};
+
+const installRuntimeErrorBridge = () => {
+    window.addEventListener('unhandledrejection', event => {
+        postRuntimeError(event?.reason || event);
+    });
+    window.addEventListener('error', event => {
+        postRuntimeError(event?.error || event?.message || event);
+    });
 };
 
 const setFileName = (value) => {
@@ -384,6 +414,7 @@ const reader = new PDFReader({
 }, pdfjsLib);
 
 installNavigationGuard();
+installRuntimeErrorBridge();
 reader.init();
 
 const editor = new PDFEditor({
@@ -536,6 +567,7 @@ PDFEvent.on(Events.TOOLBAR_ITEM_ACTIVE, (evt) => {
     const tool = evt?.data?.tool;
     const name = tool?.name;
     if (typeof name !== 'string' || !name) return;
+    setTouchGestureLock(shouldLockTouchGestures(name));
     postToParent({
         type: 'open-tool',
         tool: name === 'radact' ? 'redact' : name
@@ -573,6 +605,7 @@ window.addEventListener('message', e => {
 
     if (data.type == 'load-pdf') {
         clearRenderCompleteWait();
+        setTouchGestureLock(false);
         const nextToken = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken + 1;
         activeLoadToken = nextToken;
         const expectedLoadId = typeof reader?.loadId === 'number' ? reader.loadId + 1 : null;
@@ -587,16 +620,19 @@ window.addEventListener('message', e => {
             try {
                 const dataBuffer = toArrayBuffer(data.data);
                 if (dataBuffer) {
+                    editor.prepareForNewLoad?.();
                     clearActiveBlobUrl();
                     await reader.load(dataBuffer);
                     return;
                 }
                 if (typeof data.url === 'string' && data.url) {
+                    editor.prepareForNewLoad?.();
                     clearActiveBlobUrl();
                     await reader.load(data.url);
                     return;
                 }
                 if (data.blob instanceof Blob) {
+                    editor.prepareForNewLoad?.();
                     clearActiveBlobUrl();
                     activeBlobUrl = URL.createObjectURL(data.blob);
                     await reader.load(activeBlobUrl);
@@ -622,6 +658,7 @@ window.addEventListener('message', e => {
 
     if (data.type == 'cancel-load') {
         clearRenderCompleteWait();
+        setTouchGestureLock(false);
         const token = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken;
         const runCancel = async () => {
             try {
@@ -645,7 +682,8 @@ window.addEventListener('message', e => {
 
     if (data.type === 'set-tool' && typeof data.tool === 'string' && data.tool) {
         try {
-            const normalizedTool = data.tool === 'redact' ? 'radact' : data.tool;
+            const normalizedTool = normalizeToolName(data.tool);
+            setTouchGestureLock(shouldLockTouchGestures(normalizedTool));
             editor.toolbar?.get(normalizedTool)?.click?.();
         } catch (err) {
             // ignore

@@ -36,6 +36,7 @@ export class PDFPageBase {
     content = null;
     loadId = null;
     #canvasImage = null;
+    #renderTask = null;
 
     constructor(pdfDocument, pageNum, scale) {
         this.pdfDocument = pdfDocument;
@@ -101,7 +102,7 @@ export class PDFPageBase {
         this.render(renderType).then(() => {
             PDFEvent.dispatch(Events.PAGE_ZOOM, this);
             PDFEvent.dispatch(Events.SET_SCALE, this.scale);
-        });
+        }).catch(() => {});
     }
 
     /**
@@ -236,7 +237,15 @@ export class PDFPageBase {
             transform: transform,
             viewport: viewport
         };
-        await this.pageProxy.render(renderContext).promise;
+        const renderTask = this.pageProxy.render(renderContext);
+        this.#renderTask = renderTask;
+        try {
+            await renderTask.promise;
+        } finally {
+            if (this.#renderTask === renderTask) {
+                this.#renderTask = null;
+            }
+        }
         return canvas;
     }
 
@@ -298,5 +307,58 @@ export class PDFPageBase {
         // if (this.elAnnotationLayer) {
             // this.elAnnotationLayer.innerHTML = '';
         // }
+    }
+
+    dispose() {
+        if (this.#renderTask?.cancel) {
+            try {
+                this.#renderTask.cancel();
+            } catch (err) {
+                // ignore
+            }
+        }
+        this.#renderTask = null;
+
+        if (this.pageProxy?.cleanup) {
+            try {
+                this.pageProxy.cleanup();
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        this.rendered = false;
+        this.textDivs = [];
+        this.textContentItems = null;
+        this.textContentStyles = {};
+        this.annotations = null;
+        this.content = null;
+        this.#canvasImage = null;
+
+        if (this.elTextLayer) {
+            this.elTextLayer.innerHTML = '';
+        }
+        if (this.elAnnotationLayer) {
+            this.elAnnotationLayer.innerHTML = '';
+        }
+        if (this.elElementLayer) {
+            this.elElementLayer.innerHTML = '';
+        }
+        if (this.elDrawLayer) {
+            this.elDrawLayer.innerHTML = '';
+        }
+
+        this.elThumbs?.remove?.();
+        this.elContainer?.remove?.();
+
+        this.elThumbs = null;
+        this.elContainer = null;
+        this.elWrapper = null;
+        this.elElementLayer = null;
+        this.elTextLayer = null;
+        this.elAnnotationLayer = null;
+        this.elDrawLayer = null;
+        this.pageProxy = null;
+        this.pdfDocument = null;
     }
 };

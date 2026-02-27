@@ -9,17 +9,32 @@ export class Font {
     static #cache = {};
     static fontUrl = '';
     static fontkit = null;
-    static #fallbackFont = null;
+    static #fallbackFontBytes = null;
+    static #fallbackFontPromise = null;
     static CHARS = CHARS;
     static UNICODE_FONT = UNICODE_FONT;
     static CJK_RANGE = CJK_RANGE;
 
     static async fetchFallbackFont() {
-        if (Font.#fallbackFont) {
-            return Font.#fallbackFont;
+        if (Font.#fallbackFontBytes) {
+            return Font.#fallbackFontBytes.slice().buffer;
         }
-        let url = ASSETS_URL + 'temp.otf';
-        return fetch(url).then(res => res.arrayBuffer());
+        if (!Font.#fallbackFontPromise) {
+            let url = ASSETS_URL + 'temp.otf';
+            Font.#fallbackFontPromise = fetch(url).then(async res => {
+                if (!res.ok) {
+                    throw new Error('failed to fetch fallback font');
+                }
+                const buffer = await res.arrayBuffer();
+                Font.#fallbackFontBytes = new Uint8Array(buffer);
+                return Font.#fallbackFontBytes;
+            }).catch(error => {
+                Font.#fallbackFontPromise = null;
+                throw error;
+            });
+        }
+        const bytes = await Font.#fallbackFontPromise;
+        return bytes.slice().buffer;
     }
 
     /**

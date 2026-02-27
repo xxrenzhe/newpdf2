@@ -70,6 +70,7 @@ export class PDFEditor {
     PDFLib = null;
     history = null;
     fontWorker = new Worker(new URL('./font_worker.js', import.meta.url));
+    isSaving = false;
 
     constructor(options, pdfData, reader) {
         if (typeof(options) == 'object') {
@@ -132,18 +133,25 @@ export class PDFEditor {
         });
 
         PDFEvent.on(Events.READER_INIT, () => {
+            this.prepareForNewLoad();
             this.initToolbar();
             this.toolbar.get('text').click();
             PDFEvent.dispatch(Events.TOOLBAR_INIT);
         });
 
         PDFEvent.on(Events.SAVE, () => {
-            this.pdfDocument.fixFontData();
+            this.pdfDocument.fixFontData().catch(error => {
+                PDFEvent.dispatch(Events.ERROR, {
+                    message: error?.message || String(error)
+                });
+            });
         });
 
         PDFEvent.on(Events.DOWNLOAD, () => {
             //检查字体是否加载完成
+            if (this.isSaving) return;
             if (!this.pdfDocument.checkFonts()) return;
+            this.isSaving = true;
             this.pdfDocument.save(true).then(async blob => {
                 // if (this.options.debug) {
                 //     // window.open(URL.createObjectURL(blob));
@@ -157,15 +165,13 @@ export class PDFEditor {
                     blob: blob
                 }, '*');
                 this.reset();
+            }).catch(error => {
+                PDFEvent.dispatch(Events.ERROR, {
+                    message: error?.message || String(error)
+                });
+            }).finally(() => {
+                this.isSaving = false;
             });
-        });
-
-        this.fontWorker.addEventListener('message', e => {
-            let data = e.data;
-            if (data.type == 'font_subset_after') {
-                this.pdfDocument.setFont(data.pageId, data.fontFile, data.newBuffer);
-                PDFEvent.dispatch(Events.DOWNLOAD);
-            }
         });
 
         window.addEventListener('mousedown', e => {
@@ -286,10 +292,12 @@ export class PDFEditor {
     }
 
     async reset() {
+        this.isSaving = false;
         this.pdfDocument.embedFonts = {};
-        this.history.clear();
-        this.elHistoryWrapper.querySelector('.' + HISTORY_BOX_CLASS).innerHTML = '';
-        this.elHistoryBtn.style.display = 'none';
+        this.pdfDocument.pageRemoved = [];
+        this.pdfDocument.destroyDocumentProxy();
+        this.pdfDocument.fontSubsetRequestId = 0;
+        this.resetHistoryUi();
         // this.reader.pdfjsLib.getDocument(this.pdfData).promise.then(documentProxy => {
         //     this.reader.pdfDocument.documentProxy = documentProxy;
         // })
@@ -297,22 +305,40 @@ export class PDFEditor {
         // this.reader.pdfDocument.documentProxy = documentProxy;
     }
 
+    resetHistoryUi() {
+        this.history?.clear?.();
+        const historyBox = this.elHistoryWrapper?.querySelector?.('.' + HISTORY_BOX_CLASS);
+        if (historyBox) {
+            historyBox.innerHTML = '';
+        }
+        if (this.elHistoryBtn) {
+            this.elHistoryBtn.style.display = 'none';
+        }
+    }
+
+    prepareForNewLoad() {
+        this.isSaving = false;
+        this.resetHistoryUi();
+        this.pdfDocument?.resetForNewSource?.();
+    }
+
     async download(fileName) {
         try {
-            this.flushData().then(() => {
-                PDFEvent.dispatch(Events.SAVE);
-                // this.pdfDocument.save(true).then(async blob => {
-                //     if (this.options.debug) {
-                //         window.open(URL.createObjectURL(blob));
-                //     } else {
-                //         saveAs(blob, fileName);
-                //     }
-                //     this.reset();
-                // });
-            });
+            await this.flushData();
+            PDFEvent.dispatch(Events.SAVE);
+            // this.pdfDocument.save(true).then(async blob => {
+            //     if (this.options.debug) {
+            //         window.open(URL.createObjectURL(blob));
+            //     } else {
+            //         saveAs(blob, fileName);
+            //     }
+            //     this.reset();
+            // });
         } catch (e) {
             console.log(e);
-            PDFEvent.dispatch(Events.ERROR, e);
+            PDFEvent.dispatch(Events.ERROR, {
+                message: e?.message || String(e)
+            });
         }
     }
 

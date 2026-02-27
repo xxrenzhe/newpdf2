@@ -25,10 +25,31 @@
   html,
   body {
     height: 100dvh;
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
   }
 
   .pdf-main {
     height: 100dvh;
+  }
+
+  .pdf-main,
+  .pdf-wrapper,
+  .pdf-main-wrapper,
+  .pdf-main-box {
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  body.pdf-touch-gesture-lock,
+  body.pdf-touch-gesture-lock .pdf-main,
+  body.pdf-touch-gesture-lock .pdf-wrapper,
+  body.pdf-touch-gesture-lock .pdf-main-wrapper,
+  body.pdf-touch-gesture-lock .pdf-main-box,
+  body.pdf-touch-gesture-lock .__pdf_page_preview_wrapper,
+  body.pdf-touch-gesture-lock .drawLayer {
+    touch-action: none !important;
   }
 
   .pdf-header {

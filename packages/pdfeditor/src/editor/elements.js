@@ -140,4 +140,20 @@ export class Elements {
             this.remove(i);
         }
     }
+
+    clearSilently() {
+        for (let i in this.items) {
+            const element = this.items[i];
+            if (!element) {
+                continue;
+            }
+            try {
+                element.remove();
+            } catch (err) {
+                // ignore
+            }
+        }
+        this.items = {};
+        this.activeId = null;
+    }
 }

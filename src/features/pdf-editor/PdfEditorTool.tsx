@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import Link from "@/components/AppLink";
 import { useLanguage } from "@/components/LanguageProvider";
 import EmbeddedPdfEditor from "@/features/pdf-editor/EmbeddedPdfEditor";
@@ -16,6 +17,7 @@ const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 const EDITOR_READY_TIMEOUT_MS = 12000;
 const PDF_LOAD_TIMEOUT_MS = 60000;
 const IFRAME_LOAD_TIMEOUT_MS = 15000;
+const PDF_DOWNLOAD_TIMEOUT_MS = 45000;
 const PDFEDITOR_BUILD_ID = (process.env.NEXT_PUBLIC_PDFEDITOR_BUILD_ID ?? "").trim();
 const BLOCKED_NAVIGATION_MESSAGE = "Editor navigation was blocked and reloaded.";
 const ENABLE_EDITOR_LEGACY_FALLBACK = process.env.NEXT_PUBLIC_EDITOR_LEGACY_FALLBACK === "true";
@@ -165,6 +167,7 @@ export default function PdfEditorTool({
   const editorFallbackUsedRef = useRef(false);
   const manualCancelTokenRef = useRef<number | null>(null);
   const blockedEmbedCountRef = useRef(0);
+  const downloadTimeoutRef = useRef<number | null>(null);
   const { fileObjectUrlRef, fileBytesPromiseRef } = usePdfEditorFileIO({
     file,
     pdfLoaded,
@@ -178,6 +181,13 @@ export default function PdfEditorTool({
   }, [lang]);
 
   const outName = useMemo(() => file.name.replace(/\.[^.]+$/, "") + "-edited.pdf", [file.name]);
+
+  const clearDownloadTimeout = useCallback(() => {
+    if (downloadTimeoutRef.current) {
+      window.clearTimeout(downloadTimeoutRef.current);
+      downloadTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     setUploadTip(uploadTips[0] ?? "");
@@ -196,6 +206,7 @@ export default function PdfEditorTool({
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
     manualCancelTokenRef.current = null;
+    clearDownloadTimeout();
     if (ENABLE_EDITOR_LEGACY_FALLBACK) {
       editorFallbackUsedRef.current = false;
       if (editorFallbackTimerRef.current) {
@@ -207,7 +218,14 @@ export default function PdfEditorTool({
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
     }
-  }, [editorKey]);
+  }, [clearDownloadTimeout, editorKey]);
+
+  useEffect(
+    () => () => {
+      clearDownloadTimeout();
+    },
+    [clearDownloadTimeout]
+  );
 
   useEffect(() => {
     setExternalEmbedWarning("");
@@ -296,6 +314,7 @@ export default function PdfEditorTool({
     setError,
     setExternalEmbedWarning,
     setUploadProgress,
+    onDownloadTerminal: clearDownloadTimeout,
   });
 
 
@@ -309,10 +328,18 @@ export default function PdfEditorTool({
 
   const requestDownload = useCallback(() => {
     if (!pdfLoaded) return;
+    clearDownloadTimeout();
     setError("");
     setBusy(true);
+    downloadTimeoutRef.current = window.setTimeout(() => {
+      downloadTimeoutRef.current = null;
+      const timeoutMessage = t("pdfDownloadTimeout", "PDF generation timed out. Please try again.");
+      toast.error(timeoutMessage);
+      setBusy(false);
+      setError(timeoutMessage);
+    }, PDF_DOWNLOAD_TIMEOUT_MS);
     postToEditor({ type: "download" });
-  }, [pdfLoaded, postToEditor]);
+  }, [clearDownloadTimeout, pdfLoaded, postToEditor, t]);
 
   const onFileChange = useCallback(
     (evt: React.ChangeEvent<HTMLInputElement>) => {

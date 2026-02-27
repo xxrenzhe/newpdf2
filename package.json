@@ -15,7 +15,7 @@
     "validate-all": "npm run lint && npm run build",
     "test:e2e": "playwright test",
     "format": "biome format --write",
-    "test:pdfeditor": "node --test packages/pdfeditor/src/entry/__tests__/load_token_tracker.test.mjs packages/pdfeditor/src/editor/__tests__/origin_text_state.test.mjs packages/pdfeditor/src/editor/__tests__/history_policy.test.mjs packages/pdfeditor/src/editor/__tests__/history_push_source.test.mjs packages/pdfeditor/src/reader/__tests__/clear_text_state.test.mjs packages/pdfeditor/src/reader/__tests__/text_selection.test.mjs packages/pdfeditor/src/reader/__tests__/text_layout.test.mjs"
+    "test:pdfeditor": "node --test packages/pdfeditor/src/entry/__tests__/load_token_tracker.test.mjs packages/pdfeditor/src/entry/__tests__/runtime_safety.test.mjs packages/pdfeditor/src/editor/__tests__/origin_text_state.test.mjs packages/pdfeditor/src/editor/__tests__/history_policy.test.mjs packages/pdfeditor/src/editor/__tests__/history_push_source.test.mjs packages/pdfeditor/src/reader/__tests__/clear_text_state.test.mjs packages/pdfeditor/src/reader/__tests__/text_selection.test.mjs packages/pdfeditor/src/reader/__tests__/text_layout.test.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.34.3",

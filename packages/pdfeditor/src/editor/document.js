@@ -5,6 +5,7 @@ import { trimSpace } from '../misc';
 import { PDFPage } from './page';
 import opentype from 'opentype.js';
 
+const FONT_SUBSET_TIMEOUT_MS = 15000;
 
 export class PDFDocument {
     editor = null;
@@ -12,6 +13,7 @@ export class PDFDocument {
     pages = [];
     embedFonts = {};
     pageRemoved = [];
+    fontSubsetRequestId = 0;
 
     constructor(editor, documentProxy) {
         this.editor = editor;
@@ -68,6 +70,81 @@ export class PDFDocument {
         PDFEvent.dispatch(Events.DOWNLOAD);
     }
 
+    async subsetFontWithWorker({
+        text,
+        pageId,
+        fontFile,
+        arrayBuffer,
+        fallbackBuffer
+    }) {
+        const worker = this.editor?.fontWorker;
+        if (!worker) {
+            throw new Error('font worker unavailable');
+        }
+        const requestId = ++this.fontSubsetRequestId;
+        return new Promise((resolve, reject) => {
+            let finished = false;
+            const finish = (callback, value) => {
+                if (finished) return;
+                finished = true;
+                worker.removeEventListener('message', onMessage);
+                worker.removeEventListener('error', onError);
+                worker.removeEventListener('messageerror', onMessageError);
+                clearTimeout(timeoutId);
+                callback(value);
+            };
+            const onMessage = (event) => {
+                const data = event?.data;
+                if (!data || typeof data !== 'object') return;
+                if (typeof data.requestId !== 'number' || data.requestId !== requestId) return;
+                if (data.type === 'font_subset_after') {
+                    if (!data.newBuffer) {
+                        finish(reject, new Error('font subset worker returned empty buffer'));
+                        return;
+                    }
+                    finish(resolve, data.newBuffer);
+                    return;
+                }
+                if (data.type === 'font_subset_error') {
+                    const message =
+                        typeof data.message === 'string' && data.message
+                            ? data.message
+                            : 'font subset worker failed';
+                    finish(reject, new Error(message));
+                }
+            };
+            const onError = (event) => {
+                const message = event?.message || 'font subset worker failed';
+                finish(reject, new Error(message));
+            };
+            const onMessageError = () => {
+                finish(reject, new Error('font subset worker message error'));
+            };
+            const timeoutId = setTimeout(() => {
+                finish(reject, new Error('font subset worker timeout'));
+            }, FONT_SUBSET_TIMEOUT_MS);
+            worker.addEventListener('message', onMessage);
+            worker.addEventListener('error', onError);
+            worker.addEventListener('messageerror', onMessageError);
+            try {
+                worker.postMessage({
+                    type: 'font_subset',
+                    requestId,
+                    text,
+                    pageId,
+                    fontFile,
+                    arrayBuffer,
+                    fallbackBuffer
+                }, [
+                    arrayBuffer,
+                    fallbackBuffer
+                ]);
+            } catch (error) {
+                finish(reject, error);
+            }
+        });
+    }
+
     async getFont(pageId, text, fontFile) {
         // return this.documentProxy.embedFont(StandardFonts.Helvetica);
 
@@ -101,46 +178,43 @@ export class PDFDocument {
                 let isIncludeCJK = new RegExp(Font.CJK_RANGE);
                 if (isIncludeCJK.test(text) && _text) {
                     arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
-                    this.setFont(pageId, fontFile, arrayBuffer);
+                    await this.setFont(pageId, fontFile, arrayBuffer);
                 } else {
                     if (!isFetchFont) {
                         if (_text) {
                             try {
-                                Font.fetchFallbackFont().then(fallbackBuffer => {
-                                    this.editor.fontWorker.postMessage({
-                                        type: 'font_subset',
-                                        text: _text,
-                                        pageId: pageId,
-                                        fontFile: fontFile,
-                                        arrayBuffer: arrayBuffer,
-                                        fallbackBuffer: fallbackBuffer
-                                    }, [
-                                        arrayBuffer,
-                                        fallbackBuffer
-                                    ]);
-                                }).catch(e => {
-                                    this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                                const fallbackBuffer = await Font.fetchFallbackFont();
+                                const subsetBuffer = await this.subsetFontWithWorker({
+                                    text: _text,
+                                    pageId: pageId,
+                                    fontFile: fontFile,
+                                    arrayBuffer: arrayBuffer,
+                                    fallbackBuffer: fallbackBuffer
                                 });
+                                await this.setFont(pageId, fontFile, subsetBuffer);
                             } catch (e) {
-                                this.setFont(pageId, fontFile, StandardFonts.Helvetica);
+                                await this.setFont(pageId, fontFile, StandardFonts.Helvetica);
                             }
                         } else {
-                            this.setFont(pageId, fontFile, arrayBuffer);
+                            await this.setFont(pageId, fontFile, arrayBuffer);
                         }
                     } else {
                         arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
-                        this.setFont(pageId, fontFile, arrayBuffer);
+                        await this.setFont(pageId, fontFile, arrayBuffer);
                     }
                 }
             } else {
                 //从服务器拉取字体数据
                 arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
-                this.setFont(pageId, fontFile, arrayBuffer);
+                await this.setFont(pageId, fontFile, arrayBuffer);
             }
             // if (!arrayBuffer) {
             //     arrayBuffer = this.documentProxy.embedFont(StandardFonts.Helvetica);
             // }
+        } else {
+            await this.setFont(pageId, fontFile, arrayBuffer);
         }
+        return this.embedFonts[pageId][fontFile];
     }
 
     async setFont(pageId, fontFile, arrayBuffer) {
@@ -156,6 +230,41 @@ export class PDFDocument {
         return Object.values(this.embedFonts).every(fonts => {
             return Object.values(fonts).every(font => font != null);
         });
+    }
+
+    destroyDocumentProxy() {
+        const documentProxy = this.documentProxy;
+        this.documentProxy = null;
+        if (!documentProxy || typeof documentProxy.destroy !== 'function') {
+            return;
+        }
+        try {
+            const result = documentProxy.destroy();
+            if (result && typeof result.then === 'function') {
+                result.catch(() => {});
+            }
+        } catch (err) {
+            // ignore
+        }
+    }
+
+    resetForNewSource() {
+        this.pages.forEach(page => {
+            try {
+                page?.elements?.clearSilently?.();
+            } catch (err) {
+                // ignore
+            }
+            if (page) {
+                page.elements = null;
+                page.pdfDocument = null;
+            }
+        });
+        this.pages = [];
+        this.embedFonts = {};
+        this.pageRemoved = [];
+        this.destroyDocumentProxy();
+        this.fontSubsetRequestId = 0;
     }
 
     addPage(pageNum) {

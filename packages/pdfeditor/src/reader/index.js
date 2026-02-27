@@ -66,6 +66,10 @@ export class PDFReader {
     locale = null;
     loadId = 0;
     openedObjectUrl = null;
+    mainObserver = null;
+    thumbsObserver = null;
+    wheelHandler = null;
+    resizeHandler = null;
     #loadingTask = null;
 
     constructor(options, pdfjsLib, password = null) {
@@ -119,33 +123,61 @@ export class PDFReader {
         this.elFile.click();
     }
 
+    #disconnectObservers() {
+        if (this.mainObserver?.disconnect) {
+            try {
+                this.mainObserver.disconnect();
+            } catch (err) {
+                // ignore
+            }
+        }
+        this.mainObserver = null;
+
+        if (this.thumbsObserver?.disconnect) {
+            try {
+                this.thumbsObserver.disconnect();
+            } catch (err) {
+                // ignore
+            }
+        }
+        this.thumbsObserver = null;
+    }
+
+    #ensureGlobalListeners() {
+        if (this.options.wheel && !this.wheelHandler) {
+            this.wheelHandler = (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    const delta = normalizeWheelEventDirection(e);
+                    this.scale += (SCALE.STEP * 100) / delta;
+                    if (this.scale <= SCALE.MIN) {
+                        this.scale = SCALE.MIN;
+                    } else if (this.scale >= SCALE.MAX) {
+                        this.scale = SCALE.MAX;
+                    }
+                    this.viewMode = this.scale;
+                    this.zoom(this.scale, this.options.renderType);
+                }
+            };
+            window.addEventListener('wheel', this.wheelHandler, {
+                passive: false
+            });
+        }
+
+        if (!this.resizeHandler) {
+            this.resizeHandler = () => {
+                this.zoom(this.viewMode, this.options.renderType);
+            };
+            window.addEventListener('resize', this.resizeHandler);
+        }
+    }
+
 
     async #disposeCurrentDocument() {
-        const documentProxy = this.pdfDocument?.documentProxy;
-
-        if (documentProxy?._transport?.fontLoader?.clear) {
-            try {
-                documentProxy._transport.fontLoader.clear();
-            } catch (err) {
-                // ignore
-            }
-        }
-
-        if (documentProxy?.cleanup) {
-            try {
-                await documentProxy.cleanup();
-            } catch (err) {
-                // ignore
-            }
-        }
-
-        if (documentProxy?.destroy) {
-            try {
-                await documentProxy.destroy();
-            } catch (err) {
-                // ignore
-            }
-        }
+        const pdfDocument = this.pdfDocument;
+        this.#disconnectObservers();
+        await pdfDocument?.destroyDocumentProxy?.();
+        pdfDocument?.dispose?.();
 
         Font.clear();
 
@@ -324,24 +356,7 @@ export class PDFReader {
     }
 
     #initReader() {
-        if (this.options.wheel) {
-            window.addEventListener('wheel', e => {
-                if (e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    const delta = normalizeWheelEventDirection(e);
-                    this.scale += (SCALE.STEP * 100) / delta;
-                    if (this.scale <= SCALE.MIN) {
-                        this.scale = SCALE.MIN;
-                    } else if (this.scale >= SCALE.MAX) {
-                        this.scale = SCALE.MAX;
-                    }
-                    this.viewMode = this.scale;
-                    this.zoom(this.scale, this.options.renderType);
-                }
-            }, {
-                passive: false
-            });
-        }
+        this.#ensureGlobalListeners();
         
         if (this.options.thumbs) {
             this.#initThumbs();
@@ -356,16 +371,19 @@ export class PDFReader {
         } else {
             this.parentElement = this.mainBox;
         }
-
-        window.addEventListener('resize', e => {
-            this.zoom(this.viewMode, this.options.renderType);
-        });
         this.pdfDocument.setPageActive(1);
         Locale.bind();
     }
 
     #initThumbs() {
         this.thumbsBox = this.options.thumbs instanceof Node ? this.options.thumbs : document.querySelector(this.options.thumbs);
+        if (this.thumbsObserver?.disconnect) {
+            try {
+                this.thumbsObserver.disconnect();
+            } catch (err) {
+                // ignore
+            }
+        }
         let obOptions = {
             root: null,
             rootMargin: obServerThumbs.rootMargin,
@@ -382,7 +400,7 @@ export class PDFReader {
                         let page = this.pdfDocument.getPage(pageNum);
                         page.renderImage().then(el => {
                             entry.target.firstChild.appendChild(el.cloneNode(true));
-                        });
+                        }).catch(() => {});
                     }
                 }
             });
@@ -405,10 +423,18 @@ export class PDFReader {
             this.thumbsBox.appendChild(elThumbs);
             observer.observe(elThumbs);
         }
+        this.thumbsObserver = observer;
     }
 
     #initMain() {
         this.mainBox = this.options.main instanceof Node ? this.options.main : document.querySelector(this.options.main);
+        if (this.mainObserver?.disconnect) {
+            try {
+                this.mainObserver.disconnect();
+            } catch (err) {
+                // ignore
+            }
+        }
         let obOptions = {
             root: null,
             rootMargin: obServerMain.rootMargin,
@@ -434,7 +460,7 @@ export class PDFReader {
                     }
                     page.render(this.options.renderType).then(() => {
                         this.pdfDocument.thumbScrollTo(page.pageNum, true);
-                    });
+                    }).catch(() => {});
                 }
             });
         }, obOptions);

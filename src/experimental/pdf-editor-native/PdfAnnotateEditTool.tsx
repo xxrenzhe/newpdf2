@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback } from "react";
 import { downloadBlob } from "@/lib/pdf/client";
 
-const PDFEditor = dynamic(() => import("@/components/PDFEditor"), {
+const PDFEditor = dynamic(() => import("./PDFEditor"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-[600px]">

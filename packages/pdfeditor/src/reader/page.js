@@ -466,6 +466,18 @@ export class PDFPage extends PDFPageBase {
         });
         return this.markClearTextsByIndices(indices);
     }
+
+    dispose() {
+        this.textParts = [];
+        this.clearTexts = [];
+        this.clearTextIndexCounts = Object.create(null);
+        this.textItemRects = [];
+        this.hideOriginElements = [];
+        this.isConvertWidget = [];
+        this.elInsertPage = null;
+        super.dispose();
+    }
+
     #filterDiv(n) {
         const textParts = this.textParts[n];
         let firstElement = null;

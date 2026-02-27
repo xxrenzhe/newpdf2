@@ -153,4 +153,50 @@ export class PDFDocument {
         }
         return found;
     }
+
+    async destroyDocumentProxy() {
+        const documentProxy = this.documentProxy;
+        this.documentProxy = null;
+        if (!documentProxy) {
+            return;
+        }
+
+        if (documentProxy?._transport?.fontLoader?.clear) {
+            try {
+                documentProxy._transport.fontLoader.clear();
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        if (documentProxy?.cleanup) {
+            try {
+                await documentProxy.cleanup();
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        if (documentProxy?.destroy) {
+            try {
+                await documentProxy.destroy();
+            } catch (err) {
+                // ignore
+            }
+        }
+    }
+
+    dispose() {
+        clearTimeout(this.timeout);
+        this.pages.forEach(page => {
+            try {
+                page?.dispose?.();
+            } catch (err) {
+                // ignore
+            }
+        });
+        this.pages = [];
+        this.pageActive = null;
+        this.documentProxy = null;
+    }
 };

@@ -3,8 +3,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Document, Page } from "react-pdf";
 import dynamic from "next/dynamic";
-import AnnotationToolbar from "./AnnotationToolbar";
-import type { AnnotationTool } from "./PDFAnnotationCanvas";
+import AnnotationToolbar from "@/components/AnnotationToolbar";
+import type { AnnotationTool } from "@/components/PDFAnnotationCanvas";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
@@ -12,7 +12,7 @@ import { applyAnnotationOverlays, downloadBlob, type PdfTextReplacementItem } fr
 import { useLanguage } from "@/components/LanguageProvider";
 
 // Dynamically import annotation canvas
-const PDFAnnotationCanvas = dynamic(() => import("./PDFAnnotationCanvas"), {
+const PDFAnnotationCanvas = dynamic(() => import("@/components/PDFAnnotationCanvas"), {
   ssr: false,
 });
 
