@@ -519,5 +519,9 @@
   "faqBilling6A": "我们接受所有主要信用卡、PayPal 和其他付款方式（具体取决于您所在的地区）。",
   "uploadValidationErrorTitle": "上传失败",
   "uploadValidationErrorHint": "请选择受支持的文件后重试。",
-  "retryActionHint": "请检查文件后重试。"
+  "retryActionHint": "请检查文件后重试。",
+  "saveProgressFont": "正在合并字体…",
+  "saveProgressRender": "正在渲染布局…",
+  "editorCrashedMessage": "PDF 编辑器已停止响应。",
+  "forceReload": "强制重新加载"
 }

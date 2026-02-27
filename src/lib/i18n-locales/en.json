@@ -519,5 +519,9 @@
   "faqBilling6A": "We accept all major credit cards, PayPal, and other payment methods depending on your region.",
   "uploadValidationErrorTitle": "Upload failed",
   "uploadValidationErrorHint": "Please choose a supported file and try again.",
-  "retryActionHint": "Please check the file and try again."
+  "retryActionHint": "Please check the file and try again.",
+  "saveProgressFont": "Merging fonts…",
+  "saveProgressRender": "Rendering layout…",
+  "editorCrashedMessage": "The PDF editor stopped responding.",
+  "forceReload": "Force Reload"
 }

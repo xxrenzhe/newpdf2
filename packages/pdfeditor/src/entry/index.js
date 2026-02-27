@@ -578,6 +578,32 @@ PDFEvent.on(Events.TOOLBAR_ITEM_ACTIVE, (evt) => {
 
 sendEditorReady();
 
+let saveProgressTimer = null;
+
+PDFEvent.on(Events.SAVE, () => {
+    if (saveProgressTimer) {
+        clearTimeout(saveProgressTimer);
+        saveProgressTimer = null;
+    }
+    saveProgressTimer = setTimeout(() => {
+        saveProgressTimer = null;
+        postToParent({ type: 'pdf-save-progress', phase: 'font' });
+    }, 2000);
+});
+
+PDFEvent.on(Events.DOWNLOAD, () => {
+    if (saveProgressTimer) {
+        clearTimeout(saveProgressTimer);
+        saveProgressTimer = null;
+    }
+    postToParent({ type: 'pdf-save-progress', phase: 'render' });
+});
+
+PDFEvent.on(Events.HISTORY_CHANGE, (evt) => {
+    const step = evt?.data?.step;
+    postToParent({ type: 'pdf-dirty-state', isDirty: typeof step === 'number' && step > 0 });
+});
+
 if (fileUrl) {
     try {
         const parsed = new URL(fileUrl, window.location.href);
@@ -597,6 +623,11 @@ window.addEventListener('message', e => {
 
     if (data.type == 'ping') {
         sendEditorReady(true);
+        return;
+    }
+
+    if (data.type === 'health-check') {
+        postToParent({ type: 'health-check-ack' });
         return;
     }
 

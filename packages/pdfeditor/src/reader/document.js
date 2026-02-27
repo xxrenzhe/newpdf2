@@ -161,6 +161,20 @@ export class PDFDocument {
             return;
         }
 
+        // Release GPU memory held by orphaned pdfjs canvases
+        try {
+            const container = this.reader?.mainBox || document.querySelector('#pdf-main');
+            if (container) {
+                const canvases = container.querySelectorAll('canvas');
+                canvases.forEach(c => {
+                    c.width = 0;
+                    c.height = 0;
+                });
+            }
+        } catch (err) {
+            // ignore
+        }
+
         if (documentProxy?._transport?.fontLoader?.clear) {
             try {
                 documentProxy._transport.fontLoader.clear();

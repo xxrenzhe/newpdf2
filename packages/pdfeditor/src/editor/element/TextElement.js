@@ -13,6 +13,8 @@ class TextElement extends BaseElement {
             opacity: 1,
             lineStyle: null,    //underline, strike
             background: null,
+            letterSpacing: null,
+            wordSpacing: null,
             bold: false,
             italic: false,
             rotate: undefined,
@@ -54,6 +56,8 @@ class TextElement extends BaseElement {
         this.elText.style.fontFamily = this.attrs.fontFamily;
         this.elText.style.lineHeight = this.attrs.lineHeight + 'px';
         this.elText.style.opacity = this.attrs.opacity;
+        this.elText.style.letterSpacing = this.attrs.letterSpacing != null ? this.attrs.letterSpacing + 'px' : '';
+        this.elText.style.wordSpacing = this.attrs.wordSpacing != null ? this.attrs.wordSpacing + 'px' : '';
         if (this.attrs.rotate) {
             this.elText.style.transform = 'rotate('+ this.attrs.rotate +'deg)';
         }
@@ -80,6 +84,8 @@ class TextElement extends BaseElement {
         super.zoom(scale);
         this.elText.style.fontSize = this.attrs.size * this.pageScale + 'px';
         this.elText.style.lineHeight = this.attrs.lineHeight * this.pageScale + 'px';
+        this.elText.style.letterSpacing = this.attrs.letterSpacing != null ? this.attrs.letterSpacing * this.pageScale + 'px' : '';
+        this.elText.style.wordSpacing = this.attrs.wordSpacing != null ? this.attrs.wordSpacing * this.pageScale + 'px' : '';
     }
 
     childElement() {
@@ -122,10 +128,12 @@ class TextElement extends BaseElement {
                 return;
             }
             this.elText.style.cursor = 'pointer';
-            this.el.classList.remove('active');
-            PDFEvent.dispatch(Events.ELEMENT_BLUR, {
-                page: this.page,
-                element: this
+            requestAnimationFrame(() => {
+                this.el.classList.remove('active');
+                PDFEvent.dispatch(Events.ELEMENT_BLUR, {
+                    page: this.page,
+                    element: this
+                });
             });
         });
 
@@ -176,7 +184,25 @@ class TextElement extends BaseElement {
         let x = this.getX();
         let y = this.page.height - (this.getY() + fontSize - fontSize * 0.3);
         let lineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : (fontSize - 2)) + lineTop;
-        //let lineHeight = options.font.heightAtSize(fontSize);
+
+        // Read computed spacing from DOM for pixel-accurate alignment
+        let charSpacing = this.attrs.letterSpacing || 0;
+        let wordSpacing = this.attrs.wordSpacing || 0;
+        if (this.elText && this.elText.isConnected) {
+            try {
+                const computed = window.getComputedStyle(this.elText);
+                const parsedChar = parseFloat(computed.letterSpacing);
+                if (Number.isFinite(parsedChar) && parsedChar !== 0) {
+                    charSpacing = parsedChar / (this.pageScale || 1);
+                }
+                const parsedWord = parseFloat(computed.wordSpacing);
+                if (Number.isFinite(parsedWord) && parsedWord !== 0) {
+                    wordSpacing = parsedWord / (this.pageScale || 1);
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
 
         let options = {
             x: x,
@@ -207,7 +233,20 @@ class TextElement extends BaseElement {
                 opacity: options.opacity
             });
         }
+        const hasSpacing = charSpacing !== 0 || wordSpacing !== 0;
+        if (hasSpacing) {
+            const ops = [];
+            if (charSpacing !== 0) ops.push(this.editor.PDFLib.setCharacterSpacing(charSpacing));
+            if (wordSpacing !== 0) ops.push(this.editor.PDFLib.setWordSpacing(wordSpacing));
+            this.page.pageProxy.pushOperators(...ops);
+        }
         this.page.pageProxy.drawText(this.attrs.text, options);
+        if (hasSpacing) {
+            const resetOps = [];
+            if (charSpacing !== 0) resetOps.push(this.editor.PDFLib.setCharacterSpacing(0));
+            if (wordSpacing !== 0) resetOps.push(this.editor.PDFLib.setWordSpacing(0));
+            this.page.pageProxy.pushOperators(...resetOps);
+        }
 
         if (this.attrs.lineStyle) {
             let lineY = 0;
@@ -221,8 +260,7 @@ class TextElement extends BaseElement {
                     start: { x: x, y: lineY },
                     end: { x: x + options.font.widthOfTextAtSize(lines[i], fontSize), y: lineY },
                     thickness: thickness,
-                    // color: options.color,
-                    color: this.editor.PDFLib.componentsToColor(hexToRgb('#ff0000').map(v => (v / 255))),
+                    color: options.color,
                     opacity: options.opacity
                 });
             }

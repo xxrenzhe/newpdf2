@@ -21,6 +21,9 @@ type PdfExternalEmbedBlockedMessage = {
 type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
 type PdfOpenToolMessage = { type: "open-tool"; tool?: string };
 type PdfEditorReadyMessage = { type: "pdf-editor-ready" };
+type PdfSaveProgressMessage = { type: "pdf-save-progress"; phase: string };
+type HealthCheckAckMessage = { type: "health-check-ack" };
+type PdfDirtyStateMessage = { type: "pdf-dirty-state"; isDirty: boolean };
 type PdfEditorMessage =
   | PdfDownloadMessage
   | PdfLoadedMessage
@@ -31,7 +34,10 @@ type PdfEditorMessage =
   | PdfExternalEmbedBlockedMessage
   | PdfLoadCancelledMessage
   | PdfOpenToolMessage
-  | PdfEditorReadyMessage;
+  | PdfEditorReadyMessage
+  | PdfSaveProgressMessage
+  | HealthCheckAckMessage
+  | PdfDirtyStateMessage;
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TranslateFn = (key: string, fallback: string) => string;
@@ -60,6 +66,9 @@ type UsePdfEditorMessagesOptions = {
   setError: Setter<string>;
   setExternalEmbedWarning: Setter<string>;
   setUploadProgress: Setter<number>;
+  onSaveProgressHint?: (phase: string) => void;
+  onHealthCheckAck?: () => void;
+  onDirtyStateChange?: (isDirty: boolean) => void;
 };
 
 function getMessageRecord(value: unknown) {
@@ -130,6 +139,16 @@ function parseEditorMessage(value: unknown): PdfEditorMessage | null {
       };
     case "pdf-editor-ready":
       return { type: "pdf-editor-ready" };
+    case "pdf-save-progress": {
+      const phase = typeof record.phase === "string" ? record.phase : "";
+      return { type: "pdf-save-progress", phase };
+    }
+    case "health-check-ack":
+      return { type: "health-check-ack" };
+    case "pdf-dirty-state": {
+      const isDirty = typeof record.isDirty === "boolean" ? record.isDirty : false;
+      return { type: "pdf-dirty-state", isDirty };
+    }
     default:
       return null;
   }
@@ -225,6 +244,9 @@ export function usePdfEditorMessages({
   setError,
   setExternalEmbedWarning,
   setUploadProgress,
+  onSaveProgressHint,
+  onHealthCheckAck,
+  onDirtyStateChange,
 }: UsePdfEditorMessagesOptions) {
   const lastErrorToastRef = useRef<{ message: string; timestamp: number } | null>(null);
 
@@ -382,6 +404,18 @@ export function usePdfEditorMessages({
           }
           return;
         }
+        case "pdf-save-progress": {
+          onSaveProgressHint?.(message.phase);
+          return;
+        }
+        case "health-check-ack": {
+          onHealthCheckAck?.();
+          return;
+        }
+        case "pdf-dirty-state": {
+          onDirtyStateChange?.(message.isDirty);
+          return;
+        }
         case "pdf-download":
           return;
         default:
@@ -403,6 +437,9 @@ export function usePdfEditorMessages({
     onOpenTool,
     onDownloadTerminal,
     notifyError,
+    onSaveProgressHint,
+    onHealthCheckAck,
+    onDirtyStateChange,
     setBusy,
     setEditorBooted,
     setEditorReady,

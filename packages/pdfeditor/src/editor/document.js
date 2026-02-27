@@ -52,21 +52,24 @@ export class PDFDocument {
                 this.embedFonts[page.id][item.attrs.fontFile] = null;
             }
         }
-        
+
         //是否立即下载（合并本地字体会通过message异步下载）
-        for (let pageId in texts) {
-            for (let fontFile in texts[pageId]) {
-                let text = texts[pageId][fontFile];
-                if (!trimSpace(text)) continue;
-                try {
-                    await this.getFont(pageId, text, fontFile);
-                } catch(e) {
-                    console.error('[pdfeditor] getFont failed, fallback to Helvetica', e);
-                    await this.setFontFallback(pageId, fontFile, e);
+        try {
+            for (let pageId in texts) {
+                for (let fontFile in texts[pageId]) {
+                    let text = texts[pageId][fontFile];
+                    if (!trimSpace(text)) continue;
+                    try {
+                        await this.getFont(pageId, text, fontFile);
+                    } catch(e) {
+                        console.error('[pdfeditor] getFont failed, fallback to Helvetica', e);
+                        await this.setFontFallback(pageId, fontFile, e);
+                    }
                 }
             }
+        } finally {
+            PDFEvent.dispatch(Events.DOWNLOAD);
         }
-        PDFEvent.dispatch(Events.DOWNLOAD);
     }
 
     async subsetFontWithWorker({

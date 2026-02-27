@@ -12,12 +12,13 @@ import { usePdfEditorDom } from "@/features/pdf-editor/usePdfEditorDom";
 import { usePdfEditorFileIO } from "@/features/pdf-editor/usePdfEditorFileIO";
 import { usePdfEditorUiState } from "@/features/pdf-editor/usePdfEditorUiState";
 import { usePdfEditorErrorHandler } from "@/features/pdf-editor/usePdfEditorErrorHandler";
+import { clearPdfEditorCache } from "@/lib/pdfEditorCache";
 
 const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 const EDITOR_READY_TIMEOUT_MS = 12000;
 const PDF_LOAD_TIMEOUT_MS = 60000;
 const IFRAME_LOAD_TIMEOUT_MS = 15000;
-const PDF_DOWNLOAD_TIMEOUT_MS = 30000;
+const PDF_DOWNLOAD_TIMEOUT_MS = 45000;
 const PDF_DOWNLOAD_TIMEOUT_QUERY_KEY = "__pdfDownloadTimeoutMs";
 const PDF_DOWNLOAD_TIMEOUT_MIN_MS = 500;
 const PDFEDITOR_BUILD_ID = (process.env.NEXT_PUBLIC_PDFEDITOR_BUILD_ID ?? "").trim();
@@ -155,6 +156,12 @@ export default function PdfEditorTool({
   const [error, setError] = useState("");
   const [externalEmbedWarning, setExternalEmbedWarning] = useState("");
   const [loadCancelled, setLoadCancelled] = useState(false);
+  const [saveProgressHint, setSaveProgressHint] = useState("");
+  const [editorCrashed, setEditorCrashed] = useState(false);
+  const [forceReloadCounter, setForceReloadCounter] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
+  const healthCheckFailCountRef = useRef(0);
+  const healthCheckTimerRef = useRef<number | null>(null);
   const appliedToolRef = useRef<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadTip, setUploadTip] = useState(uploadTips[0] ?? "");
@@ -179,8 +186,8 @@ export default function PdfEditorTool({
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
     if (PDFEDITOR_BUILD_ID) params.set("v", PDFEDITOR_BUILD_ID.slice(0, 12));
-    return params.toString();
-  }, [lang]);
+    return params.toString() + (forceReloadCounter > 0 ? `&_r=${forceReloadCounter}` : "");
+  }, [lang, forceReloadCounter]);
 
   const outName = useMemo(() => file.name.replace(/\.[^.]+$/, "") + "-edited.pdf", [file.name]);
 
@@ -204,6 +211,9 @@ export default function PdfEditorTool({
     setBusy(false);
     setError("");
     setExternalEmbedWarning("");
+    setEditorCrashed(false);
+    setSaveProgressHint("");
+    setIsDirty(false);
     blockedEmbedCountRef.current = 0;
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
@@ -220,6 +230,11 @@ export default function PdfEditorTool({
       window.clearInterval(editorPingTimerRef.current);
       editorPingTimerRef.current = null;
     }
+    if (healthCheckTimerRef.current) {
+      window.clearInterval(healthCheckTimerRef.current);
+      healthCheckTimerRef.current = null;
+    }
+    healthCheckFailCountRef.current = 0;
   }, [clearDownloadTimeout, editorKey]);
 
   useEffect(
@@ -294,6 +309,85 @@ export default function PdfEditorTool({
     pdfLoadTimeoutMs: PDF_LOAD_TIMEOUT_MS,
   });
 
+  const onHealthCheckAck = useCallback(() => {
+    healthCheckFailCountRef.current = 0;
+  }, []);
+
+  // Health check timer: start after PDF loaded, send every 5s, 3 misses = crash
+  useEffect(() => {
+    if (healthCheckTimerRef.current) {
+      window.clearInterval(healthCheckTimerRef.current);
+      healthCheckTimerRef.current = null;
+    }
+    if (!pdfLoaded || editorCrashed) return;
+    healthCheckFailCountRef.current = 0;
+    healthCheckTimerRef.current = window.setInterval(() => {
+      const frame = editorFrameRef.current?.contentWindow;
+      if (!frame) return;
+      try {
+        frame.postMessage({ type: "health-check" }, "*");
+      } catch {
+        // iframe may be dead
+      }
+      healthCheckFailCountRef.current += 1;
+      if (healthCheckFailCountRef.current >= 3) {
+        setEditorCrashed(true);
+        if (healthCheckTimerRef.current) {
+          window.clearInterval(healthCheckTimerRef.current);
+          healthCheckTimerRef.current = null;
+        }
+      }
+    }, 5000);
+    // Send first check immediately
+    try {
+      editorFrameRef.current?.contentWindow?.postMessage({ type: "health-check" }, "*");
+    } catch {
+      // ignore
+    }
+    return () => {
+      if (healthCheckTimerRef.current) {
+        window.clearInterval(healthCheckTimerRef.current);
+        healthCheckTimerRef.current = null;
+      }
+    };
+  }, [pdfLoaded, editorCrashed]);
+
+  const handleForceReload = useCallback(() => {
+    setEditorCrashed(false);
+    healthCheckFailCountRef.current = 0;
+    setForceReloadCounter((c) => c + 1);
+  }, []);
+
+  const onSaveProgressHint = useCallback(
+    (phase: string) => {
+      if (phase === "font") {
+        setSaveProgressHint(t("saveProgressFont", "Merging fonts…"));
+      } else if (phase === "render") {
+        setSaveProgressHint(t("saveProgressRender", "Rendering layout…"));
+      }
+    },
+    [t]
+  );
+
+  const clearSaveProgressHint = useCallback(() => {
+    setSaveProgressHint("");
+  }, []);
+
+  const onDirtyStateChange = useCallback((dirty: boolean) => {
+    setIsDirty(dirty);
+  }, []);
+
+  // Warn user before leaving with unsaved changes
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
   usePdfEditorMessages({
     editorFrameRef,
     outName,
@@ -317,7 +411,15 @@ export default function PdfEditorTool({
     setError,
     setExternalEmbedWarning,
     setUploadProgress,
-    onDownloadTerminal: clearDownloadTimeout,
+    onSaveProgressHint,
+    onHealthCheckAck,
+    onDirtyStateChange,
+    onDownloadTerminal: useCallback(() => {
+      clearDownloadTimeout();
+      clearSaveProgressHint();
+      setIsDirty(false);
+      void clearPdfEditorCache().catch(() => {});
+    }, [clearDownloadTimeout, clearSaveProgressHint]),
   });
 
 
@@ -341,6 +443,7 @@ export default function PdfEditorTool({
     }
     clearDownloadTimeout();
     setError("");
+    setSaveProgressHint("");
     setBusy(true);
     downloadTimeoutRef.current = window.setTimeout(() => {
       downloadTimeoutRef.current = null;
@@ -474,7 +577,9 @@ export default function PdfEditorTool({
             onClick={requestDownload}
             disabled={!iframeReady || !pdfLoaded || busy}
           >
-            {busy ? t("working", "Working…") : t("saveDownload", "Save & Download")}
+            {busy
+              ? (saveProgressHint || t("working", "Working…"))
+              : t("saveDownload", "Save & Download")}
           </button>
           {showChangeFile && (
             <button
@@ -492,6 +597,19 @@ export default function PdfEditorTool({
       {error && (
         <div data-testid="pdf-editor-error" className="m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
           {error}
+        </div>
+      )}
+
+      {editorCrashed && !error && (
+        <div data-testid="pdf-editor-crashed" className="m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center justify-between gap-3">
+          <span>{t("editorCrashedMessage", "The PDF editor stopped responding.")}</span>
+          <button
+            type="button"
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+            onClick={handleForceReload}
+          >
+            {t("forceReload", "Force Reload")}
+          </button>
         </div>
       )}
 
