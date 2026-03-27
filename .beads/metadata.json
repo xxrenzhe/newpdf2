@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "newpdf2",
+  "project_id": "e7c99be9-fd5f-4e18-8547-c23e26bd1684"
+}

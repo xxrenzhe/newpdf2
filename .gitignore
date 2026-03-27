@@ -172,3 +172,7 @@ vite.config.ts.timestamp-*
 
 # Worktrees
 .worktrees/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
