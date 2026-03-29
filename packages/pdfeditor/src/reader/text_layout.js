@@ -96,7 +96,7 @@ const hasRotationDrift = (textItem, nextTextItem) => {
 };
 
 
-const getRunReadGap = (textItem, nextTextItem, isVertical) => {
+export const getRunReadGap = (textItem, nextTextItem, isVertical) => {
     const transform1 = getTransform(textItem);
     const transform2 = getTransform(nextTextItem);
     if (!transform1 || !transform2) {

@@ -3,7 +3,7 @@ import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base.js';
 import { getPixelColor, trimSpace } from '../misc.js';
 import { collectTextIndicesInRect } from './text_selection.js';
-import { getTextRotation, shouldBreakTextRun } from './text_layout.js';
+import { getTextRotation, shouldBreakTextRun, getRunReadGap, isVerticalTextRun } from './text_layout.js';
 import { countTextMatches } from '../search_text.js';
 import {
     collectClearTextItems,
@@ -118,6 +118,16 @@ export class PDFPage extends PDFPageBase {
             
             for (let i = 0; i < this.textContentItems.length; i++) {
                 let textItem = this.textContentItems[i];
+                // [KISS Optimization] 智能重构：补全 PDF 分散文本块中丢失的空格，提升编辑和复制准确性
+                if (elements.length > 0) {
+                    let prevTextItem = this.textContentItems[i - 1];
+                    let isVertical = isVerticalTextRun(textItem);
+                    let gap = getRunReadGap(prevTextItem, textItem, isVertical);
+                    let size = isVertical ? textItem.width : textItem.height;
+                    if (gap > (size || 10) * 0.22 && !prevTextItem.str.endsWith(' ') && !textItem.str.startsWith(' ')) {
+                        text += ' ';
+                    }
+                }
                 text += textItem.str;
                 if (lineRotate === null) {
                     lineRotate = getTextRotation(textItem);
