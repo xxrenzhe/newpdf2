@@ -1,8 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import type { Download, Locator, Page } from "playwright/test";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import JSZip from "jszip";
+
+async function loadPdfLib() {
+  return import("pdf-lib");
+}
+
+async function loadJsZip() {
+  const module = await import("jszip");
+  return module.default;
+}
+
+async function loadPdfJsV2() {
+  const module = await import("pdfjs-dist-v2/legacy/build/pdf.js");
+  return (module.default ?? module) as {
+    getDocument: (
+      src: unknown
+    ) => {
+      promise: Promise<{
+        getPage: (pageNumber: number) => Promise<{ getTextContent: () => Promise<{ items: unknown[] }> }>;
+        destroy: () => Promise<void>;
+      }>;
+    };
+  };
+}
 
 export function repoPath(...parts: string[]) {
   return path.join(process.cwd(), ...parts);
@@ -25,6 +47,7 @@ export function editorSaveDownloadButton(page: Page): Locator {
 }
 
 export async function makePdfBytes(label: string, pageCount = 2): Promise<Uint8Array> {
+  const { PDFDocument, StandardFonts, rgb } = await loadPdfLib();
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
 
@@ -54,12 +77,82 @@ export function expectPdfHeader(bytes: Uint8Array) {
   if (head !== "%PDF") throw new Error(`Expected PDF header %PDF, got ${JSON.stringify(head)}`);
 }
 
+export function pdfContainsToken(bytes: Uint8Array, token: string): boolean {
+  const pdf = Buffer.from(bytes);
+  const rawText = pdf.toString("latin1");
+  if (rawText.includes(token)) return true;
+
+  const streamKeyword = Buffer.from("stream");
+  const endstreamKeyword = Buffer.from("endstream");
+  let searchFrom = 0;
+
+  while (searchFrom < pdf.length) {
+    const streamPos = pdf.indexOf(streamKeyword, searchFrom);
+    if (streamPos < 0) break;
+
+    const dictStart = Math.max(0, streamPos - 512);
+    const dictSnippet = pdf.toString("latin1", dictStart, streamPos);
+    const isFlateDecode = dictSnippet.includes("/FlateDecode");
+
+    let streamDataStart = streamPos + streamKeyword.length;
+    if (pdf[streamDataStart] === 0x0d && pdf[streamDataStart + 1] === 0x0a) {
+      streamDataStart += 2;
+    } else if (pdf[streamDataStart] === 0x0d || pdf[streamDataStart] === 0x0a) {
+      streamDataStart += 1;
+    }
+
+    const endstreamPos = pdf.indexOf(endstreamKeyword, streamDataStart);
+    if (endstreamPos < 0) break;
+
+    let streamDataEnd = endstreamPos;
+    if (pdf[streamDataEnd - 2] === 0x0d && pdf[streamDataEnd - 1] === 0x0a) {
+      streamDataEnd -= 2;
+    } else if (pdf[streamDataEnd - 1] === 0x0d || pdf[streamDataEnd - 1] === 0x0a) {
+      streamDataEnd -= 1;
+    }
+
+    if (isFlateDecode && streamDataEnd > streamDataStart) {
+      try {
+        const decoded = zlib.inflateSync(pdf.subarray(streamDataStart, streamDataEnd));
+        if (decoded.toString("latin1").includes(token)) return true;
+      } catch {
+        // Ignore streams that are not valid zlib payloads for this check.
+      }
+    }
+
+    searchFrom = endstreamPos + endstreamKeyword.length;
+  }
+
+  return false;
+}
+
 export async function loadPdfPageCount(bytes: Uint8Array): Promise<number> {
+  const { PDFDocument } = await loadPdfLib();
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
   return doc.getPageCount();
 }
 
+export async function extractPdfText(bytes: Uint8Array, pageNumber = 1): Promise<string> {
+  const pdfjs = await loadPdfJsV2();
+  const input = await pdfjs.getDocument({ data: bytes, disableWorker: true }).promise;
+  try {
+    const page = await input.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    return textContent.items
+      .map((item) => {
+        if (!item || typeof item !== "object") return "";
+        const text = (item as { str?: unknown }).str;
+        return typeof text === "string" ? text : "";
+      })
+      .join(" ")
+      .trim();
+  } finally {
+    await input.destroy().catch(() => {});
+  }
+}
+
 export async function unzip(bytes: Uint8Array) {
+  const JSZip = await loadJsZip();
   return JSZip.loadAsync(bytes);
 }
 

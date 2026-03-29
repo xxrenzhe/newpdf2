@@ -207,10 +207,119 @@ class HeaderFooter extends ToolbarItemBase {
         elPageEnd.value = this.reader.pageCount;
         elPageEnd.setAttribute('max', this.reader.pageCount);
 
+        const getPageBox = page => {
+            const width = parseInt(page?.readerPage?.elWrapper?.style?.width, 10)
+                || page?.readerPage?.elWrapper?.getBoundingClientRect?.()?.width
+                || 600;
+            const height = parseInt(page?.readerPage?.elWrapper?.style?.height, 10)
+                || page?.readerPage?.elWrapper?.getBoundingClientRect?.()?.height
+                || 800;
+            return { width, height };
+        };
+
+        const getAlignedX = (align, totalWidth, boxWidth) => {
+            if (align === 'right') {
+                return Math.max(8, totalWidth - boxWidth - 12);
+            }
+            if (align === 'center') {
+                return Math.max(8, totalWidth / 2 - boxWidth / 2);
+            }
+            return 8;
+        };
+
+        const lockElement = element => {
+            if (!element) return;
+            element.disableDrag = true;
+            element.disableResize = true;
+            element.el?.classList?.remove('__resizable', '__resizable-border');
+        };
+
 
         const elBtnOk = elBody.querySelector('.btn_ok');
         elBtnOk.addEventListener('click', () => {
             this.dialog.close();
+            let pageStart = parseInt(elPageStart.value, 10) || 1;
+            let pageEnd = parseInt(elPageEnd.value, 10) || this.reader.pageCount;
+            pageStart = Math.max(1, pageStart);
+            pageEnd = Math.min(this.reader.pageCount, pageEnd);
+            if (pageEnd < pageStart) {
+                const temp = pageStart;
+                pageStart = pageEnd;
+                pageEnd = temp;
+            }
+
+            for (let i = pageStart; i <= pageEnd; i++) {
+                const page = this.editor.pdfDocument.getPage(i);
+                if (!page) continue;
+                const pageBox = getPageBox(page);
+                const headerY = 8;
+                const footerY = Math.max(8, pageBox.height - Math.max(24, this.textSize * 1.8));
+
+                if (this.mode === 'text') {
+                    if (this.headerText) {
+                        const headerBoxWidth = Math.max(100, this.headerText.length * this.textSize * 0.7);
+                        const element = page.elements.add('textCanvas', {
+                            size: this.textSize,
+                            color: this.textColor,
+                            text: this.headerText,
+                            fontFamily: this.fontFamily,
+                            fontFile: this.fontFile
+                        }, {
+                            pos: {
+                                x: getAlignedX(this.headerAlign, pageBox.width, headerBoxWidth),
+                                y: headerY
+                            }
+                        });
+                        lockElement(element);
+                    }
+
+                    if (this.footerText) {
+                        const footerBoxWidth = Math.max(100, this.footerText.length * this.textSize * 0.7);
+                        const element = page.elements.add('textCanvas', {
+                            size: this.textSize,
+                            color: this.textColor,
+                            text: this.footerText,
+                            fontFamily: this.fontFamily,
+                            fontFile: this.fontFile
+                        }, {
+                            pos: {
+                                x: getAlignedX(this.footerAlign, pageBox.width, footerBoxWidth),
+                                y: footerY
+                            }
+                        });
+                        lockElement(element);
+                    }
+                    continue;
+                }
+
+                const addImage = (arrayBuffer, align, y) => {
+                    if (!arrayBuffer) return;
+                    const image = new Image();
+                    const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+                    image.src = URL.createObjectURL(blob);
+                    image.style.width = '100%';
+                    image.style.height = '100%';
+                    const imageWidth = 120;
+                    const imageHeight = 40;
+                    const element = page.elements.add('image', {
+                        image,
+                        imageType: 'image/jpeg',
+                        arrayBuffer,
+                        opacity: 1,
+                        width: imageWidth,
+                        height: imageHeight
+                    }, {
+                        pos: {
+                            x: getAlignedX(align, pageBox.width, imageWidth),
+                            y
+                        }
+                    });
+                    lockElement(element);
+                };
+
+                addImage(this.headerArrayBuffer, this.headerAlign, headerY);
+                addImage(this.footerArrayBuffer, this.footerAlign, footerY);
+            }
         });
 
 

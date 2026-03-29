@@ -46,12 +46,7 @@ let plugins = [
             {
                 from: path.resolve(__dirname, 'src/assets'),
                 to: 'assets',
-                noErrorOnMissing: true,
-                globOptions: {
-                    ignore: [
-                        '**/temp.otf'
-                    ]
-                }
+                noErrorOnMissing: true
             }
         ]
     }),

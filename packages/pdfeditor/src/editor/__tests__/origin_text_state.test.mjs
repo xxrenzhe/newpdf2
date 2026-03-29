@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyOriginTextState, isSystemOriginTextElement } from '../origin_text_state.js';
+import {
+    applyOriginTextState,
+    hasAppliedOriginTextState,
+    isSystemOriginTextElement,
+    markOriginTextStateApplied,
+    syncOriginTextState
+} from '../origin_text_state.js';
 
 const createElement = ({ attrs = {}, page = {} } = {}) => ({
     attrs,
@@ -90,6 +96,65 @@ test('applyOriginTextState returns false when element has no origin references',
 
     assert.equal(applyOriginTextState(element, true), false);
     assert.equal(applyOriginTextState(element, false), false);
+});
+
+test('syncOriginTextState avoids double-applying an existing converted origin state', () => {
+    const calls = [];
+    const readerPage = {
+        pageNum: 1,
+        markClearTextsByIndices: (indices) => calls.push(['mark', indices]),
+        lockConvertedTextPart: (partIdx) => calls.push(['lock', partIdx])
+    };
+
+    const element = createElement({
+        attrs: {
+            originTextIndices: [5],
+            originTextPartIdx: 'part-5',
+            originPageNum: 1
+        },
+        page: {
+            pageNum: 1,
+            readerPage
+        }
+    });
+
+    markOriginTextStateApplied(element, true);
+    assert.equal(hasAppliedOriginTextState(element), true);
+    assert.equal(syncOriginTextState(element, true), true);
+    assert.deepEqual(calls, []);
+});
+
+test('syncOriginTextState restores and clears applied marker once', () => {
+    const calls = [];
+    const readerPage = {
+        pageNum: 1,
+        restoreClearTexts: (indices) => calls.push(['restore', indices]),
+        releaseConvertedTextPart: (partIdx) => calls.push(['release', partIdx])
+    };
+
+    const element = createElement({
+        attrs: {
+            originTextIndices: [6],
+            originTextPartIdx: 'part-6',
+            originPageNum: 1
+        },
+        page: {
+            pageNum: 1,
+            readerPage
+        }
+    });
+
+    markOriginTextStateApplied(element, true);
+    assert.equal(syncOriginTextState(element, false), true);
+    assert.equal(hasAppliedOriginTextState(element), false);
+    assert.deepEqual(calls, [
+        ['restore', [6]],
+        ['release', 'part-6']
+    ]);
+
+    calls.length = 0;
+    assert.equal(syncOriginTextState(element, false), true);
+    assert.deepEqual(calls, []);
 });
 
 test('isSystemOriginTextElement identifies system-created text elements', () => {

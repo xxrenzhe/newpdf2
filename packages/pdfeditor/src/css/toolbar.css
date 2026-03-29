@@ -573,6 +573,26 @@
     text-decoration: line-through #ff0000 2px;
 }
 
+.__act_item_find,
+.__act_item_find_replace {
+    gap: 6px;
+}
+
+.__find_case_label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #4b5563;
+}
+
+.__find_status {
+    min-width: 88px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
 
 .__dialog_header {
     background-color: var(--dialog-header-bg-color) !important;
@@ -1856,6 +1876,40 @@ input[type=number]::-webkit-outer-spin-button{
     height: 12px;
     margin-top: 6px;
     margin-left: 6px;
+}
+.pdf-toolbar .tool_more {
+    position: relative;
+}
+.pdf-toolbar #tool_more {
+    gap: 6px;
+}
+.pdf-toolbar #tool_more img {
+    width: 12px;
+    height: 12px;
+}
+.more_dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 180px;
+    background-color: #ffffff;
+    border: 1px solid #d7e0eb;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    padding: 6px 0;
+    display: none;
+    z-index: 10000;
+}
+.more_dropdown.show {
+    display: block;
+}
+.more_dropdown_item {
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.more_dropdown_item:hover {
+    background-color: var(--hover-bg-color);
 }
 .dropdown_box{
     position: absolute;

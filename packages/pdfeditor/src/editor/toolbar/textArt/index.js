@@ -4,7 +4,7 @@ import Pickr from '@simonwep/pickr';
 import { COLOR_ITEMS } from '../../../defines';
 const textArt = 'text_art';
 const textArtFont = 'text_art_font';
-const fontUrl = "/pdfeditor/assets/fonts/";
+const fontUrl = ASSETS_URL;
 const loadDom = document.querySelector('.loading_box');
 const fontListBox = [];
 
@@ -80,7 +80,7 @@ class TextArt extends ToolbarItemBase {
                 let _element = document.createElement('div');
                 _element.innerHTML = this.attrs.text;
                 _element.classList.add('text_art_' +this.attrs.textArtType )
-                _element.style.fontSize = this.attrs.size*readerScale**scale + 'px';
+                _element.style.fontSize = this.attrs.size * readerScale * scale + 'px';
                 _element.style.fontFamily = this.attrs.fontFamily;
                 _element.style.color = this.attrs.color;
                 _element.style.textStroke = "2px" + this.attrs.strokeColor;

@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
 import { expectPdfHeader, makePdfBytes, readDownloadBytes, editorSaveDownloadButton } from "./utils";
 
-test("deleting existing PDF text keeps a redaction cover on export", async ({ page }) => {
+test("deleting existing PDF text removes the editable element but keeps origin text suppressed", async ({ page }) => {
   test.setTimeout(240_000);
   const pdfBytes = await makePdfBytes("delete-existing-text-download", 1);
 
@@ -28,7 +28,8 @@ test("deleting existing PDF text keeps a redaction cover on export", async ({ pa
 
   await frame.locator("#pdf-toolbar").click({ position: { x: 8, y: 8 } });
 
-  await expect(frame.locator("#pdf-main .__pdf_editor_element.__pdf_el_text")).toHaveCount(1);
+  await expect(frame.locator("#pdf-main .__pdf_editor_element.__pdf_el_text")).toHaveCount(0);
+  await expect(frame.locator("#pdf-main .textLayer .text-hide")).toHaveCount(1);
 
   const downloadPromise = page.waitForEvent("download");
   await exportButton.click();
@@ -39,4 +40,3 @@ test("deleting existing PDF text keeps a redaction cover on export", async ({ pa
 
   await expect(frame.locator(".__l_overlay")).toHaveCount(0, { timeout: 120_000 });
 });
-

@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect } from "react";
 import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "react";
+import { buildTrustedOrigin } from "@/features/pdf-editor/pdfEditorProtocol";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 
 type UsePdfEditorBridgeOptions = {
   editorFrameRef: RefObject<HTMLIFrameElement | null>;
+  editorSrc: string;
+  editorSessionId: string;
   file: File;
   iframeReady: boolean;
   editorReady: boolean;
@@ -32,6 +35,8 @@ type UsePdfEditorBridgeOptions = {
 
 export function usePdfEditorBridge({
   editorFrameRef,
+  editorSrc,
+  editorSessionId,
   file,
   iframeReady,
   editorReady,
@@ -54,17 +59,20 @@ export function usePdfEditorBridge({
   enableLegacyFallback,
   transferPdfBytesLimit,
 }: UsePdfEditorBridgeOptions) {
+  const targetOrigin = buildTrustedOrigin(editorSrc);
+
   const postToEditor = useCallback(
     (message: unknown, transfer?: Transferable[]) => {
       const target = editorFrameRef.current?.contentWindow;
-      if (!target) return;
+      if (!target || !targetOrigin || !message || typeof message !== "object") return;
+      const payload = { ...(message as Record<string, unknown>), editorSessionId };
       if (transfer && transfer.length > 0) {
-        target.postMessage(message, "*", transfer);
+        target.postMessage(payload, targetOrigin, transfer);
       } else {
-        target.postMessage(message, "*");
+        target.postMessage(payload, targetOrigin);
       }
     },
-    [editorFrameRef]
+    [editorFrameRef, editorSessionId, targetOrigin]
   );
 
   const sendLoadToEditor = useCallback(
@@ -98,13 +106,7 @@ export function usePdfEditorBridge({
       }
       postToEditor({ type: "load-pdf", blob: targetFile, loadToken: token, fileName: targetFile.name });
     },
-    [
-      activeLoadTokenRef,
-      fileBytesPromiseRef,
-      fileObjectUrlRef,
-      postToEditor,
-      transferPdfBytesLimit,
-    ]
+    [activeLoadTokenRef, fileBytesPromiseRef, fileObjectUrlRef, postToEditor, transferPdfBytesLimit]
   );
 
   useEffect(() => {
@@ -241,5 +243,6 @@ export function usePdfEditorBridge({
 
   return {
     postToEditor,
+    targetOrigin,
   };
 }

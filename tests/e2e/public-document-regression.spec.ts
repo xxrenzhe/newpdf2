@@ -4,9 +4,11 @@ import { expectPdfHeader, readDownloadBytes, repoPath, editorSaveDownloadButton,
 
 const EDITOR_IFRAME_SELECTOR = 'iframe[src*="/pdfeditor/index.html"]';
 const TEXT_BORDER_SELECTOR = "#pdf-main .textLayer .text-border";
+const TEXT_HIDDEN_SELECTOR = "#pdf-main .textLayer .text-hide";
 const TEXT_ELEMENT_SELECTOR = "#pdf-main .__pdf_editor_element.__pdf_el_text";
 const TEXT_EDITABLE_SELECTOR = '#pdf-main .__pdf_el_text [contenteditable="true"]';
 const RECT_ELEMENT_SELECTOR = "#pdf-main .__pdf_editor_element.__pdf_el_rect";
+const ERASE_MASK_SELECTOR = "#pdf-main .__pdf_editor_element.__pdf_el_eraseMask";
 const DRAW_LAYER_SELECTOR = "#pdf-main .drawLayer";
 
 function overlapRatio(a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) {
@@ -199,6 +201,7 @@ test("public/document.pdf: editable text boundary + add/modify/delete + original
 
   const textElements = frameLocator.locator(TEXT_ELEMENT_SELECTOR);
   const textCountBeforeRemove = await textElements.count();
+  const hiddenBeforeRemove = await frameLocator.locator(TEXT_HIDDEN_SELECTOR).count();
   const removeButton = textElements.last().locator(".__act_remove").first();
   await expect(removeButton).toBeVisible({ timeout: 120_000 });
   await removeButton.dispatchEvent("click");
@@ -206,8 +209,8 @@ test("public/document.pdf: editable text boundary + add/modify/delete + original
   await expect
     .poll(async () => {
       const count = await textElements.count();
-      const hiddenCount = await frameLocator.locator(`${TEXT_ELEMENT_SELECTOR}.__pdf_el_hidden`).count();
-      return count < textCountBeforeRemove || hiddenCount > 0;
+      const hiddenCount = await frameLocator.locator(TEXT_HIDDEN_SELECTOR).count();
+      return count < textCountBeforeRemove && hiddenCount >= hiddenBeforeRemove;
     })
     .toBeTruthy();
 
@@ -255,6 +258,7 @@ test("public/document-vertical.pdf: vertical text detect + edit + delete", async
 
   const textElements = frameLocator.locator(TEXT_ELEMENT_SELECTOR);
   const textCountBeforeRemove = await textElements.count();
+  const hiddenBeforeRemove = await frameLocator.locator(TEXT_HIDDEN_SELECTOR).count();
   const removeButton = textElements.last().locator(".__act_remove").first();
   await expect(removeButton).toBeVisible({ timeout: 120_000 });
   await removeButton.dispatchEvent("click");
@@ -262,8 +266,8 @@ test("public/document-vertical.pdf: vertical text detect + edit + delete", async
   await expect
     .poll(async () => {
       const count = await textElements.count();
-      const hiddenCount = await frameLocator.locator(`${TEXT_ELEMENT_SELECTOR}.__pdf_el_hidden`).count();
-      return count < textCountBeforeRemove || hiddenCount > 0;
+      const hiddenCount = await frameLocator.locator(TEXT_HIDDEN_SELECTOR).count();
+      return count < textCountBeforeRemove && hiddenCount >= hiddenBeforeRemove;
     })
     .toBeTruthy();
 
@@ -275,19 +279,25 @@ test("public/document-vertical.pdf: vertical text detect + edit + delete", async
 });
 
 
-test("public/document.pdf: eraser creates cover rect", async ({ page }) => {
+test("public/document.pdf: eraser suppresses original text with erase masks", async ({ page }) => {
   test.setTimeout(300_000);
   const { frameLocator, exportButton } = await openEditorWithPublicPdf(page, "public/document.pdf");
 
   const borders = frameLocator.locator(TEXT_BORDER_SELECTOR);
   await expect.poll(async () => borders.count()).toBeGreaterThan(20);
 
-  const rects = frameLocator.locator(RECT_ELEMENT_SELECTOR);
-  const before = await rects.count();
+  const eraseMasks = frameLocator.locator(ERASE_MASK_SELECTOR);
+  const hiddenTexts = frameLocator.locator(TEXT_HIDDEN_SELECTOR);
+  const beforeMasks = await eraseMasks.count();
+  const beforeHidden = await hiddenTexts.count();
 
   await frameLocator.locator("#tool_eraser").click();
   await dragOnFirstDrawLayer(frameLocator, { x: 0.15, y: 0.15 }, { x: 0.5, y: 0.32 });
 
-  await expect.poll(async () => rects.count()).toBeGreaterThan(before);
+  await expect.poll(async () => {
+    const maskCount = await eraseMasks.count();
+    const hiddenCount = await hiddenTexts.count();
+    return maskCount > beforeMasks || hiddenCount > beforeHidden;
+  }).toBeTruthy();
   await expect(exportButton).toBeEnabled();
 });

@@ -38,15 +38,51 @@ function rgbToHex(r, g, b) {
 }
 
 function hexToRgb(hex) {
-    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (result) {
-        let r = parseInt(result[1], 16);
-        let g = parseInt(result[2], 16);
-        let b = parseInt(result[3], 16);
-        //return r + "," + g + "," + b;
-        return [ r, g, b ];
+    if (Array.isArray(hex) && hex.length >= 3) {
+        return [
+            Math.max(0, Math.min(255, Number(hex[0]) || 0)),
+            Math.max(0, Math.min(255, Number(hex[1]) || 0)),
+            Math.max(0, Math.min(255, Number(hex[2]) || 0))
+        ];
     }
-    return null;
+
+    if (typeof hex !== 'string') {
+        return [0, 0, 0];
+    }
+
+    const value = hex.trim();
+    if (!value) {
+        return [0, 0, 0];
+    }
+
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(value);
+    if (result) {
+        return [
+            parseInt(result[1], 16),
+            parseInt(result[2], 16),
+            parseInt(result[3], 16)
+        ];
+    }
+
+    result = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(value);
+    if (result) {
+        return [
+            parseInt(result[1] + result[1], 16),
+            parseInt(result[2] + result[2], 16),
+            parseInt(result[3] + result[3], 16)
+        ];
+    }
+
+    const rgbMatch = /^rgba?\(\s*([+-]?\d*\.?\d+)\s*,\s*([+-]?\d*\.?\d+)\s*,\s*([+-]?\d*\.?\d+)/i.exec(value);
+    if (rgbMatch) {
+        return [
+            Math.max(0, Math.min(255, Math.round(Number(rgbMatch[1]) || 0))),
+            Math.max(0, Math.min(255, Math.round(Number(rgbMatch[2]) || 0))),
+            Math.max(0, Math.min(255, Math.round(Number(rgbMatch[3]) || 0)))
+        ];
+    }
+
+    return [0, 0, 0];
 }
 
 function mergeDeep(target, source) {

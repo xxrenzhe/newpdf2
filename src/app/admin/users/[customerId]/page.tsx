@@ -3,6 +3,8 @@ import type Stripe from "stripe";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 function formatDateTime(seconds: number | undefined): string {
   if (!seconds) return "-";
   const d = new Date(seconds * 1000);

@@ -5,45 +5,21 @@ import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "reac
 import { toast } from "sonner";
 import { downloadBlob } from "@/lib/pdf/client";
 import { savePdfEditorOutput } from "@/lib/pdfEditorCache";
-
-type PdfDownloadMessage = { type: "pdf-download"; blob: Blob };
-type PdfLoadedMessage = { type: "pdf-loaded"; pageCount?: number; loadToken?: number };
-type PdfRenderCompleteMessage = { type: "pdf-render-complete"; loadToken?: number };
-type PdfProgressMessage = { type: "pdf-progress"; loaded: number; total?: number; loadToken?: number };
-type PdfPasswordErrorMessage = { type: "pdf-password-error"; loadToken?: number };
-type PdfErrorMessage = { type: "pdf-error"; message?: string; loadToken?: number };
-type PdfExternalEmbedBlockedMessage = {
-  type: "pdf-external-embed-blocked";
-  count?: number;
-  origins?: string[];
-  loadToken?: number;
-};
-type PdfLoadCancelledMessage = { type: "pdf-load-cancelled"; loadToken?: number };
-type PdfOpenToolMessage = { type: "open-tool"; tool?: string };
-type PdfEditorReadyMessage = { type: "pdf-editor-ready" };
-type PdfSaveProgressMessage = { type: "pdf-save-progress"; phase: string };
-type HealthCheckAckMessage = { type: "health-check-ack" };
-type PdfDirtyStateMessage = { type: "pdf-dirty-state"; isDirty: boolean };
-type PdfEditorMessage =
-  | PdfDownloadMessage
-  | PdfLoadedMessage
-  | PdfRenderCompleteMessage
-  | PdfProgressMessage
-  | PdfPasswordErrorMessage
-  | PdfErrorMessage
-  | PdfExternalEmbedBlockedMessage
-  | PdfLoadCancelledMessage
-  | PdfOpenToolMessage
-  | PdfEditorReadyMessage
-  | PdfSaveProgressMessage
-  | HealthCheckAckMessage
-  | PdfDirtyStateMessage;
+import {
+  matchesEditorSessionId,
+  matchesLoadToken,
+  matchesRequestId,
+  parseEditorMessage,
+} from "@/features/pdf-editor/pdfEditorProtocol";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TranslateFn = (key: string, fallback: string) => string;
 
 type UsePdfEditorMessagesOptions = {
   editorFrameRef: RefObject<HTMLIFrameElement | null>;
+  expectedOrigin: string | null;
+  editorSessionId: string;
+  activeRequestIdRef: MutableRefObject<string | null>;
   outName: string;
   t: TranslateFn;
   activeLoadTokenRef: MutableRefObject<number>;
@@ -53,10 +29,10 @@ type UsePdfEditorMessagesOptions = {
   uploadProgressStartTimeoutRef: MutableRefObject<number | null>;
   uploadProgressTimerRef: MutableRefObject<number | null>;
   editorPingTimerRef: MutableRefObject<number | null>;
-  editorReady: boolean;
-  editorBooted: boolean;
+  onAnyValidMessage?: () => void;
   onOpenTool?: (toolKey: string) => void;
   onDownloadTerminal?: () => void;
+  onDownloadError?: () => void;
   setIframeReady: Setter<boolean>;
   setEditorReady: Setter<boolean>;
   setEditorBooted: Setter<boolean>;
@@ -70,94 +46,6 @@ type UsePdfEditorMessagesOptions = {
   onHealthCheckAck?: () => void;
   onDirtyStateChange?: (isDirty: boolean) => void;
 };
-
-function getMessageRecord(value: unknown) {
-  if (!value || typeof value !== "object") return null;
-  return value as Record<string, unknown>;
-}
-
-function parseLoadToken(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function parseEditorMessage(value: unknown): PdfEditorMessage | null {
-  const record = getMessageRecord(value);
-  if (!record) return null;
-  if (typeof record.type !== "string") return null;
-
-  const loadToken = parseLoadToken(record.loadToken);
-
-  switch (record.type) {
-    case "pdf-download": {
-      if (!(record.blob instanceof Blob)) return null;
-      return { type: "pdf-download", blob: record.blob };
-    }
-    case "pdf-loaded":
-      return {
-        type: "pdf-loaded",
-        pageCount: typeof record.pageCount === "number" ? record.pageCount : undefined,
-        loadToken,
-      };
-    case "pdf-render-complete":
-      return {
-        type: "pdf-render-complete",
-        loadToken,
-      };
-    case "pdf-progress": {
-      if (typeof record.loaded !== "number" || !Number.isFinite(record.loaded)) return null;
-      const total = typeof record.total === "number" && Number.isFinite(record.total) ? record.total : undefined;
-      return {
-        type: "pdf-progress",
-        loaded: record.loaded,
-        total,
-        loadToken,
-      };
-    }
-    case "pdf-password-error":
-      return { type: "pdf-password-error", loadToken };
-    case "pdf-error":
-      return {
-        type: "pdf-error",
-        message: typeof record.message === "string" ? record.message : undefined,
-        loadToken,
-      };
-    case "pdf-external-embed-blocked":
-      return {
-        type: "pdf-external-embed-blocked",
-        count: typeof record.count === "number" && Number.isFinite(record.count) ? record.count : undefined,
-        origins: Array.isArray(record.origins)
-          ? record.origins.filter((origin): origin is string => typeof origin === "string")
-          : undefined,
-        loadToken,
-      };
-    case "pdf-load-cancelled":
-      return { type: "pdf-load-cancelled", loadToken };
-    case "open-tool":
-      return {
-        type: "open-tool",
-        tool: typeof record.tool === "string" ? record.tool : undefined,
-      };
-    case "pdf-editor-ready":
-      return { type: "pdf-editor-ready" };
-    case "pdf-save-progress": {
-      const phase = typeof record.phase === "string" ? record.phase : "";
-      return { type: "pdf-save-progress", phase };
-    }
-    case "health-check-ack":
-      return { type: "health-check-ack" };
-    case "pdf-dirty-state": {
-      const isDirty = typeof record.isDirty === "boolean" ? record.isDirty : false;
-      return { type: "pdf-dirty-state", isDirty };
-    }
-    default:
-      return null;
-  }
-}
-
-function matchesLoadToken(loadToken: number | undefined, expectedToken: number) {
-  if (typeof loadToken !== "number") return true;
-  return loadToken === expectedToken;
-}
 
 function normalizePdfEditorError(rawMessage: string | undefined, t: TranslateFn) {
   const text = typeof rawMessage === "string" ? rawMessage.trim() : "";
@@ -210,10 +98,7 @@ function normalizePdfEditorError(rawMessage: string | undefined, t: TranslateFn)
     return t("pdfEditorNetworkError", "Network error while loading editor resources. Please try again.");
   }
 
-  if (
-    lower.includes("font worker") ||
-    lower.includes("font subset worker")
-  ) {
+  if (lower.includes("font worker") || lower.includes("font subset worker")) {
     return t("pdfEditorFontWorkerError", "Font processing failed while saving. Please try again.");
   }
 
@@ -222,6 +107,9 @@ function normalizePdfEditorError(rawMessage: string | undefined, t: TranslateFn)
 
 export function usePdfEditorMessages({
   editorFrameRef,
+  expectedOrigin,
+  editorSessionId,
+  activeRequestIdRef,
   outName,
   t,
   activeLoadTokenRef,
@@ -231,10 +119,10 @@ export function usePdfEditorMessages({
   uploadProgressStartTimeoutRef,
   uploadProgressTimerRef,
   editorPingTimerRef,
-  editorReady,
-  editorBooted,
+  onAnyValidMessage,
   onOpenTool,
   onDownloadTerminal,
+  onDownloadError,
   setIframeReady,
   setEditorReady,
   setEditorBooted,
@@ -249,6 +137,7 @@ export function usePdfEditorMessages({
   onDirtyStateChange,
 }: UsePdfEditorMessagesOptions) {
   const lastErrorToastRef = useRef<{ message: string; timestamp: number } | null>(null);
+  const lastWarningToastRef = useRef<{ message: string; timestamp: number } | null>(null);
 
   const notifyError = useCallback((message: string) => {
     const text = message.trim();
@@ -262,28 +151,29 @@ export function usePdfEditorMessages({
     toast.error(text);
   }, []);
 
-  useEffect(() => {
-    const onMessage = (evt: MessageEvent) => {
-      const source = editorFrameRef.current?.contentWindow;
-      if (!source || evt.source !== source) return;
-      const message = parseEditorMessage(evt.data);
-      if (!message || message.type !== "pdf-download") return;
-      onDownloadTerminal?.();
-      setBusy(false);
-      downloadBlob(message.blob, outName);
-      void savePdfEditorOutput(message.blob, outName).catch(() => {});
-    };
-
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [editorFrameRef, onDownloadTerminal, outName, setBusy]);
+  const notifyWarning = useCallback((message: string) => {
+    const text = message.trim();
+    if (!text) return;
+    const now = Date.now();
+    const previous = lastWarningToastRef.current;
+    if (previous && previous.message === text && now - previous.timestamp < 1500) {
+      return;
+    }
+    lastWarningToastRef.current = { message: text, timestamp: now };
+    toast.warning(text);
+  }, []);
 
   useEffect(() => {
     const onMessage = (evt: MessageEvent) => {
       const source = editorFrameRef.current?.contentWindow;
       if (!source || evt.source !== source) return;
+      if (!expectedOrigin || evt.origin !== expectedOrigin) return;
+
       const message = parseEditorMessage(evt.data);
       if (!message) return;
+      if (!matchesEditorSessionId(message.editorSessionId, editorSessionId)) return;
+
+      onAnyValidMessage?.();
 
       switch (message.type) {
         case "pdf-editor-ready":
@@ -326,8 +216,8 @@ export function usePdfEditorMessages({
           const ratio = Math.max(0, Math.min(1, message.loaded / total));
           const pct = Math.min(95, Math.round(ratio * 95));
           hasRealProgressRef.current = true;
-          if (!editorReady) setEditorReady(true);
-          if (!editorBooted) setEditorBooted(true);
+          setEditorReady(true);
+          setEditorBooted(true);
           if (uploadProgressStartTimeoutRef.current) window.clearTimeout(uploadProgressStartTimeoutRef.current);
           uploadProgressStartTimeoutRef.current = null;
           if (uploadProgressTimerRef.current) window.clearInterval(uploadProgressTimerRef.current);
@@ -337,27 +227,37 @@ export function usePdfEditorMessages({
         }
         case "pdf-password-error":
           if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) return;
-          onDownloadTerminal?.();
           hasRealProgressRef.current = false;
           manualCancelTokenRef.current = null;
-          const passwordErrorText = t(
-            "pdfPasswordProtected",
-            "This PDF is password protected. Please unlock it first, then re-open in the editor."
+          notifyError(
+            t(
+              "pdfPasswordProtected",
+              "This PDF is password protected. Please unlock it first, then re-open in the editor."
+            )
           );
-          notifyError(passwordErrorText);
           setBusy(false);
           setLoadCancelled(false);
-          setError(passwordErrorText);
+          setError(
+            t(
+              "pdfPasswordProtected",
+              "This PDF is password protected. Please unlock it first, then re-open in the editor."
+            )
+          );
           return;
         case "pdf-error": {
-          if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) return;
-          onDownloadTerminal?.();
-          hasRealProgressRef.current = false;
+          const isRequestError = matchesRequestId(message.requestId, activeRequestIdRef.current);
+          if (!matchesLoadToken(message.loadToken, activeLoadTokenRef.current)) {
+            if (!isRequestError) return;
+          }
           const text = normalizePdfEditorError(message.message, t);
           if (message.message && text !== message.message.trim()) {
-            console.error("[pdfeditor] runtime error", message.message);
+            console.warn("[pdfeditor] runtime error", message.message);
           }
           notifyError(text);
+          hasRealProgressRef.current = false;
+          if (isRequestError) {
+            onDownloadError?.();
+          }
           setBusy(false);
           setLoadCancelled(false);
           setError(text);
@@ -378,8 +278,26 @@ export function usePdfEditorMessages({
             "pdfExternalEmbedsBlocked",
             "External content in this PDF was blocked for security. The editor should still work."
           );
-          const text = originLabel ? `${base} (${originLabel})` : base;
-          setExternalEmbedWarning(text);
+          setExternalEmbedWarning(originLabel ? `${base} (${originLabel})` : base);
+          return;
+        }
+        case "pdf-font-fallback": {
+          const hasRequestId = typeof message.requestId === "string" && message.requestId.trim().length > 0;
+          if (hasRequestId && !matchesRequestId(message.requestId, activeRequestIdRef.current)) return;
+          const fonts =
+            Array.isArray(message.fonts)
+              ? message.fonts
+                  .filter((font) => typeof font === "string" && font.trim().length > 0)
+                  .map((font) => font.trim())
+                  .slice(0, 3)
+              : [];
+          const count = typeof message.count === "number" && message.count > 0 ? message.count : fonts.length;
+          const base = t(
+            "pdfFontFallbackWarning",
+            "Some fonts in this PDF were unavailable or restricted. Safe fallback fonts were used for export."
+          );
+          const suffix = fonts.length > 0 ? ` (${fonts.join(", ")})` : count > 1 ? ` (${count})` : "";
+          notifyWarning(`${base}${suffix}`);
           return;
         }
         case "pdf-load-cancelled": {
@@ -404,19 +322,22 @@ export function usePdfEditorMessages({
           }
           return;
         }
-        case "pdf-save-progress": {
+        case "pdf-save-progress":
+          if (!matchesRequestId(message.requestId, activeRequestIdRef.current)) return;
           onSaveProgressHint?.(message.phase);
           return;
-        }
-        case "health-check-ack": {
+        case "health-check-ack":
           onHealthCheckAck?.();
           return;
-        }
-        case "pdf-dirty-state": {
+        case "pdf-dirty-state":
           onDirtyStateChange?.(message.isDirty);
           return;
-        }
         case "pdf-download":
+          if (!matchesRequestId(message.requestId, activeRequestIdRef.current)) return;
+          onDownloadTerminal?.();
+          setBusy(false);
+          downloadBlob(message.blob, outName);
+          void savePdfEditorOutput(message.blob, outName).catch(() => {});
           return;
         default:
           return;
@@ -427,19 +348,24 @@ export function usePdfEditorMessages({
     return () => window.removeEventListener("message", onMessage);
   }, [
     activeLoadTokenRef,
+    activeRequestIdRef,
     blockedEmbedCountRef,
-    editorBooted,
     editorFrameRef,
     editorPingTimerRef,
-    editorReady,
+    editorSessionId,
+    expectedOrigin,
     hasRealProgressRef,
     manualCancelTokenRef,
-    onOpenTool,
-    onDownloadTerminal,
     notifyError,
-    onSaveProgressHint,
-    onHealthCheckAck,
+    notifyWarning,
+    onAnyValidMessage,
+    onDownloadError,
+    onDownloadTerminal,
     onDirtyStateChange,
+    onHealthCheckAck,
+    onOpenTool,
+    onSaveProgressHint,
+    outName,
     setBusy,
     setEditorBooted,
     setEditorReady,

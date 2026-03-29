@@ -64,10 +64,24 @@ test("runtime pdf-error from iframe clears busy state and shows readable message
     }
 
     await frame.evaluate(() => {
-      window.parent.postMessage(
+      const runtimeWindow = window as Window & {
+        __PDFEDITOR_EDITOR_SESSION_ID__?: unknown;
+        __PDFEDITOR_ACTIVE_REQUEST_ID__?: unknown;
+      };
+      const editorSessionId =
+        typeof runtimeWindow.__PDFEDITOR_EDITOR_SESSION_ID__ === "string"
+          ? runtimeWindow.__PDFEDITOR_EDITOR_SESSION_ID__
+          : undefined;
+      const requestId =
+        typeof runtimeWindow.__PDFEDITOR_ACTIVE_REQUEST_ID__ === "string"
+          ? runtimeWindow.__PDFEDITOR_ACTIVE_REQUEST_ID__
+          : undefined;
+      runtimeWindow.parent.postMessage(
         {
           type: "pdf-error",
           message: "Out of memory while processing PDF",
+          editorSessionId,
+          requestId,
         },
         "*"
       );

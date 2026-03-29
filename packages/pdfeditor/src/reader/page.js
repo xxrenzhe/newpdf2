@@ -1,11 +1,10 @@
 import { Events, PDFEvent } from '../event.js';
-import { Font } from '../font.js';
 import { PDFLinkService } from 'pdfjs-dist-v2/lib/web/pdf_link_service';
 import { PDFPageBase } from './page_base.js';
 import { getPixelColor, trimSpace } from '../misc.js';
-import { Locale } from '../locale.js';
 import { collectTextIndicesInRect } from './text_selection.js';
 import { getTextRotation, shouldBreakTextRun } from './text_layout.js';
+import { countTextMatches } from '../search_text.js';
 import {
     collectClearTextItems,
     markClearTextIndices,
@@ -16,40 +15,20 @@ const textContentOptions = {
     disableCombineTextItems: false,
     includeMarkedContent: false
 };
-const INSERT_PAGE_CLASS= 'insert_page_box';
-const INSERT_PAGE_BTN_CLASS= 'insert_page_btn';
 const REMOVE_BTN = 'remove_page';
 
 export class PDFPage extends PDFPageBase {
     textParts = [];
+    textLayerReady = null;
     clearTexts = [];
     clearTextIndexCounts = Object.create(null);
     textItemRects = [];
     //要隐藏的元素
     hideOriginElements = [];
     isConvertWidget = [];
-    elInsertPage = null;
 
     init() {
         super.init();
-        this.elInsertPage = document.createElement('div');
-        this.elInsertPage.addEventListener('click', () => {
-            PDFEvent.dispatch(Events.PAGE_ADD, {
-                pageNum: this.pageNum + 1
-            });
-        });
-        this.elInsertPage.classList.add(INSERT_PAGE_BTN_CLASS);
-        this.elInsertPage.textContent = Locale.get('insert_page');
-        let elBox = document.createElement('div');
-        elBox.classList.add(INSERT_PAGE_CLASS);
-        elBox.style.display = 'none';
-        let elBg = document.createElement('div');
-        elBg.classList.add('insert_page_bg');
-        elBox.appendChild(elBg);
-        elBox.appendChild(this.elInsertPage);
-        this.elContainer.appendChild(elBox);
-
-
         let elRemoveBtn = document.createElement('img');
         elRemoveBtn.src = ASSETS_URL + 'img/deletepage.svg';
         elRemoveBtn.classList.add(REMOVE_BTN);
@@ -66,7 +45,6 @@ export class PDFPage extends PDFPageBase {
         });
         this.elWrapper.appendChild(elRemoveBtn);
         setTimeout(()=>{
-            elBox.style.display = 'flex';
             elRemoveBtn.style.display = 'block';
         },1000)
     }
@@ -86,13 +64,14 @@ export class PDFPage extends PDFPageBase {
         this.elTextLayer.style.height = canvas.style.height;
         
         const viewport = this.pageProxy.getViewport({ scale: this.scale / this.outputScale });
-        this.getTextContent().then(async textContent => {
+        this.textLayerReady = this.getTextContent().then(async textContent => {
             const readableStream = this.pageProxy.streamTextContent(textContentOptions);
             // const x = transform[4];
             // const y = transform[5];
             //首先按 Y desc , X asc 对文本进行排序
             // this.textContentItems.sort((a, b) => b.transform[5] - a.transform[5] || a.transform[4] - b.transform[4]);
             const styles = textContent.styles;
+            this.textParts = [];
             this.textDivs = [];
             let textContentItemsStr = [];
             let taskTextLayer = this.reader.pdfjsLib.renderTextLayer({
@@ -112,125 +91,125 @@ export class PDFPage extends PDFPageBase {
             //     Font.subset(id, this.pageProxy.commonObjs, fontName);
             // });
 
-            taskTextLayer.promise.then(() => {
-                this.hideOriginElements.forEach(data => {
-                    let textDiv = this.textDivs[data.idx];
-                    if (!textDiv) {
-                        return;
-                    }
-                    textDiv.style.userSelect = data.hiddenUserSelect ?? data.userSelect ?? '';
-                    textDiv.style.padding = data.hiddenPadding ?? data.padding ?? '';
-                    textDiv.style.backgroundColor = data.hiddenBackgroundColor ?? data.backgroundColor ?? '';
-                    if (data.className) {
-                        textDiv.classList.add(data.className);
-                    }
-                    textDiv.classList.remove('text-border');
-                });
+            await taskTextLayer.promise;
+            this.hideOriginElements.forEach(data => {
+                let textDiv = this.textDivs[data.idx];
+                if (!textDiv) {
+                    return;
+                }
+                textDiv.style.userSelect = data.hiddenUserSelect ?? data.userSelect ?? '';
+                textDiv.style.padding = data.hiddenPadding ?? data.padding ?? '';
+                textDiv.style.backgroundColor = data.hiddenBackgroundColor ?? data.backgroundColor ?? '';
+                if (data.className) {
+                    textDiv.classList.add(data.className);
+                }
+                textDiv.classList.remove('text-border');
+            });
 
-                const wrapperRect = this.elWrapper ? this.elWrapper.getBoundingClientRect() : null;
-                this.textItemRects = [];
-                let text = '';
-                let textWidth = 0;
-                let elements = [];
-                let lineBounds = null;
-                let lineRotate = null;
-                let n = 0;
-                // console.log(this.textContentItems);
-                
-                for (let i = 0; i < this.textContentItems.length; i++) {
-                    let textItem = this.textContentItems[i];
-                    text += textItem.str;
-                    if (lineRotate === null) {
-                        lineRotate = getTextRotation(textItem);
-                    }
-                    let elDiv = this.textDivs[i];
-                    if (this.hideOriginElements.findIndex(data => data.idx == i) === -1) {
-                        elDiv.classList.add('text-border');
-                    }
-                    let offsetX = 2;
-                    let styleLeft  = (parseInt(elDiv.style.left) * this.outputScale) + offsetX + 'px';
-                    let styleTop = (parseInt(elDiv.style.top) * this.outputScale) + 'px';
-                    let styleFontSize = (parseInt(elDiv.style.fontSize) * this.outputScale) + 'px';
-                    elDiv.style.left = styleLeft;
-                    elDiv.style.top = styleTop;
-                    elDiv.style.fontSize = styleFontSize;
-                    elDiv.style.fontFamily = textItem.fontName;
+            const wrapperRect = this.elWrapper ? this.elWrapper.getBoundingClientRect() : null;
+            this.textItemRects = [];
+            let text = '';
+            let textWidth = 0;
+            let elements = [];
+            let lineBounds = null;
+            let lineRotate = null;
+            let n = 0;
+            // console.log(this.textContentItems);
+            
+            for (let i = 0; i < this.textContentItems.length; i++) {
+                let textItem = this.textContentItems[i];
+                text += textItem.str;
+                if (lineRotate === null) {
+                    lineRotate = getTextRotation(textItem);
+                }
+                let elDiv = this.textDivs[i];
+                if (this.hideOriginElements.findIndex(data => data.idx == i) === -1) {
+                    elDiv.classList.add('text-border');
+                }
+                let offsetX = 2;
+                let styleLeft  = (parseInt(elDiv.style.left) * this.outputScale) + offsetX + 'px';
+                let styleTop = (parseInt(elDiv.style.top) * this.outputScale) + 'px';
+                let styleFontSize = (parseInt(elDiv.style.fontSize) * this.outputScale) + 'px';
+                elDiv.style.left = styleLeft;
+                elDiv.style.top = styleTop;
+                elDiv.style.fontSize = styleFontSize;
+                elDiv.style.fontFamily = textItem.fontName;
 
-                    elDiv.setAttribute('data-p', this.pageNum);
-                    elDiv.setAttribute('data-id', this.pageNum + '_' + n + '_' + elements.length);
-                    elDiv.setAttribute('data-parts', n);
-                    elDiv.setAttribute('data-l', elements.length);
-                    elDiv.setAttribute('data-idx', i);
-                    elDiv.setAttribute('data-loadedname', textItem.fontName);
-                    elDiv.setAttribute('data-fontsize', styleFontSize);
-                    let style = styles[textItem.fontName];
-                    elDiv.setAttribute('data-fallbackname', style.fontFamily);
-                    elDiv.setAttribute('data-ascent', style.ascent || 0);
-                    elDiv.setAttribute('data-descent', style.descent || 0);
-                    if (textItem.color) {
-                        elDiv.setAttribute('data-fontcolor', textItem.color);
-                    }
-                    if (this.pageProxy.commonObjs.has(textItem.fontName)) {
-                        let objs = this.pageProxy.commonObjs.get(textItem.fontName);
-                        elDiv.setAttribute('data-fontname', objs.name);
-                    }
+                elDiv.setAttribute('data-p', this.pageNum);
+                elDiv.setAttribute('data-id', this.pageNum + '_' + n + '_' + elements.length);
+                elDiv.setAttribute('data-parts', n);
+                elDiv.setAttribute('data-l', elements.length);
+                elDiv.setAttribute('data-idx', i);
+                elDiv.setAttribute('data-loadedname', textItem.fontName);
+                elDiv.setAttribute('data-fontsize', styleFontSize);
+                let style = styles[textItem.fontName];
+                elDiv.setAttribute('data-fallbackname', style.fontFamily);
+                elDiv.setAttribute('data-ascent', style.ascent || 0);
+                elDiv.setAttribute('data-descent', style.descent || 0);
+                if (textItem.color) {
+                    elDiv.setAttribute('data-fontcolor', textItem.color);
+                }
+                if (this.pageProxy.commonObjs.has(textItem.fontName)) {
+                    let objs = this.pageProxy.commonObjs.get(textItem.fontName);
+                    elDiv.setAttribute('data-fontname', objs.name);
+                }
 
-                    const rect = elDiv.getBoundingClientRect();
-                    textWidth += rect.width;
-                    if (wrapperRect) {
-                        const left = rect.left - wrapperRect.left;
-                        const top = rect.top - wrapperRect.top;
-                        const right = left + rect.width;
-                        const bottom = top + rect.height;
-                        this.textItemRects[i] = {
-                            dataIdx: i,
-                            rect: { left, top, width: rect.width, height: rect.height }
-                        };
-                        if (!lineBounds) {
-                            lineBounds = { left, top, right, bottom };
-                        } else {
-                            lineBounds.left = Math.min(lineBounds.left, left);
-                            lineBounds.top = Math.min(lineBounds.top, top);
-                            lineBounds.right = Math.max(lineBounds.right, right);
-                            lineBounds.bottom = Math.max(lineBounds.bottom, bottom);
-                        }
-                    }
-
-                    elements.push(elDiv);
-                    elDiv.addEventListener('click', () => {
-                        this.convertWidget(elDiv);
-                    });
-
-                    if ((i+1) == this.textContentItems.length) {
-                        this.textParts[n] = {
-                            text: text,
-                            elements: elements,
-                            width: textWidth,
-                            bounds: lineBounds,
-                            rotate: lineRotate
-                        };
-                        this.#filterDiv(n);
-                        break;
-                    }
-
-                    if (textItem.hasEOL || this.#isBreak(textItem, i+1)) {
-                        this.textParts[n] = {
-                            text: trimSpace(text),
-                            elements: elements,
-                            width: textWidth,
-                            bounds: lineBounds,
-                            rotate: lineRotate
-                        };
-                        this.#filterDiv(n);
-                        text = '';
-                        textWidth = 0;
-                        elements = [];
-                        lineBounds = null;
-                        lineRotate = null;
-                        n++;
+                const rect = elDiv.getBoundingClientRect();
+                textWidth += rect.width;
+                if (wrapperRect) {
+                    const left = rect.left - wrapperRect.left;
+                    const top = rect.top - wrapperRect.top;
+                    const right = left + rect.width;
+                    const bottom = top + rect.height;
+                    this.textItemRects[i] = {
+                        dataIdx: i,
+                        rect: { left, top, width: rect.width, height: rect.height }
+                    };
+                    if (!lineBounds) {
+                        lineBounds = { left, top, right, bottom };
+                    } else {
+                        lineBounds.left = Math.min(lineBounds.left, left);
+                        lineBounds.top = Math.min(lineBounds.top, top);
+                        lineBounds.right = Math.max(lineBounds.right, right);
+                        lineBounds.bottom = Math.max(lineBounds.bottom, bottom);
                     }
                 }
-            });
+
+                elements.push(elDiv);
+                elDiv.addEventListener('click', () => {
+                    this.convertWidget(elDiv);
+                });
+
+                if ((i+1) == this.textContentItems.length) {
+                    this.textParts[n] = {
+                        text: text,
+                        elements: elements,
+                        width: textWidth,
+                        bounds: lineBounds,
+                        rotate: lineRotate
+                    };
+                    this.#filterDiv(n);
+                    break;
+                }
+
+                if (textItem.hasEOL || this.#isBreak(textItem, i+1)) {
+                    this.textParts[n] = {
+                        text: trimSpace(text),
+                        elements: elements,
+                        width: textWidth,
+                        bounds: lineBounds,
+                        rotate: lineRotate
+                    };
+                    this.#filterDiv(n);
+                    text = '';
+                    textWidth = 0;
+                    elements = [];
+                    lineBounds = null;
+                    lineRotate = null;
+                    n++;
+                }
+            }
+            return true;
         });
 
         if (!this.elAnnotationLayer) {
@@ -260,6 +239,28 @@ export class PDFPage extends PDFPageBase {
         return canvas;
     }
 
+    async ensureTextLayerReady() {
+        if (!this.rendered || !this.elTextLayer) {
+            this.rendered = false;
+            await this.render('html');
+        }
+
+        if (this.textLayerReady && typeof this.textLayerReady.then === 'function') {
+            await this.textLayerReady;
+        }
+        return true;
+    }
+
+    async find(text, isCase) {
+        if (Array.isArray(this.textParts) && this.textParts.length > 0) {
+            const found = this.findTextParts(text, isCase);
+            if (found) {
+                return found;
+            }
+        }
+        return super.find(text, isCase);
+    }
+
     #collectPartTextIndices(textPart) {
         if (!textPart || !Array.isArray(textPart.elements)) {
             return [];
@@ -278,6 +279,68 @@ export class PDFPage extends PDFPageBase {
             }
         }
         return indices;
+    }
+
+    #isTextPartHidden(indices) {
+        if (!Array.isArray(indices) || indices.length === 0) {
+            return false;
+        }
+
+        return indices.some((idx) => {
+            return (this.clearTextIndexCounts?.[idx] || 0) > 0;
+        });
+    }
+
+    findTextParts(text, isCase) {
+        const query = String(text ?? '');
+        if (!query || !Array.isArray(this.textParts) || this.textParts.length === 0) {
+            return null;
+        }
+
+        const found = [];
+        this.textParts.forEach((textPart, partIdx) => {
+            const partText = String(textPart?.text ?? '');
+            if (!partText) {
+                return;
+            }
+
+            const indices = this.#collectPartTextIndices(textPart);
+            if (this.#isTextPartHidden(indices)) {
+                return;
+            }
+
+            const hints = countTextMatches(partText, query, isCase);
+            if (hints < 1) {
+                return;
+            }
+
+            found.push({
+                idx: indices[0] ?? partIdx,
+                partIdx,
+                str: partText,
+                indices,
+                hints
+            });
+        });
+
+        return found.length > 0 ? found : null;
+    }
+
+    getTextPartElement(partIdx) {
+        const textPart = this.textParts?.[partIdx];
+        if (!textPart || !Array.isArray(textPart.elements)) {
+            return null;
+        }
+        return textPart.elements.find((element) => element?.isConnected) || textPart.elements[0] || null;
+    }
+
+    async convertTextPart(partIdx) {
+        await this.ensureTextLayerReady();
+        const anchor = this.getTextPartElement(partIdx);
+        if (!anchor) {
+            return false;
+        }
+        return this.convertWidget(anchor);
     }
 
     markClearTextsByIndices(indices) {
@@ -469,12 +532,12 @@ export class PDFPage extends PDFPageBase {
 
     dispose() {
         this.textParts = [];
+        this.textLayerReady = null;
         this.clearTexts = [];
         this.clearTextIndexCounts = Object.create(null);
         this.textItemRects = [];
         this.hideOriginElements = [];
         this.isConvertWidget = [];
-        this.elInsertPage = null;
         super.dispose();
     }
 

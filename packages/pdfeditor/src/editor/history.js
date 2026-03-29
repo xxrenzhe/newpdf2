@@ -1,5 +1,5 @@
 import { Events, PDFEvent } from '../event.js';
-import { applyOriginTextState } from './origin_text_state.js';
+import { ORIGIN_TEXT_REMOVE_STRATEGY, syncOriginTextState } from './origin_text_state.js';
 import {
     HISTORY_SOURCE,
     normalizeHistorySource,
@@ -38,11 +38,14 @@ const Operator = {
         elements.items[element.id] = element;
         element.page.readerPage.elWrapper.appendChild(element.el);
         element.zoom(element.scale);
-        applyOriginTextState(element, true, element?.page?.readerPage || null);
+        syncOriginTextState(element, true, element?.page?.readerPage || null);
         elements.setActive(element.id);
     },
-    remove: (element, elements) => {
-        applyOriginTextState(element, false, element?.page?.readerPage || null);
+    remove: (element, elements, options = {}) => {
+        const originStateStrategy = options?.originStateStrategy || ORIGIN_TEXT_REMOVE_STRATEGY.RESTORE;
+        if (originStateStrategy === ORIGIN_TEXT_REMOVE_STRATEGY.RESTORE) {
+            syncOriginTextState(element, false, element?.page?.readerPage || null);
+        }
         element.remove();
         delete elements.items[element.id];
         elements.activeId = null;
@@ -84,7 +87,10 @@ export class History {
             if (!shouldTrackElementHistory(element)) {
                 return;
             }
-            const elements = this.editor.pdfDocument.getPageActive().elements;
+            const elements = e?.data?.page?.elements || element?.page?.elements;
+            if (!elements) {
+                return;
+            }
             this.push(OPERATE.REMOVE, () => {
                 Operator.remove(element, elements);
             }, () => {
@@ -99,11 +105,15 @@ export class History {
             if (!shouldTrackElementHistory(element)) {
                 return;
             }
-            const elements = this.editor.pdfDocument.getPageActive().elements;
+            const elements = e?.data?.page?.elements || element?.page?.elements;
+            const originStateStrategy = e?.data?.originStateStrategy || ORIGIN_TEXT_REMOVE_STRATEGY.RESTORE;
+            if (!elements) {
+                return;
+            }
             this.push(OPERATE.CREATE, () => {
                 Operator.create(element, elements);
             }, () => {
-                Operator.remove(element, elements);
+                Operator.remove(element, elements, { originStateStrategy });
             }, source);
             updateHistoryCount();
         });
@@ -216,6 +226,7 @@ export class History {
     clear() {
         this.#opList = [];
         this.#step = 0;
+        this.#dispatchEvent();
     }
 
     /**

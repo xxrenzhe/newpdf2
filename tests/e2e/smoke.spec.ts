@@ -1,19 +1,10 @@
 import fs from "node:fs";
 import { expect, test } from "./fixtures";
 import { TOOLS } from "../../src/lib/tools";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { editorSaveDownloadButton, toolUploadBrowseButton } from "./utils";
+import { editorSaveDownloadButton, makePdfBytes, toolUploadBrowseButton } from "./utils";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-async function makePdfBytes(label: string): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-  const page = doc.addPage([595.28, 841.89]); // A4
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  page.drawText(`Playwright fixture: ${label}`, { x: 50, y: 780, size: 24, font, color: rgb(0, 0, 0) });
-  return doc.save();
 }
 
 test("static pages render", async ({ page }) => {
@@ -39,7 +30,7 @@ test("static pages render", async ({ page }) => {
 
 test('home "Browse files" opens file chooser', async ({ page }) => {
   test.setTimeout(120_000);
-  const pdfBytes = await makePdfBytes("home-upload");
+  const pdfBytes = await makePdfBytes("home-upload", 1);
 
   await page.goto("/");
   const [chooser] = await Promise.all([
@@ -59,7 +50,7 @@ test('home "Browse files" opens file chooser', async ({ page }) => {
 
 test("pdf editor converts PDF text into editable element", async ({ page }) => {
   test.setTimeout(120_000);
-  const pdfBytes = await makePdfBytes("convert-widget");
+  const pdfBytes = await makePdfBytes("convert-widget", 1);
 
   const pageErrors: Error[] = [];
   page.on("pageerror", (err) => pageErrors.push(err));
@@ -85,7 +76,7 @@ test("pdf editor converts PDF text into editable element", async ({ page }) => {
 
 test("watermark tool downloads a PDF", async ({ page }) => {
   test.setTimeout(120_000);
-  const pdfBytes = await makePdfBytes("watermark");
+  const pdfBytes = await makePdfBytes("watermark", 1);
 
   await page.goto("/tools/watermark");
   await page.locator('input[type="file"]').setInputFiles({
@@ -108,8 +99,8 @@ test("watermark tool downloads a PDF", async ({ page }) => {
 
 test("merge tool downloads a PDF", async ({ page }) => {
   test.setTimeout(120_000);
-  const pdf1Bytes = await makePdfBytes("merge-a");
-  const pdf2Bytes = await makePdfBytes("merge-b");
+  const pdf1Bytes = await makePdfBytes("merge-a", 1);
+  const pdf2Bytes = await makePdfBytes("merge-b", 1);
 
   await page.goto("/tools/merge");
   await page.locator('input[type="file"]').setInputFiles([
@@ -132,7 +123,7 @@ test("merge tool downloads a PDF", async ({ page }) => {
 for (const tool of TOOLS) {
   test(`home tool card works: ${tool.key}`, async ({ page }) => {
     test.setTimeout(120_000);
-    const pdfBytes = await makePdfBytes(`home-${tool.key}`);
+    const pdfBytes = await makePdfBytes(`home-${tool.key}`, 1);
 
     await page.goto("/");
     const toolsSection = page.locator("#tools");

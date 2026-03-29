@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { toast } from "sonner";
 import Link from "@/components/AppLink";
 import { useLanguage } from "@/components/LanguageProvider";
-import EmbeddedPdfEditor from "@/features/pdf-editor/EmbeddedPdfEditor";
+import EmbeddedPdfEditor, { buildEditorSrc } from "@/features/pdf-editor/EmbeddedPdfEditor";
 import { usePdfEditorMessages } from "@/features/pdf-editor/usePdfEditorMessages";
 import { usePdfEditorLoadLifecycle } from "@/features/pdf-editor/usePdfEditorLoadLifecycle";
 import { usePdfEditorBridge } from "@/features/pdf-editor/usePdfEditorBridge";
@@ -12,13 +12,20 @@ import { usePdfEditorDom } from "@/features/pdf-editor/usePdfEditorDom";
 import { usePdfEditorFileIO } from "@/features/pdf-editor/usePdfEditorFileIO";
 import { usePdfEditorUiState } from "@/features/pdf-editor/usePdfEditorUiState";
 import { usePdfEditorErrorHandler } from "@/features/pdf-editor/usePdfEditorErrorHandler";
-import { clearPdfEditorCache } from "@/lib/pdfEditorCache";
+import {
+  buildTrustedOrigin,
+  hasHealthCheckTimedOut,
+  shouldPauseHealthChecks,
+} from "@/features/pdf-editor/pdfEditorProtocol";
+import { clearPdfEditorInput } from "@/lib/pdfEditorCache";
 
 const TRANSFER_PDF_BYTES_LIMIT = 32 * 1024 * 1024; // 32MB
 const EDITOR_READY_TIMEOUT_MS = 12000;
 const PDF_LOAD_TIMEOUT_MS = 60000;
 const IFRAME_LOAD_TIMEOUT_MS = 15000;
 const PDF_DOWNLOAD_TIMEOUT_MS = 45000;
+const PDF_HEALTH_CHECK_INTERVAL_MS = 5000;
+const PDF_HEALTH_CHECK_TIMEOUT_MS = 20000;
 const PDF_DOWNLOAD_TIMEOUT_QUERY_KEY = "__pdfDownloadTimeoutMs";
 const PDF_DOWNLOAD_TIMEOUT_MIN_MS = 500;
 const PDFEDITOR_BUILD_ID = (process.env.NEXT_PUBLIC_PDFEDITOR_BUILD_ID ?? "").trim();
@@ -49,7 +56,7 @@ function UploadProgressOverlay({
     >
       <div className="w-[min(840px,calc(100vw-2rem))] rounded-2xl bg-white shadow-2xl border border-[color:var(--brand-line)] p-8">
         <h2 className="text-3xl font-semibold text-[color:var(--brand-ink)]">
-          {t("loadingPleaseWait", "Loading, please wait…")}
+          {t("loadingPleaseWait", "Loading, please wait...")}
         </h2>
         <div className="mt-5 h-2 w-full rounded-full bg-[color:var(--brand-lilac)] overflow-hidden" role="progressbar" aria-valuenow={clamped}>
           <div
@@ -138,6 +145,7 @@ export default function PdfEditorTool({
   const editorFrameRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeLoadTokenRef = useRef(0);
+  const editorSessionId = useId();
   const fileInputId = useId();
   const { t, lang } = useLanguage();
   const uploadTips = useMemo(
@@ -162,6 +170,8 @@ export default function PdfEditorTool({
   const [isDirty, setIsDirty] = useState(false);
   const healthCheckFailCountRef = useRef(0);
   const healthCheckTimerRef = useRef<number | null>(null);
+  const lastEditorActivityAtRef = useRef(Date.now());
+  const activeRequestIdRef = useRef<string | null>(null);
   const appliedToolRef = useRef<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadTip, setUploadTip] = useState(uploadTips[0] ?? "");
@@ -182,6 +192,11 @@ export default function PdfEditorTool({
     pdfLoaded,
     transferPdfBytesLimit: TRANSFER_PDF_BYTES_LIMIT,
   });
+  const editorSrc = useMemo(
+    () => buildEditorSrc(lang, PDFEDITOR_BUILD_ID ? PDFEDITOR_BUILD_ID.slice(0, 12) : undefined),
+    [lang]
+  );
+  const expectedOrigin = useMemo(() => buildTrustedOrigin(editorSrc), [editorSrc]);
   const editorKey = useMemo(() => {
     const params = new URLSearchParams();
     if (lang) params.set("lang", lang);
@@ -215,6 +230,7 @@ export default function PdfEditorTool({
     setSaveProgressHint("");
     setIsDirty(false);
     blockedEmbedCountRef.current = 0;
+    activeRequestIdRef.current = null;
     pendingLoadTokenRef.current = null;
     pendingLoadFileRef.current = null;
     manualCancelTokenRef.current = null;
@@ -234,6 +250,7 @@ export default function PdfEditorTool({
       window.clearInterval(healthCheckTimerRef.current);
       healthCheckTimerRef.current = null;
     }
+    lastEditorActivityAtRef.current = Date.now();
     healthCheckFailCountRef.current = 0;
   }, [clearDownloadTimeout, editorKey]);
 
@@ -249,8 +266,10 @@ export default function PdfEditorTool({
     blockedEmbedCountRef.current = 0;
   }, [file]);
 
-  const { postToEditor } = usePdfEditorBridge({
+  const { postToEditor, targetOrigin } = usePdfEditorBridge({
     editorFrameRef,
+    editorSrc,
+    editorSessionId,
     file,
     iframeReady,
     editorReady,
@@ -274,7 +293,7 @@ export default function PdfEditorTool({
     transferPdfBytesLimit: TRANSFER_PDF_BYTES_LIMIT,
   });
 
-  const { detectEditorBooted, detectFirstPageRendered, injectMobileOverrides } = usePdfEditorDom({
+  const { detectEditorBooted, injectMobileOverrides } = usePdfEditorDom({
     editorFrameRef,
   });
 
@@ -297,7 +316,6 @@ export default function PdfEditorTool({
     uploadProgressStartTimeoutRef,
     uploadProgressTimerRef,
     postToEditor,
-    isRenderedInIframe: detectFirstPageRendered,
     setBusy,
     setLoadCancelled,
     setError,
@@ -310,53 +328,75 @@ export default function PdfEditorTool({
   });
 
   const onHealthCheckAck = useCallback(() => {
+    lastEditorActivityAtRef.current = Date.now();
     healthCheckFailCountRef.current = 0;
   }, []);
 
-  // Health check timer: start after PDF loaded, send every 5s, 3 misses = crash
+  const onAnyValidEditorMessage = useCallback(() => {
+    lastEditorActivityAtRef.current = Date.now();
+    if (healthCheckFailCountRef.current > 0) {
+      healthCheckFailCountRef.current = 0;
+    }
+  }, []);
+
   useEffect(() => {
     if (healthCheckTimerRef.current) {
       window.clearInterval(healthCheckTimerRef.current);
       healthCheckTimerRef.current = null;
     }
-    if (!pdfLoaded || editorCrashed) return;
+    if (!pdfLoaded || editorCrashed || !targetOrigin) return;
+
     healthCheckFailCountRef.current = 0;
-    healthCheckTimerRef.current = window.setInterval(() => {
+    lastEditorActivityAtRef.current = Date.now();
+
+    const runHealthCheck = () => {
       const frame = editorFrameRef.current?.contentWindow;
       if (!frame) return;
+      if (shouldPauseHealthChecks(document.visibilityState, busy)) {
+        healthCheckFailCountRef.current = 0;
+        lastEditorActivityAtRef.current = Date.now();
+        return;
+      }
       try {
-        frame.postMessage({ type: "health-check" }, "*");
+        frame.postMessage({ type: "health-check", editorSessionId }, targetOrigin);
       } catch {
         // iframe may be dead
       }
-      healthCheckFailCountRef.current += 1;
-      if (healthCheckFailCountRef.current >= 3) {
+      const now = Date.now();
+      if (hasHealthCheckTimedOut(lastEditorActivityAtRef.current, now, PDF_HEALTH_CHECK_TIMEOUT_MS)) {
+        healthCheckFailCountRef.current += 1;
+      } else if (healthCheckFailCountRef.current > 0) {
+        healthCheckFailCountRef.current -= 1;
+      }
+      if (healthCheckFailCountRef.current >= 2) {
         setEditorCrashed(true);
         if (healthCheckTimerRef.current) {
           window.clearInterval(healthCheckTimerRef.current);
           healthCheckTimerRef.current = null;
         }
       }
-    }, 5000);
-    // Send first check immediately
-    try {
-      editorFrameRef.current?.contentWindow?.postMessage({ type: "health-check" }, "*");
-    } catch {
-      // ignore
-    }
+    };
+
+    runHealthCheck();
+    healthCheckTimerRef.current = window.setInterval(runHealthCheck, PDF_HEALTH_CHECK_INTERVAL_MS);
     return () => {
       if (healthCheckTimerRef.current) {
         window.clearInterval(healthCheckTimerRef.current);
         healthCheckTimerRef.current = null;
       }
     };
-  }, [pdfLoaded, editorCrashed]);
+  }, [busy, editorCrashed, editorSessionId, pdfLoaded, targetOrigin]);
 
   const handleForceReload = useCallback(() => {
+    setError("");
+    setBusy(false);
+    setSaveProgressHint("");
+    clearDownloadTimeout();
+    activeRequestIdRef.current = null;
     setEditorCrashed(false);
     healthCheckFailCountRef.current = 0;
     setForceReloadCounter((c) => c + 1);
-  }, []);
+  }, [clearDownloadTimeout]);
 
   const onSaveProgressHint = useCallback(
     (phase: string) => {
@@ -372,6 +412,12 @@ export default function PdfEditorTool({
   const clearSaveProgressHint = useCallback(() => {
     setSaveProgressHint("");
   }, []);
+
+  const finalizeDownloadRequest = useCallback(() => {
+    clearDownloadTimeout();
+    clearSaveProgressHint();
+    activeRequestIdRef.current = null;
+  }, [clearDownloadTimeout, clearSaveProgressHint]);
 
   const onDirtyStateChange = useCallback((dirty: boolean) => {
     setIsDirty(dirty);
@@ -390,6 +436,9 @@ export default function PdfEditorTool({
 
   usePdfEditorMessages({
     editorFrameRef,
+    expectedOrigin,
+    editorSessionId,
+    activeRequestIdRef,
     outName,
     t,
     activeLoadTokenRef,
@@ -399,8 +448,7 @@ export default function PdfEditorTool({
     uploadProgressStartTimeoutRef,
     uploadProgressTimerRef,
     editorPingTimerRef,
-    editorReady,
-    editorBooted,
+    onAnyValidMessage: onAnyValidEditorMessage,
     onOpenTool,
     setIframeReady,
     setEditorReady,
@@ -415,11 +463,17 @@ export default function PdfEditorTool({
     onHealthCheckAck,
     onDirtyStateChange,
     onDownloadTerminal: useCallback(() => {
-      clearDownloadTimeout();
-      clearSaveProgressHint();
+      finalizeDownloadRequest();
       setIsDirty(false);
-      void clearPdfEditorCache().catch(() => {});
-    }, [clearDownloadTimeout, clearSaveProgressHint]),
+      void clearPdfEditorInput().catch(() => {});
+    }, [finalizeDownloadRequest]),
+    onDownloadError: useCallback(() => {
+      const requestId = activeRequestIdRef.current;
+      if (requestId) {
+        postToEditor({ type: "cancel-download", requestId });
+      }
+      finalizeDownloadRequest();
+    }, [finalizeDownloadRequest, postToEditor]),
   });
 
 
@@ -435,25 +489,35 @@ export default function PdfEditorTool({
     if (!pdfLoaded) return;
     let timeoutMs = PDF_DOWNLOAD_TIMEOUT_MS;
     if (typeof window !== "undefined") {
-      const rawTimeout = new URLSearchParams(window.location.search).get(PDF_DOWNLOAD_TIMEOUT_QUERY_KEY);
+      const url = new URL(window.location.href);
+      const rawTimeout =
+        url.searchParams.get(PDF_DOWNLOAD_TIMEOUT_QUERY_KEY) ??
+        new URLSearchParams(window.location.search).get(PDF_DOWNLOAD_TIMEOUT_QUERY_KEY);
       const parsedTimeout = rawTimeout ? Number.parseInt(rawTimeout, 10) : NaN;
       if (Number.isFinite(parsedTimeout) && parsedTimeout >= PDF_DOWNLOAD_TIMEOUT_MIN_MS) {
         timeoutMs = parsedTimeout;
       }
     }
+    const requestId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    activeRequestIdRef.current = requestId;
     clearDownloadTimeout();
     setError("");
     setSaveProgressHint("");
     setBusy(true);
     downloadTimeoutRef.current = window.setTimeout(() => {
-      downloadTimeoutRef.current = null;
+      if (activeRequestIdRef.current !== requestId) return;
+      postToEditor({ type: "cancel-download", requestId });
+      finalizeDownloadRequest();
       const timeoutMessage = t("pdfDownloadTimeout", "PDF generation timed out. Please try again.");
       toast.error(timeoutMessage);
       setBusy(false);
       setError(timeoutMessage);
     }, timeoutMs);
-    postToEditor({ type: "download" });
-  }, [clearDownloadTimeout, pdfLoaded, postToEditor, t]);
+    postToEditor({ type: "download", requestId });
+  }, [clearDownloadTimeout, finalizeDownloadRequest, pdfLoaded, postToEditor, t]);
 
   const onFileChange = useCallback(
     (evt: React.ChangeEvent<HTMLInputElement>) => {
@@ -594,11 +658,26 @@ export default function PdfEditorTool({
         </div>
       </div>
 
-      {error && (
-        <div data-testid="pdf-editor-error" className="m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-          {error}
-        </div>
-      )}
+      <div
+        data-testid="pdf-editor-error"
+        role="alert"
+        aria-live="assertive"
+        className={error ? "m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3" : "sr-only"}
+      >
+        {error ? (
+          <div className="flex items-center justify-between gap-3">
+            <span className="min-w-0">{error}</span>
+            <button
+              type="button"
+              data-testid="pdf-editor-force-reload"
+              className="shrink-0 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+              onClick={handleForceReload}
+            >
+              {t("forceReload", "Force Reload")}
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       {editorCrashed && !error && (
         <div data-testid="pdf-editor-crashed" className="m-5 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center justify-between gap-3">
@@ -632,6 +711,7 @@ export default function PdfEditorTool({
         <EmbeddedPdfEditor
           key={editorKey}
           iframeRef={editorFrameRef}
+          src={editorSrc}
           lang={lang}
           buildId={PDFEDITOR_BUILD_ID ? PDFEDITOR_BUILD_ID.slice(0, 12) : undefined}
           onReady={handleEditorReady}

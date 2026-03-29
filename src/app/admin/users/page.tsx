@@ -1,6 +1,8 @@
 import { listStripeUsers, type StripeUserRow } from "@/lib/admin/stripeUsers";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 function formatDateTime(seconds: number | undefined): string {
   if (!seconds) return "-";
   const d = new Date(seconds * 1000);
@@ -85,4 +87,3 @@ export default async function AdminUsersPage() {
     </div>
   );
 }
-

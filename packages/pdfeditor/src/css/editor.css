@@ -26,6 +26,40 @@ span[role=presentation]::selection {
     outline: none !important;
 }
 
+.__pdf_find_match {
+    outline: 2px solid rgba(234, 179, 8, 0.7) !important;
+    outline-offset: 1px;
+}
+
+span.__pdf_find_match {
+    background-color: rgba(250, 204, 21, 0.24) !important;
+}
+
+.__pdf_editor_element.__pdf_find_match {
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.65);
+}
+
+.__pdf_editor_element.__pdf_find_match .__pdf_editor_element_child {
+    background-color: rgba(250, 204, 21, 0.18);
+}
+
+.__pdf_find_match_active {
+    outline-color: rgba(2, 132, 199, 0.95) !important;
+}
+
+span.__pdf_find_match_active {
+    background-color: rgba(56, 189, 248, 0.2) !important;
+}
+
+.__pdf_editor_element.__pdf_find_match_active {
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.9);
+}
+
+.__pdf_editor_element.__pdf_find_match_active .__pdf_editor_element_child {
+    background-color: rgba(56, 189, 248, 0.16);
+}
+
 .__resizable-border:hover {
     border: none !important;
     outline: var(--element-border-width) var(--element-border-style2) var(--element-border-color2) !important;

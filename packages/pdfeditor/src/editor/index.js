@@ -8,6 +8,7 @@ import { saveAs } from 'file-saver';
 import { Toolbar } from './toolbar';
 import { History } from './history';
 import { HISTORY_SOURCE } from './history_policy';
+import { markOriginTextStateApplied, ORIGIN_TEXT_REMOVE_STRATEGY } from './origin_text_state';
 import { Locale } from '../locale';
 
 const DISABLED_CLASS = 'disabled';
@@ -51,6 +52,8 @@ const btnPageNumber = 'tool_page_number';
 const btnForms = 'tool_forms';
 const btnTextArt = 'tool_textArt';
 const btnSeal = 'tool_seal';
+const btnMore = 'tool_more';
+const moreDropdown = 'more_dropdown';
 
 
 
@@ -73,6 +76,11 @@ export class PDFEditor {
     fontWorkerErrorHandler = null;
     fontWorkerMessageErrorHandler = null;
     isSaving = false;
+    downloadSeq = 0;
+    pendingDownloadSeq = 0;
+    activeDownloadSeq = 0;
+    cancelledDownloadSeq = 0;
+    assemblePdfUnavailable = true;
 
     constructor(options, pdfData, reader) {
         if (typeof(options) == 'object') {
@@ -101,6 +109,11 @@ export class PDFEditor {
                 e.data.attrs,
                 e.data.options
             );
+            if (!element) {
+                return;
+            }
+            markOriginTextStateApplied(element, true);
+            element.options.historySource = HISTORY_SOURCE.USER;
             this.toolbar.tools.text.setActions(element);
             
             const elFontList = element.elActions.querySelector('.font-dropdown');
@@ -114,7 +127,9 @@ export class PDFEditor {
             // elFontList.selectedIndex = 0;
 
             let elSpan = document.querySelector('#history_slider span');
-            elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            if (elSpan) {
+                elSpan.textContent = document.querySelectorAll('#pdf-main .__pdf_editor_element').length;
+            }
         });
 
         let timeout = null;
@@ -151,11 +166,25 @@ export class PDFEditor {
         });
 
         PDFEvent.on(Events.DOWNLOAD, () => {
+            const downloadSeq = this.consumePendingDownloadSeq();
+            if (this.isDownloadCancelled(downloadSeq)) {
+                window.__PDFEDITOR_CLEAR_ACTIVE_REQUEST_ID__?.();
+                return;
+            }
             //检查字体是否加载完成
             if (this.isSaving) return;
-            if (!this.pdfDocument.checkFonts()) return;
+            if (!this.pdfDocument.checkFonts()) {
+                PDFEvent.dispatch(Events.ERROR, {
+                    message: 'font resources are not ready'
+                });
+                return;
+            }
             this.isSaving = true;
-            this.pdfDocument.save(true).then(async blob => {
+            this.activeDownloadSeq = downloadSeq;
+            this.pdfDocument.save(true).then(blob => {
+                if (this.isDownloadCancelled(downloadSeq)) {
+                    return;
+                }
                 // if (this.options.debug) {
                 //     // window.open(URL.createObjectURL(blob));
                 //     location = URL.createObjectURL(blob);
@@ -165,25 +194,40 @@ export class PDFEditor {
 
                 parent.postMessage({
                     type: 'pdf-download',
-                    blob: blob
-                }, '*');
+                    blob: blob,
+                    editorSessionId: window.__PDFEDITOR_EDITOR_SESSION_ID__ || undefined,
+                    requestId: window.__PDFEDITOR_ACTIVE_REQUEST_ID__ || undefined
+                }, window.__PDFEDITOR_PARENT_ORIGIN__ || '*');
+                window.__PDFEDITOR_ACTIVE_REQUEST_ID__ = null;
+                window.__PDFEDITOR_CLEAR_ACTIVE_REQUEST_ID__?.();
                 this.reset();
             }).catch(error => {
+                if (this.isDownloadCancelled(downloadSeq)) {
+                    return;
+                }
                 PDFEvent.dispatch(Events.ERROR, {
                     message: error?.message || String(error)
                 });
             }).finally(() => {
+                if (this.activeDownloadSeq === downloadSeq) {
+                    this.activeDownloadSeq = 0;
+                }
                 this.isSaving = false;
             });
         });
 
         window.addEventListener('mousedown', e => {
-            if (e.target.getAttribute('role') == 'presentation' 
-                || e.target.getAttribute('contenteditable')
-                || e.target.parentElement.getAttribute('contenteditable')) {
+            const target = e.target instanceof Element ? e.target : null;
+            if (!target) {
                 return;
             }
-            const page = this.pdfDocument.getPageActive();
+            if (target.getAttribute('role') == 'presentation' 
+                || target.getAttribute('contenteditable')
+                || target.parentElement?.getAttribute('contenteditable')) {
+                return;
+            }
+            const page = this.pdfDocument.getPageActive()
+                || this.pdfDocument.pages.find(p => p?.elements?.activeId);
             if (page && page.elements.activeId) {
                 const element = page.elements.get(page.elements.activeId);
                 if (element.el.classList.contains('active')) {
@@ -263,6 +307,47 @@ export class PDFEditor {
         }
     }
 
+    nextDownloadSeq() {
+        this.downloadSeq += 1;
+        return this.downloadSeq;
+    }
+
+    consumePendingDownloadSeq() {
+        if (this.pendingDownloadSeq > 0) {
+            const seq = this.pendingDownloadSeq;
+            this.pendingDownloadSeq = 0;
+            return seq;
+        }
+        return this.nextDownloadSeq();
+    }
+
+    markDownloadCancelled(downloadSeq) {
+        if (!Number.isFinite(downloadSeq) || downloadSeq <= 0) {
+            return;
+        }
+        this.cancelledDownloadSeq = Math.max(this.cancelledDownloadSeq, downloadSeq);
+    }
+
+    isDownloadCancelled(downloadSeq) {
+        if (!Number.isFinite(downloadSeq) || downloadSeq <= 0) {
+            return false;
+        }
+        return this.cancelledDownloadSeq >= downloadSeq;
+    }
+
+    resetDownloadLifecycle() {
+        const targetSeq = this.activeDownloadSeq || this.pendingDownloadSeq;
+        this.markDownloadCancelled(targetSeq);
+        this.isSaving = false;
+        this.pendingDownloadSeq = 0;
+        this.activeDownloadSeq = 0;
+    }
+
+    cancelDownload() {
+        const targetSeq = this.activeDownloadSeq || this.pendingDownloadSeq;
+        this.markDownloadCancelled(targetSeq);
+    }
+
     /**
      * 
      * @param {Base64String | Uint8Array | ArrayBuffer} data
@@ -314,13 +399,14 @@ export class PDFEditor {
         // }).then(stream => this.setDocumentProxy(stream));
 
         if (!isUpdateStream) {
-            return this.reader.getData().then(int8Array => {
-                if (this.options.debug) {
-                    const size = int8Array?.byteLength ?? int8Array?.length ?? 0;
-                    console.info('[pdfeditor] AssemblePDF skipped, using original data', { size });
-                }
-                return this.setDocumentProxy(int8Array);
-            });
+            return this.useOriginalReaderData('no-clear-texts');
+        }
+
+        if (this.assemblePdfUnavailable) {
+            if (this.options.debug) {
+                console.warn('[pdfeditor] AssemblePDF unavailable, fallback to original data');
+            }
+            return this.useOriginalReaderData('assemble-unavailable');
         } else {
             if (this.options.debug) {
                 console.info('[pdfeditor] AssemblePDF sendWithPromise', { pages: Object.keys(chars) });
@@ -335,6 +421,13 @@ export class PDFEditor {
                 }
                 return this.setDocumentProxy(stream);
             }).catch(err => {
+                if (this.shouldFallbackFromAssembleError(err)) {
+                    this.assemblePdfUnavailable = true;
+                    if (this.options.debug) {
+                        console.warn('[pdfeditor] AssemblePDF unsupported, fallback to original data', err);
+                    }
+                    return this.useOriginalReaderData('assemble-unsupported');
+                }
                 if (this.options.debug) {
                     console.error('[pdfeditor] AssemblePDF failed', err);
                 }
@@ -343,8 +436,23 @@ export class PDFEditor {
         }
     }
 
+    useOriginalReaderData(reason = 'fallback') {
+        return this.reader.getData().then(int8Array => {
+            if (this.options.debug) {
+                const size = int8Array?.byteLength ?? int8Array?.length ?? 0;
+                console.info('[pdfeditor] using original data', { reason, size });
+            }
+            return this.setDocumentProxy(int8Array);
+        });
+    }
+
+    shouldFallbackFromAssembleError(error) {
+        const message = error?.message || String(error || '');
+        return /AssemblePDF/i.test(message) && /Unknown action/i.test(message);
+    }
+
     async reset() {
-        this.isSaving = false;
+        this.resetDownloadLifecycle();
         this.pdfData = null;
         this.pdfDocument.embedFonts = {};
         this.pdfDocument.pageRemoved = [];
@@ -371,7 +479,7 @@ export class PDFEditor {
     }
 
     prepareForNewLoad() {
-        this.isSaving = false;
+        this.resetDownloadLifecycle();
         this.pdfData = null;
         this.recreateFontWorker();
         this.resetHistoryUi();
@@ -379,8 +487,19 @@ export class PDFEditor {
     }
 
     async download(fileName) {
+        if (this.pendingDownloadSeq > 0 || this.isSaving) {
+            return;
+        }
+        const downloadSeq = this.nextDownloadSeq();
+        this.pendingDownloadSeq = downloadSeq;
         try {
             await this.flushData();
+            if (this.isDownloadCancelled(downloadSeq)) {
+                if (this.pendingDownloadSeq === downloadSeq) {
+                    this.pendingDownloadSeq = 0;
+                }
+                return;
+            }
             PDFEvent.dispatch(Events.SAVE);
             // this.pdfDocument.save(true).then(async blob => {
             //     if (this.options.debug) {
@@ -391,6 +510,12 @@ export class PDFEditor {
             //     this.reset();
             // });
         } catch (e) {
+            if (this.pendingDownloadSeq === downloadSeq) {
+                this.pendingDownloadSeq = 0;
+            }
+            if (this.isDownloadCancelled(downloadSeq)) {
+                return;
+            }
             console.log(e);
             PDFEvent.dispatch(Events.ERROR, {
                 message: e?.message || String(e)
@@ -580,6 +705,8 @@ export class PDFEditor {
             });
         }
 
+        this.#initMoreDropdownCompat();
+
 
         //顶部工具栏设置
         this.#initActionsBar();
@@ -620,7 +747,7 @@ export class PDFEditor {
         });
 
         PDFEvent.on(Events.HISTORY_REMOVE, e => {
-            document.querySelector('[data-id="'+ e.data.element.id +'"]')?.remove();
+            this.elHistoryWrapper?.querySelector?.('[data-id="'+ e.data.element.id +'"]')?.remove();
         });
         
         
@@ -676,11 +803,15 @@ export class PDFEditor {
             let elPageBox = this.elHistoryWrapper.querySelectorAll('.'+ HISTORY_PAGE_CLASS);
             elPageBox.forEach(elPage => {
                 const page = this.pdfDocument.getPageForId(elPage.getAttribute('data-pageid'));
-                page.elements.removeAll();
+                page.elements.removeAll({
+                    originStateStrategy: ORIGIN_TEXT_REMOVE_STRATEGY.RESTORE
+                });
                 elPage.querySelectorAll('.history-item').forEach(elItem => {
                     elItem.remove();
                 });
             });
+            this.elHistoryBtn.style.display = 'none';
+            this.history?.clear();
         });
 
 
@@ -741,7 +872,9 @@ export class PDFEditor {
             elHistoryPage.querySelector('.' + HISTORY_LIST_CLASS).appendChild(elItem);
             elItem.querySelector('.remove').addEventListener('click', e => {
                 elItem.remove();
-                page.elements.remove(element.id);
+                page.elements.remove(element.id, {
+                    originStateStrategy: ORIGIN_TEXT_REMOVE_STRATEGY.PRESERVE
+                });
             });
             
             if (element.dataType == 'text') {
@@ -807,15 +940,78 @@ export class PDFEditor {
 
         document.querySelectorAll('.' + TAB_ITEM_CLASS).forEach(tabItem => {
             tabItem.addEventListener('click', () => {
-                let oldActive = document.querySelector('.' + TAB_ITEM_CLASS + '.active');
-                if (oldActive) {
-                    oldActive.classList.remove('active');
-                    document.querySelector('.' + TOOLS_BOX_CLASS + '.active').classList.remove('active');
-                }
-                tabItem.classList.add('active');
-                let id = tabItem.getAttribute('data-for');
-                document.querySelector('#' + id).classList.add('active');
+                if (!this.#isTabsModeEnabled()) return;
+                const id = tabItem.getAttribute('data-for');
+                if (!id) return;
+                this.#activateToolsBox(id, tabItem);
             });
+        });
+    }
+
+    #isTabsModeEnabled() {
+        const tabs = document.querySelector('.pdf-header .tabs');
+        if (!tabs) return false;
+        return window.getComputedStyle(tabs).display !== 'none';
+    }
+
+    #activateToolsBox(id, targetTabItem = null) {
+        const oldActiveTab = document.querySelector('.' + TAB_ITEM_CLASS + '.active');
+        oldActiveTab?.classList.remove('active');
+        const oldActiveBox = document.querySelector('.' + TOOLS_BOX_CLASS + '.active');
+        if (oldActiveBox && oldActiveBox.id !== id) {
+            oldActiveBox.classList.remove('active');
+        }
+        const nextBox = document.querySelector('#' + id);
+        nextBox?.classList.add('active');
+        if (targetTabItem) {
+            targetTabItem.classList.add('active');
+        } else {
+            document.querySelector('.' + TAB_ITEM_CLASS + '[data-for="' + id + '"]')?.classList.add('active');
+        }
+    }
+
+    #initMoreDropdownCompat() {
+        this.btnMore = document.getElementById(btnMore);
+        this.elMoreDropdown = document.getElementById(moreDropdown);
+        if (!this.btnMore || !this.elMoreDropdown) return;
+
+        const toolButtonByKey = {
+            insert_pages: btnInsertPages,
+            delete_pages: btnDeletePages,
+            watermark: btnWatermark,
+            page_number: btnPageNumber,
+            header_footer: btnHeaderFooter,
+            seal: btnSeal,
+            textArt: btnTextArt
+        };
+
+        const maybeOpenInsertTools = toolKey => {
+            if (!this.#isTabsModeEnabled()) return;
+            if (['insert_pages', 'delete_pages', 'watermark', 'page_number', 'header_footer', 'seal', 'textArt'].indexOf(toolKey) !== -1) {
+                this.#activateToolsBox('insert-tools');
+            }
+        };
+
+        this.btnMore.addEventListener('click', e => {
+            e.stopPropagation();
+            this.elMoreDropdown.classList.toggle('show');
+        });
+
+        this.elMoreDropdown.querySelectorAll('[data-tool]').forEach(elItem => {
+            elItem.addEventListener('click', e => {
+                e.stopPropagation();
+                const toolKey = elItem.getAttribute('data-tool');
+                const buttonId = toolButtonByKey[toolKey];
+                if (!buttonId) return;
+                maybeOpenInsertTools(toolKey);
+                document.getElementById(buttonId)?.click();
+                this.elMoreDropdown.classList.remove('show');
+            });
+        });
+
+        document.addEventListener('click', e => {
+            if (this.elMoreDropdown.contains(e.target)) return;
+            this.elMoreDropdown.classList.remove('show');
         });
     }
 

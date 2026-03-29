@@ -19,7 +19,5 @@ export default async function ToolPage({
     redirect(`/tools/${encodeURIComponent(toolKey)}/${encodeURIComponent(uploadIdFromQuery)}`);
   }
 
-  const editorUiVariant = toolKey === "annotate" || toolKey === "edit" ? "guest" : undefined;
-
-  return <UnifiedToolPage toolKey={toolKey} uploadId={uploadId} editorUiVariant={editorUiVariant} />;
+  return <UnifiedToolPage toolKey={toolKey} uploadId={uploadId} />;
 }

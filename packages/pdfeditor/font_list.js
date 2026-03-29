@@ -1,17 +1,34 @@
-const fontDomain = 'https://fonts.abcdpdf.com/';
+const fontBaseUrl = ((process.env.BASE_URL || '/pdfeditor/').replace(/\/?$/, '/')) + 'assets/fonts/';
 
 const fontList = [
     {
-        fontFamily: 'Arial',
-        showName: 'Arial',
-        fontFile: 'Arimo-Regular.ttf'
+        fontFamily: 'NotoSansCJKsc',
+        showName: 'Noto Sans SC',
+        fontFile: 'NotoSansCJKsc-Regular.otf'
     },
     {
-        fontFamily: 'SimSun',
-        showName: '宋体',
-        fontFile: 'unicode.ttf'
+        fontFamily: 'NotoSansCJKjp',
+        showName: 'Noto Sans JP',
+        fontFile: 'NotoSansCJKjp-Regular.otf'
+    },
+    {
+        fontFamily: 'NotoSansCJKkr',
+        showName: 'Noto Sans KR',
+        fontFile: 'NotoSansCJKkr-Regular.otf'
+    },
+    {
+        fontFamily: 'Lato',
+        showName: 'Lato',
+        fontFile: 'Lato-Regular.ttf'
     }
 ];
+
+function getFontFormat(fontFile) {
+    if (/\.woff2$/i.test(fontFile)) return 'woff2';
+    if (/\.woff$/i.test(fontFile)) return 'woff';
+    if (/\.otf$/i.test(fontFile)) return 'opentype';
+    return 'truetype';
+}
 
 function generateFontCSS(cssFile) {
     let css = '';
@@ -21,9 +38,10 @@ function generateFontCSS(cssFile) {
     font-family: '${font.fontFamily}';
     font-style: normal;
     font-weight: 400;
-    src: url(${fontDomain}${font.fontFile}) format('woff2');
+    font-display: swap;
+    src: url(${fontBaseUrl}${font.fontFile}) format('${getFontFormat(font.fontFile)}');
 }`;
-});
+    });
     const fs = require('fs');
     fs.writeFileSync(cssFile, css);
 }

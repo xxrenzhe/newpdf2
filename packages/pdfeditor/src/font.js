@@ -2,14 +2,21 @@ import opentype from 'opentype.js';
 import { trimSpace } from './misc';
 
 const CHARS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 's', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'S', 'Y', 'Z', ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '~', '!', '@', '#', '$', '%', '^', '&', '(', ')', '_', '+', '-', '=', '{', '}', '|', '[', ']', ';', "'", ':', '"', ',', '.', '/', '<', '>', '?', '*'];
-const UNICODE_FONT = 'unicode.ttf';
+const UNICODE_FONT = 'NotoSansCJKsc-Regular.otf';
+const UNICODE_FONT_JP = 'NotoSansCJKjp-Regular.otf';
+const UNICODE_FONT_KR = 'NotoSansCJKkr-Regular.otf';
+const UNICODE_FONT_TC = 'NotoSansCJKtc-Regular.otf';
 const CJK_RANGE = '[\u4E00-\u9FFF]';
+const HIRAGANA_KATAKANA_RANGE = /[\u3040-\u30FF\u31F0-\u31FF]/;
+const HANGUL_RANGE = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
+const BOPOMOFO_RANGE = /[\u3100-\u312F\u31A0-\u31BF]/;
 const FONT_REQUEST_TIMEOUT_MS = 12000;
 const FALLBACK_FONT_TIMEOUT_MS = 12000;
 
 export class Font {
     static #cache = {};
     static fontUrl = '';
+    static fontApiUrl = '';
     static fontkit = null;
     static #fallbackFontBytes = null;
     static #fallbackFontPromise = null;
@@ -18,6 +25,44 @@ export class Font {
     static CJK_RANGE = CJK_RANGE;
     static FONT_REQUEST_TIMEOUT_MS = FONT_REQUEST_TIMEOUT_MS;
     static FALLBACK_FONT_TIMEOUT_MS = FALLBACK_FONT_TIMEOUT_MS;
+
+    static resolveUnicodeFont(text) {
+        if (!trimSpace(text)) {
+            return null;
+        }
+        if (HANGUL_RANGE.test(text)) {
+            return UNICODE_FONT_KR;
+        }
+        if (HIRAGANA_KATAKANA_RANGE.test(text)) {
+            return UNICODE_FONT_JP;
+        }
+        if (BOPOMOFO_RANGE.test(text)) {
+            return UNICODE_FONT_TC;
+        }
+        if (new RegExp(CJK_RANGE).test(text)) {
+            return UNICODE_FONT;
+        }
+        return null;
+    }
+
+    static async #fetchFontAsset(fontFile) {
+        const baseUrl = typeof Font.fontUrl === 'string' ? Font.fontUrl : '';
+        if (!baseUrl || !baseUrl.endsWith('/')) {
+            return false;
+        }
+
+        const normalizedFontFile = String(fontFile || '').replace(/^\/+/, '');
+        if (!normalizedFontFile) {
+            return false;
+        }
+
+        const assetUrl = baseUrl + normalizedFontFile;
+        const res = await Font.#fetchWithTimeout(assetUrl, {}, Font.FONT_REQUEST_TIMEOUT_MS).catch(() => false);
+        if (!res || res.status !== 200 || !res.ok) {
+            return false;
+        }
+        return res.arrayBuffer();
+    }
 
     static async #fetchWithTimeout(url, options = {}, timeoutMs = FONT_REQUEST_TIMEOUT_MS) {
         const requestOptions = {
@@ -134,18 +179,27 @@ export class Font {
         //     return fontData;
         // }
         //当文本在CJK范围内时 向服务器取字体改为unicode
-        let isIncludeCJK = new RegExp(CJK_RANGE);
-        if (isIncludeCJK.test(text)) {
-            fontFile = UNICODE_FONT;
+        const unicodeFont = Font.resolveUnicodeFont(text);
+        if (unicodeFont) {
+            fontFile = unicodeFont;
         }
 
-        const url = this.fontUrl;
+        const assetBuffer = await Font.#fetchFontAsset(fontFile);
+        if (assetBuffer) {
+            Font.setCache(pageId, fontFile, assetBuffer);
+            return assetBuffer;
+        }
+
+        const apiUrl = typeof this.fontApiUrl === 'string' ? this.fontApiUrl.trim() : '';
+        if (!apiUrl) {
+            return false;
+        }
         const postData = new URLSearchParams({
             text: this.text2point(text),
             fontFile: fontFile
         });
         let res = await Font.#fetchWithTimeout(
-            url,
+            apiUrl,
             {
                 method: 'POST',
                 headers: {

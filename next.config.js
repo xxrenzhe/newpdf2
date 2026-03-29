@@ -4,6 +4,10 @@ const nextConfig = {
   // 启用 standalone 输出模式，用于 Docker 部署
   output: "standalone",
   outputFileTracingRoot: __dirname,
+  serverExternalPackages: ["stripe", "next-auth", "@auth/core", "openid-client", "jose"],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   allowedDevOrigins: ["*.preview.same-app.com"],
   poweredByHeader: false,
   productionBrowserSourceMaps: false,

@@ -73,7 +73,7 @@ img {
 }
 
 .pdf-header .tabs {
-    display: flex;
+    display: none;
     align-items: flex-end;
     height: 100%;
     font-size: 13px;
@@ -117,6 +117,36 @@ img {
     position: absolute;
     width: 100%;
     text-align: center;
+}
+
+html.embed .pdf-header,
+body.embed .pdf-header {
+    gap: 12px;
+}
+
+html.embed .pdf-header .logo,
+body.embed .pdf-header .logo {
+    padding-right: 0;
+    flex: 0 0 auto;
+}
+
+html.embed .pdf-header .tabs,
+body.embed .pdf-header .tabs {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+html.embed .pdf-header .file-name,
+body.embed .pdf-header .file-name {
+    position: static;
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 .pdf-footer {
@@ -476,10 +506,6 @@ img {
     outline: var(--pdf-thumbs-preview-wrapper-border);
 }
 
-.pdf-thumbs-wrapper .insert_page_box {
-    display: none;
-}
-
 .pdf-thumbs-wrapper .remove_page {
     display: none;
 }
@@ -526,38 +552,43 @@ img {
     box-shadow: var(--pdf-preview-box-shadow);
 }
 
-.pdf-main-box .insert_page_box {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-    margin-bottom: 10px;
-    position: relative;
-    opacity: 0.5;
-}
-.pdf-main-box .insert_page_box:hover{
-    opacity: 1;
-}
-.pdf-main-box .insert_page_bg {
-    position: absolute;
-    border-top: 1px dashed #0282e5;
-    width: 120%;
-    height: 10px;
-    top: 18px;
-}
-.pdf-main-box .insert_page_btn {
-    display: inline-block;
-    padding: 8px 10px;
-    border: 1px solid #0282e5;
-    color: #0282e5;
-    cursor: pointer;
-    background-color: #fff;
-    position: absolute;
-}
-
 .pdf-main-box .remove_page {
     width: 25px;
     position: absolute;
     left: -29px;
+    display: none !important;
+}
+
+.pdf-main-box.__mode_delete_pages {
+    align-content: flex-start;
+    gap: 0 24px;
+}
+
+.pdf-main-box.__mode_delete_pages .__pdf_page_preview {
+    min-height: auto;
+    margin: 0 0 40px 0;
+}
+
+.pdf-main-box.__mode_delete_pages .drawLayer,
+.pdf-main-box.__mode_delete_pages .elementLayer,
+.pdf-main-box.__mode_delete_pages .annotationLayer,
+.pdf-main-box.__mode_delete_pages .textLayer,
+.pdf-main-box.__mode_delete_pages .__pdf_editor_element,
+.pdf-main-box.__mode_delete_pages .__pdf_el_actions_wrapper {
+    display: none !important;
+}
+
+.pdf-main-box.__mode_delete_pages .remove_page {
+    display: block !important;
+    width: 32px;
+    left: auto;
+    right: 8px;
+    top: 8px;
+    padding: 6px;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+    z-index: 2;
 }
 
 .btn-download {

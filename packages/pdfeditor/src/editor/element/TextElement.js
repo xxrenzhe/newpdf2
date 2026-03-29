@@ -1,6 +1,17 @@
 import { hexToRgb, trimSpace } from '../../misc';
 import { Events, PDFEvent } from '../../event';
+import { ORIGIN_TEXT_REMOVE_STRATEGY } from '../origin_text_state';
+import { HISTORY_SOURCE } from '../history_policy';
 import { BaseElement } from './BaseElement';
+
+const ZERO_WIDTH_CHAR_PATTERN = /[\u200B-\u200D\uFEFF]/g;
+
+const normalizeEditableText = (value) => {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    return value.replace(ZERO_WIDTH_CHAR_PATTERN, '');
+};
 
 class TextElement extends BaseElement {
     init() {
@@ -90,14 +101,66 @@ class TextElement extends BaseElement {
 
     childElement() {
         this.setStyle();
+        let removeScheduled = false;
+        const removeCurrentElement = () => {
+            if (removeScheduled) {
+                return;
+            }
+            removeScheduled = true;
+            window.setTimeout(() => {
+                removeScheduled = false;
+                if (!this.el || !this.el.isConnected) {
+                    return;
+                }
+                this.options.historySource = HISTORY_SOURCE.SYSTEM;
+                PDFEvent.dispatch(Events.HISTORY_REMOVE, {
+                    page: this.page,
+                    element: this
+                });
+                this.page.elements.remove(this.id, {
+                    originStateStrategy: ORIGIN_TEXT_REMOVE_STRATEGY.PRESERVE
+                });
+                this.disableDrag = false;
+            }, 0);
+        };
+        const removeIfTextEmpty = () => {
+            if (!this.elText || !this.elText.isConnected) {
+                return false;
+            }
+            const currentText = normalizeEditableText(this.elText?.innerText || this.elText?.textContent || this.attrs.text);
+            this.attrs.text = currentText;
+            if (trimSpace(currentText)) {
+                return false;
+            }
+            removeCurrentElement();
+            return true;
+        };
+
         this.elText.addEventListener('input', () => {
-            this.attrs.text = this.elText.innerText;
+            this.attrs.text = normalizeEditableText(this.elText.innerText);
             this.syncSizeToContent();
+        });
+        this.elText.addEventListener('keyup', event => {
+            const key = event?.key;
+            if (key !== 'Backspace' && key !== 'Delete') {
+                return;
+            }
+            removeIfTextEmpty();
         });
 
         this.elText.setAttribute('contenteditable', true);
         //禁用在选中文本时的可拖放事件
         this.elText.setAttribute('draggable', false);
+        this.elText.addEventListener('mousedown', e => {
+            this.disableDrag = true;
+            e.stopPropagation();
+        });
+        this.elText.addEventListener('mouseup', () => {
+            this.disableDrag = false;
+        });
+        this.elText.addEventListener('focus', () => {
+            this.disableDrag = true;
+        });
         this.elText.addEventListener('dragstart', e => {
             e.preventDefault();
             e.stopPropagation();
@@ -110,15 +173,14 @@ class TextElement extends BaseElement {
             // this.elText.focus();
         // });
 
-        this.elText.addEventListener('blur', e => {
-            if (!trimSpace(this.attrs.text)) {
-                PDFEvent.dispatch(Events.HISTORY_REMOVE, {
-                    page: this.page,
-                    element: this
-                });
-                this.page.elements.remove(this.id);
+        const handleFocusLoss = () => {
+            if (!this.elText || !this.elText.isConnected) {
                 return;
             }
+            if (removeIfTextEmpty()) {
+                return;
+            }
+            this.disableDrag = false;
             // this.disableDrag = false;
             // this.elText.setAttribute('contenteditable', false);
             
@@ -129,13 +191,19 @@ class TextElement extends BaseElement {
             }
             this.elText.style.cursor = 'pointer';
             requestAnimationFrame(() => {
+                if (!this.el || !this.el.isConnected) {
+                    return;
+                }
                 this.el.classList.remove('active');
                 PDFEvent.dispatch(Events.ELEMENT_BLUR, {
                     page: this.page,
                     element: this
                 });
             });
-        });
+        };
+
+        this.elText.addEventListener('blur', handleFocusLoss);
+        this.elText.addEventListener('focusout', handleFocusLoss);
 
         setTimeout(() => {
             this.elText.style.cursor = 'auto';

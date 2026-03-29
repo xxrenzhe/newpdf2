@@ -29,6 +29,13 @@ const normalizeOriginTextPartIdx = (value) => {
     return String(value);
 };
 
+const ORIGIN_TEXT_STATE_APPLIED_KEY = '__originTextStateApplied';
+
+export const ORIGIN_TEXT_REMOVE_STRATEGY = Object.freeze({
+    PRESERVE: 'preserve',
+    RESTORE: 'restore'
+});
+
 const resolveReaderPage = (element, originPageNum, fallbackReaderPage = null) => {
     const pages = element?.page?.reader?.pdfDocument?.pages;
     if (originPageNum !== null && Array.isArray(pages)) {
@@ -88,6 +95,55 @@ export const applyOriginTextState = (element, shouldClear, fallbackReaderPage = 
         readerPage.releaseConvertedTextPart(originTextPartIdx);
     }
     return true;
+};
+
+export const hasAppliedOriginTextState = (element) => {
+    return !!element?.options?.[ORIGIN_TEXT_STATE_APPLIED_KEY];
+};
+
+export const markOriginTextStateApplied = (element, isApplied = true) => {
+    if (!element) {
+        return false;
+    }
+
+    if (!element.options || typeof element.options !== 'object') {
+        element.options = {};
+    }
+
+    if (isApplied) {
+        element.options[ORIGIN_TEXT_STATE_APPLIED_KEY] = true;
+    } else {
+        delete element.options[ORIGIN_TEXT_STATE_APPLIED_KEY];
+    }
+
+    return true;
+};
+
+export const syncOriginTextState = (element, shouldClear, fallbackReaderPage = null, options = {}) => {
+    const force = options?.force === true;
+    const isApplied = hasAppliedOriginTextState(element);
+
+    if (shouldClear) {
+        if (isApplied && !force) {
+            return true;
+        }
+
+        const applied = applyOriginTextState(element, true, fallbackReaderPage);
+        if (applied) {
+            markOriginTextStateApplied(element, true);
+        }
+        return applied;
+    }
+
+    if (!isApplied && !force) {
+        return true;
+    }
+
+    const restored = applyOriginTextState(element, false, fallbackReaderPage);
+    if (restored) {
+        markOriginTextStateApplied(element, false);
+    }
+    return restored;
 };
 
 export const isSystemOriginTextElement = (element) => {

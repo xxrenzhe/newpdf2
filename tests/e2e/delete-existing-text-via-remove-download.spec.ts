@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
 import { expectPdfHeader, makePdfBytes, readDownloadBytes, editorSaveDownloadButton } from "./utils";
 
-test("removing a converted text element still keeps a redaction cover on export", async ({ page }) => {
+test("removing a converted text element keeps the original text layer suppressed", async ({ page }) => {
   test.setTimeout(240_000);
   const pdfBytes = await makePdfBytes("delete-existing-text-via-remove-download", 1);
 
@@ -24,7 +24,8 @@ test("removing a converted text element still keeps a redaction cover on export"
   await expect(removeButton).toBeVisible({ timeout: 120_000 });
   await removeButton.click();
 
-  await expect(frame.locator("#pdf-main .__pdf_editor_element.__pdf_el_text.__pdf_el_hidden")).toHaveCount(1);
+  await expect(frame.locator("#pdf-main .__pdf_editor_element.__pdf_el_text")).toHaveCount(0);
+  await expect(frame.locator("#pdf-main .textLayer .text-hide")).toHaveCount(1);
 
   const downloadPromise = page.waitForEvent("download");
   await exportButton.click();
@@ -35,4 +36,3 @@ test("removing a converted text element still keeps a redaction cover on export"
 
   await expect(frame.locator(".__l_overlay")).toHaveCount(0, { timeout: 120_000 });
 });
-

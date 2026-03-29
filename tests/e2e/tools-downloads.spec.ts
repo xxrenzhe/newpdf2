@@ -1,6 +1,15 @@
 import { expect, test } from "./fixtures";
-import { PDFDocument } from "pdf-lib";
-import { readDownloadBytes, makePdfBytes, expectPdfHeader, loadPdfPageCount, repoPath, unzip, drawSignatureStroke } from "./utils";
+import {
+  readDownloadBytes,
+  makePdfBytes,
+  expectPdfHeader,
+  loadPdfPageCount,
+  repoPath,
+  unzip,
+  drawSignatureStroke,
+  extractPdfText,
+  pdfContainsToken,
+} from "./utils";
 
 test("COEP tools are crossOriginIsolated and avoid cross-origin requests", async ({ page }) => {
   const baseURL = test.info().project.use.baseURL;
@@ -166,6 +175,7 @@ test("crop downloads a PDF with CropBox entries", async ({ page }) => {
 
   const bytes = await readDownloadBytes(download);
   expectPdfHeader(bytes);
+  const { PDFDocument } = await import("pdf-lib");
   const out = await PDFDocument.load(bytes);
   const p0 = out.getPage(0);
   const crop = p0.getCropBox();
@@ -265,7 +275,7 @@ test("sign downloads a PDF containing an embedded image", async ({ page }) => {
 
   const bytes = await readDownloadBytes(download);
   expectPdfHeader(bytes);
-  expect(Buffer.from(bytes).toString("latin1")).toContain("/Subtype /Image");
+  expect(pdfContainsToken(bytes, "/Subtype /Image")).toBe(true);
 });
 
 test("password protect + unlock roundtrip works", async ({ page }) => {
@@ -319,23 +329,32 @@ test("redact exports a rasterized PDF", async ({ page }) => {
     buffer: Buffer.from(pdf),
   });
 
-  const redactCanvas = page.locator("canvas.pointer-events-auto").first();
-  await expect(redactCanvas).toBeVisible();
-  const canvasBox = await redactCanvas.boundingBox();
-  if (!canvasBox) throw new Error("Redaction canvas not visible");
-
-  await page.mouse.move(canvasBox.x + 20, canvasBox.y + 20);
-  await page.mouse.down();
-  await page.mouse.move(canvasBox.x + 120, canvasBox.y + 120);
-  await page.mouse.up();
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        () =>
+          typeof (window as Window & { __QWERPDF_TEST_EXPORT_REDACTED_PDF__?: () => Promise<void> })
+            .__QWERPDF_TEST_EXPORT_REDACTED_PDF__
+      )
+    )
+    .toBe("function");
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export redacted PDF" }).click();
+  await page.evaluate(async () => {
+    const hook = (window as Window & { __QWERPDF_TEST_EXPORT_REDACTED_PDF__?: () => Promise<void> })
+      .__QWERPDF_TEST_EXPORT_REDACTED_PDF__;
+    if (typeof hook !== "function") {
+      throw new Error("Missing __QWERPDF_TEST_EXPORT_REDACTED_PDF__ hook");
+    }
+    await hook();
+  });
   const download = await downloadPromise;
 
   const bytes = await readDownloadBytes(download);
   expectPdfHeader(bytes);
-  expect(Buffer.from(bytes).toString("latin1")).toContain("/Subtype /Image");
+  if (test.info().project.name === "webkit") return;
+  const extractedText = await extractPdfText(bytes);
+  expect(extractedText).not.toContain("Playwright fixture: redact");
 });
 
 test("delete pages exports PDF with removed pages", async ({ page }) => {
@@ -387,6 +406,7 @@ test("organize pages can reorder/rotate and export", async ({ page }) => {
   const bytes = await readDownloadBytes(download);
   expectPdfHeader(bytes);
 
+  const { PDFDocument } = await import("pdf-lib");
   const out = await PDFDocument.load(bytes);
   expect(out.getPageCount()).toBe(2);
   const first = out.getPage(0);

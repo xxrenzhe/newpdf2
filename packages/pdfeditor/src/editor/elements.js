@@ -13,13 +13,15 @@ import { RadioGroupElement } from './element/RadioGroupElement';
 import { TextFieldElement } from './element/TextFieldElement';
 import { DropdownElement } from './element/DropdownElement';
 import {TextArtElement} from './element/TextArtElement'
-import { applyOriginTextState } from './origin_text_state';
+import { EraseMaskElement } from './element/EraseMaskElement';
+import { ORIGIN_TEXT_REMOVE_STRATEGY, syncOriginTextState } from './origin_text_state';
 
 const _ELEMENTS = {
     text: TextElement,
     textArt: TextArtElement,
     textbox: TextBoxElement,
     textCanvas: TextCanvasElement,
+    eraseMask: EraseMaskElement,
     rect: RectElement,
     circle: CircleElement,
     ellipse: EllipseElement,
@@ -80,8 +82,10 @@ export class Elements {
     async insertToPDF() {
         for (let i in this.items) {
             const item = this.items[i];
-            if (['text', 'textbox', 'textCanvans'].indexOf(item.dataType) > -1 && trimSpace(item.attrs.text) == '') { //内容为空时删除
-                this.remove(this.items[i].id);
+            if (['text', 'textbox', 'textCanvas'].indexOf(item.dataType) > -1 && trimSpace(item.attrs.text) == '') { //内容为空时删除
+                this.remove(this.items[i].id, {
+                    originStateStrategy: ORIGIN_TEXT_REMOVE_STRATEGY.PRESERVE
+                });
                 continue;
             }
             await this.items[i].insertToPDF();
@@ -118,27 +122,31 @@ export class Elements {
         return this.get(id).edit(attrs);
     }
 
-    remove(id) {
+    remove(id, options = {}) {
         const element = this.get(id);
         if (!element) {
             return;
         }
 
-        applyOriginTextState(element, false, this.page?.readerPage || null);
+        const originStateStrategy = options?.originStateStrategy || ORIGIN_TEXT_REMOVE_STRATEGY.RESTORE;
+        if (originStateStrategy === ORIGIN_TEXT_REMOVE_STRATEGY.RESTORE) {
+            syncOriginTextState(element, false, this.page?.readerPage || null);
+        }
 
         element.remove();
         delete this.items[id];
         this.activeId = null;
         PDFEvent.dispatch(Events.ELEMENT_REMOVE, {
             page: this.page,
-            element: element
+            element: element,
+            originStateStrategy
         });
     }
 
-    removeAll() {
-        for (let i in this.items) {
-            this.remove(i);
-        }
+    removeAll(options = {}) {
+        Object.keys(this.items).forEach((id) => {
+            this.remove(id, options);
+        });
     }
 
     clearSilently() {

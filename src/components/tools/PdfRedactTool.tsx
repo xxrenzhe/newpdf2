@@ -1,23 +1,21 @@
 "use client";
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Document, Page } from "react-pdf";
-import * as fabric from "fabric";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FileDropzone from "./FileDropzone";
 import type { PdfRasterPreset } from "@/lib/pdf/client";
 import { downloadBlob, redactPdfRasterize } from "@/lib/pdf/client";
-import { configurePdfJsWorker } from "@/lib/pdf/pdfjs";
 import { useLanguage } from "@/components/LanguageProvider";
 import { notifyPdfToolError } from "@/lib/pdf/toolFeedback";
+import type { RedactionCanvasApi, RedactionMode } from "./PdfRedactionCanvas";
 
-type Mode = "select" | "redact";
+const PdfRedactionCanvas = dynamic(() => import("./PdfRedactionCanvas"), { ssr: false });
+const PdfRedactPreview = dynamic(() => import("./PdfRedactPreview"), {
+  ssr: false,
+  loading: () => null,
+});
 
-type RedactionCanvasHandle = {
-  deleteSelection: () => void;
-  hasSelection: () => boolean;
-};
-
-const MIN_REDACTION_SIZE = 12;
+type Mode = RedactionMode;
 
 function hasRedactionObjects(json?: string) {
   if (!json) return false;
@@ -29,234 +27,25 @@ function hasRedactionObjects(json?: string) {
   }
 }
 
-const RedactionCanvas = forwardRef<RedactionCanvasHandle, {
-  width: number;
-  height: number;
-  mode: Mode;
-  initialJson?: string;
-  onChange: (json: string) => void;
-  onSelectionChange?: (hasSelection: boolean) => void;
-}>(function RedactionCanvas(
-  { width, height, mode, initialJson, onChange, onSelectionChange },
-  ref
-) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricRef = useRef<fabric.Canvas | null>(null);
-  const startRef = useRef<{ x: number; y: number } | null>(null);
-  const currentRef = useRef<fabric.Rect | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const syncingRef = useRef(false);
-
-  const save = useCallback(() => {
-    if (syncingRef.current) return;
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    onChange(JSON.stringify(canvas.toJSON()));
-  }, [onChange]);
-
-  const notifySelection = useCallback(() => {
-    if (!onSelectionChange) return;
-    const canvas = fabricRef.current;
-    onSelectionChange(!!canvas && canvas.getActiveObjects().length > 0);
-  }, [onSelectionChange]);
-
-  const deleteSelection = useCallback(() => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    const active = canvas.getActiveObjects();
-    if (!active.length) return;
-    active.forEach((obj) => canvas.remove(obj));
-    canvas.discardActiveObject();
-    canvas.requestRenderAll();
-    notifySelection();
-  }, [notifySelection]);
-
-  useImperativeHandle(ref, () => ({
-    deleteSelection,
-    hasSelection: () => {
-      const canvas = fabricRef.current;
-      return !!canvas && canvas.getActiveObjects().length > 0;
-    },
-  }), [deleteSelection]);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = new fabric.Canvas(canvasRef.current, {
-      width,
-      height,
-      selection: true,
-    });
-    fabricRef.current = canvas;
-
-    canvas.on("object:added", save);
-    canvas.on("object:modified", save);
-    canvas.on("object:removed", save);
-    canvas.on("selection:created", notifySelection);
-    canvas.on("selection:updated", notifySelection);
-    canvas.on("selection:cleared", notifySelection);
-
-    return () => {
-      canvas.dispose();
-    };
-  }, [height, notifySelection, save, width]);
-
-  useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    canvas.setDimensions({ width, height });
-  }, [width, height]);
-
-  useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    canvas.selection = mode === "select";
-    canvas.defaultCursor = mode === "select" ? "default" : "crosshair";
-    canvas.forEachObject((obj) => {
-      obj.selectable = mode === "select";
-      obj.evented = mode === "select";
-    });
-    if (mode !== "select") {
-      canvas.discardActiveObject();
-    }
-    canvas.renderAll();
-    notifySelection();
-  }, [mode, notifySelection]);
-
-  useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    const load = async () => {
-      syncingRef.current = true;
-      canvas.clear();
-      if (!initialJson) {
-        canvas.renderAll();
-        notifySelection();
-        syncingRef.current = false;
-        return;
-      }
-
-      const loadResult = (canvas as unknown as { loadFromJSON: (json: string, cb?: () => void) => unknown }).loadFromJSON(
-        initialJson,
-        () => {}
-      );
-      if (loadResult instanceof Promise) {
-        await loadResult;
-      } else {
-        await new Promise<void>((resolve) => {
-          (canvas as unknown as { loadFromJSON: (json: string, cb: () => void) => void }).loadFromJSON(
-            initialJson,
-            () => resolve()
-          );
-        });
-      }
-      canvas.renderAll();
-      notifySelection();
-      syncingRef.current = false;
-    };
-
-    void load();
-  }, [initialJson, notifySelection]);
-
-  useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    const onMouseDown = (opt: fabric.TPointerEventInfo) => {
-      if (mode !== "redact") return;
-      const pointer = canvas.getViewportPoint(opt.e);
-      startRef.current = { x: pointer.x, y: pointer.y };
-      setIsDrawing(true);
-
-      const rect = new fabric.Rect({
-        left: pointer.x,
-        top: pointer.y,
-        width: 0,
-        height: 0,
+function createTestRedactionOverlayJson() {
+  return JSON.stringify({
+    version: "5.0.0",
+    objects: [
+      {
+        type: "rect",
+        left: 24,
+        top: 24,
+        width: 180,
+        height: 96,
+        scaleX: 1,
+        scaleY: 1,
         fill: "#000000",
         opacity: 1,
-        selectable: false,
-        evented: false,
-      });
-      canvas.add(rect);
-      currentRef.current = rect;
-    };
-
-    const onMouseMove = (opt: fabric.TPointerEventInfo) => {
-      if (!isDrawing || mode !== "redact" || !startRef.current || !currentRef.current) return;
-      const pointer = canvas.getViewportPoint(opt.e);
-      const startX = startRef.current.x;
-      const startY = startRef.current.y;
-      const rect = currentRef.current;
-      rect.set({
-        left: Math.min(startX, pointer.x),
-        top: Math.min(startY, pointer.y),
-        width: Math.abs(pointer.x - startX),
-        height: Math.abs(pointer.y - startY),
-      });
-      canvas.renderAll();
-    };
-
-    const onMouseUp = () => {
-      if (!isDrawing || mode !== "redact") return;
-      setIsDrawing(false);
-      const rect = currentRef.current;
-      if (rect) {
-        const width = rect.width ?? 0;
-        const height = rect.height ?? 0;
-        if (width < MIN_REDACTION_SIZE || height < MIN_REDACTION_SIZE) {
-          canvas.remove(rect);
-          canvas.renderAll();
-          notifySelection();
-          startRef.current = null;
-          currentRef.current = null;
-          return;
-        }
-        rect.set({ selectable: true, evented: true });
-      }
-      startRef.current = null;
-      currentRef.current = null;
-      save();
-    };
-
-    canvas.on("mouse:down", onMouseDown);
-    canvas.on("mouse:move", onMouseMove);
-    canvas.on("mouse:up", onMouseUp);
-
-    return () => {
-      canvas.off("mouse:down", onMouseDown);
-      canvas.off("mouse:move", onMouseMove);
-      canvas.off("mouse:up", onMouseUp);
-    };
-  }, [isDrawing, mode, notifySelection, save]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (mode !== "select") return;
-      if (event.key !== "Delete" && event.key !== "Backspace") return;
-      const target = event.target;
-      if (target instanceof HTMLElement) {
-        const tag = target.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return;
-      }
-      deleteSelection();
-      event.preventDefault();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [deleteSelection, mode]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 pointer-events-auto"
-      style={{ touchAction: "none" }}
-    />
-  );
-});
+        visible: true,
+      },
+    ],
+  });
+}
 
 export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
   const [file, setFile] = useState<File | null>(initialFile ?? null);
@@ -272,8 +61,19 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
-  const canvasHandleRef = useRef<RedactionCanvasHandle | null>(null);
+  const canvasApiRef = useRef<RedactionCanvasApi | null>(null);
+  const overlaysRef = useRef<Record<number, string>>({});
+  const forcedTestOverlayRef = useRef<{ pageNumber: number; json: string } | null>(null);
   const { t } = useLanguage();
+
+  const updateOverlays = useCallback(
+    (updater: (prev: Record<number, string>) => Record<number, string>) => {
+      const next = updater(overlaysRef.current);
+      overlaysRef.current = next;
+      setOverlays(next);
+    },
+    []
+  );
 
   const isPdf = useMemo(
     () => !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")),
@@ -292,7 +92,7 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
 
   const onOverlayChange = useCallback(
     (json: string) => {
-      setOverlays((prev) => {
+      updateOverlays((prev) => {
         if (!hasRedactionObjects(json)) {
           if (!(pageNumber in prev)) return prev;
           const next = { ...prev };
@@ -302,20 +102,20 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
         return { ...prev, [pageNumber]: json };
       });
     },
-    [pageNumber]
+    [pageNumber, updateOverlays]
   );
 
   const clearPage = useCallback(() => {
-    setOverlays((prev) => {
+    updateOverlays((prev) => {
       const next = { ...prev };
       delete next[pageNumber];
       return next;
     });
     setHasSelection(false);
-  }, [pageNumber]);
+  }, [pageNumber, updateOverlays]);
 
   const deleteSelection = useCallback(() => {
-    canvasHandleRef.current?.deleteSelection();
+    canvasApiRef.current?.deleteSelection();
   }, []);
 
   const exportRedacted = useCallback(async () => {
@@ -324,8 +124,21 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
     setError("");
     setProgress({ current: 0, total: 0 });
     try {
+      const effectiveOverlays = { ...overlaysRef.current };
+      const forcedTestOverlay = forcedTestOverlayRef.current;
+      if (forcedTestOverlay) {
+        effectiveOverlays[forcedTestOverlay.pageNumber] = forcedTestOverlay.json;
+      }
+      const currentPageJson = canvasApiRef.current?.serialize();
+      if (typeof currentPageJson === "string") {
+        if (hasRedactionObjects(currentPageJson)) {
+          effectiveOverlays[pageNumber] = currentPageJson;
+        } else {
+          delete effectiveOverlays[pageNumber];
+        }
+      }
       const sanitized = Object.fromEntries(
-        Object.entries(overlays).filter(([, json]) => hasRedactionObjects(json))
+        Object.entries(effectiveOverlays).filter(([, json]) => hasRedactionObjects(json))
       ) as Record<number, string>;
       const bytes = await redactPdfRasterize(file, sanitized, preset, {
         onProgress: (current, total) => setProgress({ current, total }),
@@ -337,16 +150,36 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
     } finally {
       setBusy(false);
       setProgress(null);
+      forcedTestOverlayRef.current = null;
     }
-  }, [file, isPdf, overlays, preset, t]);
-
-  useEffect(() => {
-    configurePdfJsWorker();
-  }, []);
+  }, [file, isPdf, pageNumber, preset, t]);
 
   useEffect(() => {
     setHasSelection(false);
   }, [pageNumber]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const runtime = window as Window & {
+      __QWERPDF_TEST_SET_REDACTION_OVERLAY__?: () => Promise<void>;
+      __QWERPDF_TEST_EXPORT_REDACTED_PDF__?: () => Promise<void>;
+    };
+    const applyTestOverlay = async () => {
+      const json = createTestRedactionOverlayJson();
+      forcedTestOverlayRef.current = { pageNumber, json };
+      updateOverlays((prev) => ({ ...prev, [pageNumber]: json }));
+      await canvasApiRef.current?.applySerializedJson(json);
+    };
+    runtime.__QWERPDF_TEST_SET_REDACTION_OVERLAY__ = applyTestOverlay;
+    runtime.__QWERPDF_TEST_EXPORT_REDACTED_PDF__ = async () => {
+      await applyTestOverlay();
+      await exportRedacted();
+    };
+    return () => {
+      delete runtime.__QWERPDF_TEST_SET_REDACTION_OVERLAY__;
+      delete runtime.__QWERPDF_TEST_EXPORT_REDACTED_PDF__;
+    };
+  }, [exportRedacted, pageNumber, updateOverlays]);
 
   if (!file) {
     return (
@@ -508,17 +341,14 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
               transform: `scale(${scale})`,
             }}
           >
-            <Document file={file} onLoadSuccess={onDocumentLoadSuccess} loading={null}>
-              <Page
-                pageNumber={pageNumber}
-                scale={1}
-                onLoadSuccess={onPageLoadSuccess}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-            </Document>
+            <PdfRedactPreview
+              file={file}
+              pageNumber={pageNumber}
+              onDocumentLoadSuccess={onDocumentLoadSuccess}
+              onPageLoadSuccess={onPageLoadSuccess}
+            />
 
-            <RedactionCanvas
+            <PdfRedactionCanvas
               key={pageNumber}
               width={pageDimensions.width}
               height={pageDimensions.height}
@@ -526,7 +356,9 @@ export default function PdfRedactTool({ initialFile }: { initialFile?: File }) {
               initialJson={overlays[pageNumber]}
               onChange={onOverlayChange}
               onSelectionChange={setHasSelection}
-              ref={canvasHandleRef}
+              onApiReady={(api) => {
+                canvasApiRef.current = api;
+              }}
             />
           </div>
         </div>

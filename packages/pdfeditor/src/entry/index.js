@@ -62,6 +62,12 @@ let activeBlobUrl = null;
 let pendingRenderCompleteLoadId = null;
 let pendingRenderCompleteToken = null;
 let renderCompletePollTimer = null;
+let activeEditorSessionId = null;
+let parentOrigin = '*';
+let activeRequestId = null;
+window.__PDFEDITOR_EDITOR_SESSION_ID__ = null;
+window.__PDFEDITOR_PARENT_ORIGIN__ = '*';
+window.__PDFEDITOR_ACTIVE_REQUEST_ID__ = null;
 const loadTokenTracker = createLoadTokenTracker(24);
 
 const clearActiveBlobUrl = () => {
@@ -139,7 +145,11 @@ const resolveLoadToken = (payload, fallbackToken = activeLoadToken) => {
 const postToParent = (payload) => {
     try {
         if (window.parent) {
-            window.parent.postMessage(payload, '*');
+            const message = {
+                ...payload,
+                editorSessionId: activeEditorSessionId || undefined
+            };
+            window.parent.postMessage(message, parentOrigin || '*');
         }
     } catch (err) {
         // ignore
@@ -151,14 +161,53 @@ const setTouchGestureLock = (enabled) => {
     document.body.classList.toggle(TOUCH_GESTURE_LOCK_CLASS, !!enabled);
 };
 
+const resolveParentMetadata = (event) => {
+    if (event?.source !== window.parent) return;
+    if (typeof event?.origin === 'string' && event.origin) {
+        parentOrigin = event.origin;
+        window.__PDFEDITOR_PARENT_ORIGIN__ = parentOrigin;
+    }
+    const sessionId = typeof event?.data?.editorSessionId === 'string' && event.data.editorSessionId
+        ? event.data.editorSessionId
+        : null;
+    if (sessionId) {
+        activeEditorSessionId = sessionId;
+        window.__PDFEDITOR_EDITOR_SESSION_ID__ = sessionId;
+    }
+};
+
+const hasMatchingSessionId = (data) => {
+    if (!activeEditorSessionId) return false;
+    return data?.editorSessionId === activeEditorSessionId;
+};
+
+const setActiveRequestId = (requestId) => {
+    activeRequestId = typeof requestId === 'string' && requestId ? requestId : null;
+    window.__PDFEDITOR_ACTIVE_REQUEST_ID__ = activeRequestId;
+};
+
+const clearActiveRequestId = () => {
+    activeRequestId = null;
+    window.__PDFEDITOR_ACTIVE_REQUEST_ID__ = null;
+};
+window.__PDFEDITOR_CLEAR_ACTIVE_REQUEST_ID__ = clearActiveRequestId;
+
+const attachRequestId = (payload) => {
+    if (!activeRequestId) return payload;
+    return {
+        ...payload,
+        requestId: activeRequestId
+    };
+};
+
 const postRuntimeError = (error) => {
     const message = getErrorMessage(error);
     if (!message) return;
-    postToParent({
+    postToParent(attachRequestId({
         type: 'pdf-error',
         message,
         loadToken: activeLoadToken
-    });
+    }));
 };
 
 const installRuntimeErrorBridge = () => {
@@ -332,6 +381,7 @@ const installNavigationGuard = () => {
 };
 // Font.fontUrl = 'https://localhost:3000/api/font/load';
 Font.fontUrl = '/pdfeditor/assets/fonts/';
+Font.fontApiUrl = '';
 // let fileUrl = 'http://localhost/files/150kb.pdf';
 // let fileUrl = 'http://localhost/files/TEST/d/EMRPUB_2012_EN_1362.pdf';
 // let fileUrl = 'http://localhost/files/E0300IUC22_Invoice.pdf';
@@ -373,6 +423,16 @@ var langItem = document.querySelector(".lang_item");
 var langChecked = document.querySelector(".lang_checked");
 var langText = document.querySelector('.langText');
 if (langItem && langChecked && langText) {
+    const syncLangLabel = (langCode) => {
+        const code = typeof langCode === 'string' ? langCode.toLowerCase() : '';
+        if (!code) return;
+        const selected = langChecked.querySelector(`.lang_checked_item[data-lang="${code}"]`);
+        if (selected && typeof selected.textContent === 'string' && selected.textContent.trim()) {
+            langText.innerHTML = selected.textContent.trim();
+        }
+    };
+    syncLangLabel(Locale.langCode || lang || 'en');
+
     langItem.addEventListener('click',()=>{
         if(langChecked.classList.contains('hide')){
             langChecked.classList.remove('hide');
@@ -381,16 +441,18 @@ if (langItem && langChecked && langText) {
         }
     })
     langChecked.addEventListener('click',(e)=>{
-        if(e.target.className == 'lang_checked_item'){
-            langChecked.classList.add('hide');
-            langText.innerHTML = e.target.innerHTML;
-            var langCode = e.target.dataset.lang;
-            if (LANG_LIST.indexOf(langCode) >= 0) {
-                Locale.langCode = langCode;
-                Locale.load(langCode).then(() => {
-                    Locale.bind();
-                });
-            }
+        const target = e.target instanceof Element ? e.target.closest('.lang_checked_item') : null;
+        if(!target){
+            return;
+        }
+        langChecked.classList.add('hide');
+        var langCode = target.dataset.lang;
+        if (LANG_LIST.indexOf(langCode) >= 0) {
+            syncLangLabel(langCode);
+            Locale.langCode = langCode;
+            Locale.load(langCode).then(() => {
+                Locale.bind();
+            });
         }
     })
 }
@@ -434,23 +496,69 @@ editor.init();
 
 let loading = new Loading(null, 96, 96, '#fff');
 let elDownload = document.querySelector('.btn-download');
+let downloadProgressInterval = null;
+let loadingIconPlaceholder = null;
+
+const stopDownloadProgress = () => {
+    if (downloadProgressInterval) {
+        clearInterval(downloadProgressInterval);
+        downloadProgressInterval = null;
+    }
+};
+
+const restoreDownloadLoadingIcon = () => {
+    const icon = loading?.svg;
+    if (!(icon instanceof Element) || !icon.classList.contains('_loadingv2')) {
+        return;
+    }
+    const placeholder = loadingIconPlaceholder
+        || document.querySelector('.hide');
+    if (placeholder instanceof Element && icon.parentElement !== placeholder) {
+        placeholder.appendChild(icon);
+    }
+    icon.classList.add('_loading');
+};
+
+const finishDownloadLoading = () => {
+    stopDownloadProgress();
+    restoreDownloadLoadingIcon();
+    if (loading?.getStatus?.() === 1) {
+        loading.end();
+    }
+};
+
+const startDownloadLoading = () => {
+    finishDownloadLoading();
+    const elDiv = document.querySelector('._loadingv2');
+    if (!(elDiv instanceof Element)) {
+        loading.start();
+        return;
+    }
+    if (!loadingIconPlaceholder && elDiv.parentElement instanceof Element) {
+        loadingIconPlaceholder = elDiv.parentElement;
+    }
+    loading.setIcon(elDiv);
+    elDiv.classList.remove('_loading');
+    downloadLoad(0);
+    let loadItme = 0;
+    downloadProgressInterval = setInterval(() => {
+        loadItme += 1;
+        if (loadItme < 99) {
+            downloadLoad(loadItme);
+        } else {
+            downloadLoad(99);
+            stopDownloadProgress();
+        }
+    }, 100);
+    loading.start();
+};
+
 if (elDownload) {
 elDownload.addEventListener('click', () => {
-    
-    let elDiv = document.querySelector('._loadingv2');
-    loading.setIcon(elDiv);
-    var loadItme = 0
-    var intervalItem = setInterval(()=>{
-        loadItme ++;
-        if(loadItme<99){
-            downloadLoad(loadItme)
-        }else{
-            downloadLoad(99);
-            clearInterval(intervalItem)
-        }
-    },100)
-    elDiv.classList.remove('_loading');
-    loading.start();
+    if (editor.pendingDownloadSeq > 0 || editor.isSaving) {
+        return;
+    }
+    startDownloadLoading();
     editor.download();
 });
 }
@@ -556,13 +664,26 @@ PDFEvent.on(Events.PASSWORD_ERROR, (evt) => {
 PDFEvent.on(Events.ERROR, (evt) => {
     clearRenderCompleteWait();
     setTouchGestureLock(false);
+    finishDownloadLoading();
     const token = resolveLoadToken(evt?.data);
     const message = evt?.data?.message;
-    postToParent({
+    postToParent(attachRequestId({
         type: 'pdf-error',
         message: typeof message === 'string' ? message : undefined,
         loadToken: token
-    });
+    }));
+});
+
+PDFEvent.on(Events.FONT_FALLBACK, (evt) => {
+    const count = typeof evt?.data?.count === 'number' ? evt.data.count : 0;
+    const fonts = Array.isArray(evt?.data?.fonts)
+        ? evt.data.fonts.filter((font) => typeof font === 'string' && font.trim().length > 0).slice(0, 8)
+        : [];
+    postToParent(attachRequestId({
+        type: 'pdf-font-fallback',
+        count,
+        fonts
+    }));
 });
 
 PDFEvent.on(Events.TOOLBAR_ITEM_ACTIVE, (evt) => {
@@ -587,7 +708,7 @@ PDFEvent.on(Events.SAVE, () => {
     }
     saveProgressTimer = setTimeout(() => {
         saveProgressTimer = null;
-        postToParent({ type: 'pdf-save-progress', phase: 'font' });
+        postToParent(attachRequestId({ type: 'pdf-save-progress', phase: 'font' }));
     }, 2000);
 });
 
@@ -596,7 +717,11 @@ PDFEvent.on(Events.DOWNLOAD, () => {
         clearTimeout(saveProgressTimer);
         saveProgressTimer = null;
     }
-    postToParent({ type: 'pdf-save-progress', phase: 'render' });
+    postToParent(attachRequestId({ type: 'pdf-save-progress', phase: 'render' }));
+});
+
+PDFEvent.on(Events.SAVE_AFTER, () => {
+    finishDownloadLoading();
 });
 
 PDFEvent.on(Events.HISTORY_CHANGE, (evt) => {
@@ -618,8 +743,11 @@ if (fileUrl) {
 }
 
 window.addEventListener('message', e => {
+    if (e?.source !== window.parent) return;
     const data = e?.data;
     if (!data || typeof data !== 'object') return;
+    resolveParentMetadata(e);
+    if (!hasMatchingSessionId(data)) return;
 
     if (data.type == 'ping') {
         sendEditorReady(true);
@@ -637,8 +765,10 @@ window.addEventListener('message', e => {
     }
 
     if (data.type == 'load-pdf') {
+        clearActiveRequestId();
         clearRenderCompleteWait();
         setTouchGestureLock(false);
+        finishDownloadLoading();
         const nextToken = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken + 1;
         activeLoadToken = nextToken;
         const expectedLoadId = typeof reader?.loadId === 'number' ? reader.loadId + 1 : null;
@@ -682,11 +812,11 @@ window.addEventListener('message', e => {
                     // ignore
                 }
                 clearActiveBlobUrl();
-                postToParent({
+                postToParent(attachRequestId({
                     type: 'pdf-error',
                     message: 'Missing PDF payload',
                     loadToken: nextToken
-                });
+                }));
             } catch (err) {
                 try {
                     await reader.cancelLoad(false);
@@ -699,11 +829,11 @@ window.addEventListener('message', e => {
                     // ignore
                 }
                 clearActiveBlobUrl();
-                postToParent({
+                postToParent(attachRequestId({
                     type: 'pdf-error',
                     message: err?.message || String(err),
                     loadToken: nextToken
-                });
+                }));
             }
         };
 
@@ -712,8 +842,10 @@ window.addEventListener('message', e => {
     }
 
     if (data.type == 'cancel-load') {
+        clearActiveRequestId();
         clearRenderCompleteWait();
         setTouchGestureLock(false);
+        finishDownloadLoading();
         const token = typeof data.loadToken === 'number' ? data.loadToken : activeLoadToken;
         const runCancel = async () => {
             try {
@@ -724,6 +856,7 @@ window.addEventListener('message', e => {
                     type: 'pdf-load-cancelled',
                     loadToken: token
                 });
+                clearActiveRequestId();
             } catch (err) {
                 try {
                     await reader.cancelLoad(false);
@@ -736,11 +869,11 @@ window.addEventListener('message', e => {
                     // ignore
                 }
                 clearActiveBlobUrl();
-                postToParent({
+                postToParent(attachRequestId({
                     type: 'pdf-error',
                     message: err?.message || String(err),
                     loadToken: token
-                });
+                }));
             }
         };
         runCancel();
@@ -758,8 +891,21 @@ window.addEventListener('message', e => {
         return;
     }
 
+    if (data.type === 'cancel-download') {
+        const requestId = typeof data.requestId === 'string' && data.requestId ? data.requestId : null;
+        if (requestId && activeRequestId && requestId !== activeRequestId) {
+            return;
+        }
+        editor.cancelDownload?.();
+        clearActiveRequestId();
+        finishDownloadLoading();
+        return;
+    }
+
     if (data.type == 'download') {
+        setActiveRequestId(data.requestId);
         elDownload?.click?.();
+        return;
     }
 });
 

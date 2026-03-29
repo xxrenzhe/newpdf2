@@ -48,7 +48,7 @@ class TextBoxElement extends TextElement {
     }
 
     setStyle() {
-        if (!this.elText.textContent) {
+        if (this.elText.textContent !== (this.attrs.text ?? '')) {
             this.elText.textContent = this.attrs.text;
         }
         this.elText.style.color = this.attrs.color;
@@ -106,11 +106,10 @@ class TextBoxElement extends TextElement {
     }
 
     async insertToPDF() {
-        this.#splitTexts();
-        
         let lineTop = 2.5;
         let fontSize = this.attrs.size;
-        let lines = this.attrs.text.split(/[\n\f\r\u000B]/);
+        const exportText = this.#wrapTextForExport();
+        let lines = exportText.split(/[\n\f\r\u000B]/);
         let thickness = this.attrs.lineStyle ? fontSize / 14 : 0;
         let x = this.getX();
         let y = this.page.height - (this.getY() + fontSize - 2);
@@ -123,7 +122,7 @@ class TextBoxElement extends TextElement {
             color: this.editor.PDFLib.componentsToColor(hexToRgb(this.attrs.color).map(v => (v / 255))),
             opacity: this.attrs.opacity,
             lineHeight: lineHeight,
-            font: await this.pdfDocument.getFont(this.page.id, this.attrs.text, this.attrs.fontFile),
+            font: await this.pdfDocument.getFont(this.page.id, exportText, this.attrs.fontFile),
             rotate: this.attrs.rotate ? this.degrees(this.attrs.rotate) : undefined
         };
 
@@ -151,7 +150,7 @@ class TextBoxElement extends TextElement {
         }
 
         options.opacity = this.attrs.textOpacity;
-        this.page.pageProxy.drawText(this.attrs.text, options);
+        this.page.pageProxy.drawText(exportText, options);
         
         if (this.attrs.lineStyle) {
             let lineY = 0;
@@ -165,8 +164,7 @@ class TextBoxElement extends TextElement {
                     start: { x: x, y: lineY },
                     end: { x: x + options.font.widthOfTextAtSize(lines[i], fontSize), y: lineY },
                     thickness: thickness,
-                    // color: options.color,
-                    color: this.editor.PDFLib.componentsToColor(hexToRgb('#ff0000').map(v => (v / 255))),
+                    color: options.color,
                     opacity: options.opacity
                 });
             }
@@ -184,29 +182,63 @@ class TextBoxElement extends TextElement {
         elTemp.style.fontWeight = this.attrs.bold ? 'bold' : '';
         elTemp.style.fontStyle = this.attrs.italic ? 'italic' : '';
         elTemp.style.fontFamily = this.attrs.fontFamily;
-        elTemp.textContent = this.attrs.text[0];
+        elTemp.textContent = this.attrs.text?.[0] || 'M';
         document.body.appendChild(elTemp);
         const widthChar = elTemp.offsetWidth;
         elTemp.remove();
         return widthChar;
     }
 
-    #splitTexts() {
-        const elWidth = this.el.offsetWidth;
-        const widthChar = this.#getWidthChar();
-        const lineChars = Math.floor(elWidth / widthChar);
-        const lines = this.attrs.text.length <= lineChars ? 1 : Math.ceil(this.attrs.text.length / lineChars);
-        if (lines > 1) {
-            let chars = [];
-            for (let i = 0; i < lines; i++) {
-                let start = i * lineChars;
-                let end = start + lineChars;
-                let text = this.attrs.text.substring(start, end);
-                text = text.replace(/[\n\f\r\u000B]/g, '');
-                chars.push(text);
-            }
-            this.attrs.text = chars.join('\n');
+    #wrapTextForExport() {
+        const text = this.attrs.text || '';
+        if (!text) {
+            return '';
         }
+
+        const maxWidth = this.attrs.width / (this.pageScale || 1);
+        if (!Number.isFinite(maxWidth) || maxWidth <= 0) {
+            return text;
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return text;
+        }
+
+        const fontStyle = [];
+        if (this.attrs.italic) {
+            fontStyle.push('italic');
+        }
+        if (this.attrs.bold) {
+            fontStyle.push('bold');
+        }
+        fontStyle.push((this.attrs.size || 0) + 'px');
+        fontStyle.push(this.attrs.fontFamily || 'sans-serif');
+        ctx.font = fontStyle.join(' ');
+
+        const wrappedLines = [];
+        const sourceLines = text.split(/[\n\f\r\u000B]/);
+        sourceLines.forEach((sourceLine) => {
+            if (!sourceLine) {
+                wrappedLines.push('');
+                return;
+            }
+
+            let currentLine = '';
+            for (const char of sourceLine) {
+                const nextLine = currentLine + char;
+                if (currentLine && ctx.measureText(nextLine).width > maxWidth) {
+                    wrappedLines.push(currentLine);
+                    currentLine = char;
+                    continue;
+                }
+                currentLine = nextLine;
+            }
+            wrappedLines.push(currentLine);
+        });
+
+        return wrappedLines.join('\n');
     }
 
     #autoHeight() {

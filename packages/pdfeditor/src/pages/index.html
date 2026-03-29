@@ -190,7 +190,7 @@
                     </div>
                 </div>
             </div>
-            <div id="insert-tools" class="tools-box">
+            <div id="insert-tools" class="tools-box active">
                 <div class="tool-items tool-item-single tool_insert_pages">
                     <div id="tool_insert_pages" class="tool-item">
                         <img src="<%= ASSETS_URL %>img/Insertpages.svg" data-locale="insert_pages" data-locale-attrs="alt" alt="${LANG_MESSAGES.insert_pages}" />
@@ -271,6 +271,35 @@
                         <span data-locale="chart">${LANG_MESSAGES.chart}</span>
                     </div>
                 </div> -->
+            </div>
+            <div class="tool-items tool-item-single tool_more">
+                <div id="tool_more" class="tool-item">
+                    <img src="<%= ASSETS_URL %>img/down1.svg" alt="more" />
+                    <span>More</span>
+                </div>
+                <div id="more_dropdown" class="more_dropdown">
+                    <div class="more_dropdown_item" data-tool="insert_pages">
+                        <span data-locale="insert_pages">${LANG_MESSAGES.insert_pages}</span>
+                    </div>
+                    <div class="more_dropdown_item" data-tool="delete_pages">
+                        <span data-locale="delete_pages">${LANG_MESSAGES.delete_pages}</span>
+                    </div>
+                    <div class="more_dropdown_item" data-tool="watermark">
+                        <span data-locale="watermark">${LANG_MESSAGES.watermark}</span>
+                    </div>
+                    <div class="more_dropdown_item" data-tool="page_number">
+                        <span data-locale="page_number">${LANG_MESSAGES.page_number}</span>
+                    </div>
+                    <div class="more_dropdown_item" data-tool="header_footer">
+                        <span data-locale="header_footer">${LANG_MESSAGES.header_footer}</span>
+                    </div>
+                    <div class="more_dropdown_item" data-tool="seal">
+                        <span data-locale="seal_stamp">${LANG_MESSAGES.seal_stamp}</span>
+                    </div>
+                    <div class="more_dropdown_item" data-tool="textArt">
+                        <span data-locale="textart">${LANG_MESSAGES.textart}</span>
+                    </div>
+                </div>
             </div>
             <div id="other-tools" class="tools-box"></div>
         </div>

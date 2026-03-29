@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { LanguageProvider } from "@/components/LanguageProvider";
@@ -8,18 +8,18 @@ import GlobalToaster from "@/components/GlobalToaster";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pdftools.app";
 
-const jakarta = Plus_Jakarta_Sans({
-  weight: ["300", "400", "500", "600", "700"],
-  subsets: ["latin"],
+const lato = localFont({
+  src: "../../public/pdfeditor/assets/fonts/Lato-Regular.ttf",
   display: "swap",
   variable: "--font-body",
+  weight: "400",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
+const notoSans = localFont({
+  src: "../../public/pdfeditor/assets/fonts/NotoSans-latin.woff",
   display: "swap",
   variable: "--font-display",
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -110,7 +110,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${jakarta.variable} ${spaceGrotesk.variable} antialiased`} suppressHydrationWarning>
+      <body className={`${lato.variable} ${notoSans.variable} antialiased`} suppressHydrationWarning>
         <SecurityInitializer />
         <Providers>
           <LanguageProvider>

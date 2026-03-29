@@ -1,10 +1,12 @@
 import fs from "node:fs";
-import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, rgb } from "pdf-lib";
 import { expect, test } from "./fixtures";
 import { expectPdfHeader, readDownloadBytes, repoPath, editorSaveDownloadButton } from "./utils";
 
 async function makeSubsetFontPdfBytes(): Promise<Uint8Array> {
+  const [{ default: fontkit }, { PDFDocument, rgb }] = await Promise.all([
+    import("@pdf-lib/fontkit"),
+    import("pdf-lib"),
+  ]);
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
 

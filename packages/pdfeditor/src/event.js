@@ -55,6 +55,7 @@ export const Events = {
     SAVE_BEFORE: 'save_before',
     SAVE: 'save',
     SAVE_AFTER: 'save_after',
+    FONT_FALLBACK: 'font_fallback',
     DOWNLOAD: 'download'
 };
 

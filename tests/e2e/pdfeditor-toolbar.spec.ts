@@ -75,12 +75,13 @@ test("pdfeditor toolbar: draw tool adds a stroke", async ({ page }) => {
   await expect.poll(async () => images.count()).toBeGreaterThan(before);
 });
 
-test("pdfeditor toolbar: highlight and eraser create overlay rects", async ({ page }) => {
+test("pdfeditor toolbar: eraser removes intersecting highlight overlays instead of adding a white rect", async ({ page }) => {
   test.setTimeout(240_000);
   const pdfBytes = await makePdfBytes("toolbar-highlight", 1);
   const { frameLocator } = await openEditor(page, pdfBytes, "toolbar-highlight.pdf");
 
   const rects = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_rect");
+  const eraseMasks = frameLocator.locator("#pdf-main .__pdf_editor_element.__pdf_el_eraseMask");
   const before = await rects.count();
 
   await frameLocator.locator("#tool_highlight").click();
@@ -90,7 +91,8 @@ test("pdfeditor toolbar: highlight and eraser create overlay rects", async ({ pa
   const afterHighlight = await rects.count();
   await frameLocator.locator("#tool_eraser").click();
   await dragOnFirstPage(page, frameLocator);
-  await expect.poll(async () => rects.count()).toBeGreaterThan(afterHighlight);
+  await expect.poll(async () => rects.count()).toBe(before);
+  await expect(eraseMasks).toHaveCount(0);
 });
 
 test("pdfeditor toolbar: highlight text, underline, and strikethrough apply to selected text", async ({ page }) => {

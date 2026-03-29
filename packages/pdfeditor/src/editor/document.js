@@ -14,6 +14,7 @@ export class PDFDocument {
     embedFonts = {};
     pageRemoved = [];
     fontSubsetRequestId = 0;
+    fontFallbacks = new Map();
 
     constructor(editor, documentProxy) {
         this.editor = editor;
@@ -32,6 +33,7 @@ export class PDFDocument {
     }
 
     async fixFontData() {
+        this.clearFontFallbacks();
         let texts = Object.create(null);
         for (let i in this.pages) {
             const page = this.getPage(parseInt(i) + 1);
@@ -68,8 +70,37 @@ export class PDFDocument {
                 }
             }
         } finally {
+            this.emitFontFallbackNotice();
             PDFEvent.dispatch(Events.DOWNLOAD);
         }
+    }
+
+    clearFontFallbacks() {
+        this.fontFallbacks.clear();
+    }
+
+    trackFontFallback(fontFile, error) {
+        const key = typeof fontFile === 'string' && fontFile ? fontFile : 'unknown';
+        if (this.fontFallbacks.has(key)) {
+            return;
+        }
+        const message =
+            (error && typeof error.message === 'string' && error.message)
+            || (typeof error === 'string' ? error : null)
+            || null;
+        this.fontFallbacks.set(key, message);
+    }
+
+    emitFontFallbackNotice() {
+        if (!this.fontFallbacks || this.fontFallbacks.size === 0) {
+            return;
+        }
+        const fonts = Array.from(this.fontFallbacks.keys()).slice(0, 8);
+        PDFEvent.dispatch(Events.FONT_FALLBACK, {
+            count: this.fontFallbacks.size,
+            fonts
+        });
+        this.clearFontFallbacks();
     }
 
     async subsetFontWithWorker({
@@ -184,7 +215,7 @@ export class PDFDocument {
                 let isIncludeCJK = new RegExp(Font.CJK_RANGE);
                 if (isIncludeCJK.test(text) && _text) {
                     arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
-                    await this.setFont(pageId, fontFile, arrayBuffer);
+                    await this.setFetchedFontOrFallback(pageId, fontFile, arrayBuffer, 'unicode font fetch failed');
                 } else {
                     if (!isFetchFont) {
                         if (_text) {
@@ -207,13 +238,13 @@ export class PDFDocument {
                         }
                     } else {
                         arrayBuffer = await Font.fetchFont(pageId, text.join(''), Font.UNICODE_FONT);
-                        await this.setFont(pageId, fontFile, arrayBuffer);
+                        await this.setFetchedFontOrFallback(pageId, fontFile, arrayBuffer, 'unicode font fetch failed');
                     }
                 }
             } else {
                 //从服务器拉取字体数据
                 arrayBuffer = await Font.fetchFont(pageId, text, fontFile);
-                await this.setFont(pageId, fontFile, arrayBuffer);
+                await this.setFetchedFontOrFallback(pageId, fontFile, arrayBuffer, 'font fetch failed');
             }
             // if (!arrayBuffer) {
             //     arrayBuffer = this.documentProxy.embedFont(StandardFonts.Helvetica);
@@ -224,7 +255,17 @@ export class PDFDocument {
         return this.embedFonts[pageId][fontFile];
     }
 
+    async setFetchedFontOrFallback(pageId, fontFile, arrayBuffer, reason = 'font fetch failed') {
+        if (arrayBuffer) {
+            await this.setFont(pageId, fontFile, arrayBuffer);
+            return true;
+        }
+        await this.setFontFallback(pageId, fontFile, new Error(reason + ': ' + fontFile));
+        return false;
+    }
+
     async setFontFallback(pageId, fontFile, error) {
+        this.trackFontFallback(fontFile, error);
         try {
             await this.setFont(pageId, fontFile, StandardFonts.Helvetica);
         } catch (fallbackError) {
@@ -283,6 +324,7 @@ export class PDFDocument {
         this.pages = [];
         this.embedFonts = {};
         this.pageRemoved = [];
+        this.clearFontFallbacks();
         this.destroyDocumentProxy();
         this.fontSubsetRequestId = 0;
     }

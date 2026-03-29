@@ -1,12 +1,13 @@
 "use client";
 
 import { getGuestQuotaState, GUEST_QUOTA_UPDATED_EVENT } from "@/lib/guestQuota";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useClientSession } from "@/lib/useClientSession";
 
 export default function GuestQuotaBanner() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useClientSession();
   const [quota, setQuota] = useState(() => getGuestQuotaState());
   const isGuest = useMemo(() => status !== "loading" && !session, [session, status]);
   const { t } = useLanguage();

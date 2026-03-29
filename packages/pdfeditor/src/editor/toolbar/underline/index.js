@@ -6,6 +6,7 @@ import { Events, PDFEvent } from '../../../event';
 import { HISTORY_SOURCE } from '../../history_policy';
 
 const HIGHLIGHT_CLASS = 'text_underline';
+const HIGHLIGHT_COMPAT_CLASS = '__pdf_text_markup_underline';
 const REMOVED_CLASS = '__removed';
 const TAG_NAME = 'underline';
 
@@ -31,6 +32,7 @@ class Underline extends ToolbarItemBase {
             onElementCreate: (el, that) => {
                 const page = this.reader.pdfDocument.getPageActive();
                 el.setAttribute('data-pageid', page.id);
+                el.classList.add(HIGHLIGHT_COMPAT_CLASS);
                 setTimeout(() => {
                     const rect = el.getBoundingClientRect();
                     const mainRect = page.elWrapper.getBoundingClientRect();

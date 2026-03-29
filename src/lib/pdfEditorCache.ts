@@ -118,6 +118,14 @@ export async function clearPdfEditorCache(): Promise<void> {
   await Promise.all([deleteRecord("input"), deleteRecord("output")]);
 }
 
+export async function clearPdfEditorInput(): Promise<void> {
+  await deleteRecord("input");
+}
+
+export async function clearPdfEditorOutput(): Promise<void> {
+  await deleteRecord("output");
+}
+
 export async function cleanupPdfEditorCache(
   options?: { maxAgeMs?: number; usageRatioThreshold?: number }
 ): Promise<void> {

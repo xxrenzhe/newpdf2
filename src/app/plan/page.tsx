@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -13,6 +12,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useClientSession } from "@/lib/useClientSession";
 
 const features = [
   { icon: "/assets/same-assets/1797688836.svg", titleKey: "planFeatureEditor", title: "Powerful PDF Editor" },
@@ -53,7 +53,7 @@ const faqItems = [
 export default function PlanPage() {
   const [isAnnual, setIsAnnual] = useState(true);
   const [loading, setLoading] = useState(false);
-  const { data: session } = useSession();
+  const { data: session } = useClientSession();
   const router = useRouter();
   const { t } = useLanguage();
 

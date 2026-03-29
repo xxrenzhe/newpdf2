@@ -7,6 +7,7 @@ import { Events, PDFEvent } from '../../../event';
 import { HISTORY_SOURCE } from '../../history_policy';
 
 const HIGHLIGHT_CLASS = 'text_highlight';
+const HIGHLIGHT_COMPAT_CLASS = '__pdf_text_markup_highlight';
 const REMOVED_CLASS = '__removed';
 const TAG_NAME = 'highlight';
 
@@ -32,6 +33,7 @@ class TextHighLight extends ToolbarItemBase {
             onElementCreate: (el, that) => {
                 const page = this.reader.pdfDocument.getPageActive();
                 el.setAttribute('data-pageid', page.id);
+                el.classList.add(HIGHLIGHT_COMPAT_CLASS);
                 el.style.background = this.attrs.background;
                 el.style.opacity = this.attrs.opacity;
 

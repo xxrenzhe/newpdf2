@@ -2,7 +2,7 @@
 
 import Link from "@/components/AppLink";
 import { useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,10 +15,11 @@ import {
 import { TOOLS } from "@/lib/tools";
 import { ToolIcon } from "@/lib/toolIcons";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useClientSession } from "@/lib/useClientSession";
 
 export default function Header() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
-  const { data: session, status } = useSession();
+  const { data: session, status } = useClientSession();
   const { t } = useLanguage();
 
   const handleSignOut = async () => {
