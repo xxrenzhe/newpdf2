@@ -392,6 +392,16 @@ export class PDFReader {
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.intersectionRatio <= 0) {
+                    // [KISS Optimization] 显存主动回收 (VRAM Aggressive GC)
+                    let pageNum = entry.target.getAttribute('data-page');
+                    if (pageNum) {
+                        const page = this.pdfDocument.getPage(pageNum);
+                        if (page && page.content && page.content.tagName === 'CANVAS') {
+                            page.content.width = 1;
+                            page.content.height = 1;
+                            page.rendered = false;
+                        }
+                    }
                     return;
                 }
                 if (entry.isIntersecting) {
@@ -444,6 +454,16 @@ export class PDFReader {
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.intersectionRatio <= 0) {
+                    // [KISS Optimization] 显存主动回收 (VRAM Aggressive GC)
+                    let pageNum = entry.target.getAttribute('data-page');
+                    if (pageNum) {
+                        const page = this.pdfDocument.getPage(pageNum);
+                        if (page && page.content && page.content.tagName === 'CANVAS') {
+                            page.content.width = 1;
+                            page.content.height = 1;
+                            page.rendered = false;
+                        }
+                    }
                     return;
                 }
 

@@ -153,19 +153,50 @@ class TextBoxElement extends TextElement {
                 try {
             this.page.pageProxy.drawText(exportText, options);
         } catch (e) {
-            console.warn('[pdfeditor] Font encoding error, filtering text:', e);
-            if (options.font && typeof options.font.encodeText === 'function') {
-                let filtered = '';
-                for (let c of exportText) {
-                    try {
-                        options.font.encodeText(c);
-                        filtered += c;
-                    } catch(err) {
-                        filtered += '?';
-                    }
-                }
-                this.page.pageProxy.drawText(filtered, options);
+            console.warn('[pdfeditor] Font encoding error, using Canvas rasterization fallback for CJK:', e);
+            let fontScale = (this.pageScale < 2 ? 2 : this.pageScale) + this.scale;
+            let fallFontSize = this.attrs.size * fontScale;
+            let linesFallback = exportText.split(/[\n\f\r\u000B]/);
+            let fallLineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : fallFontSize) + 4;
+            fallLineHeight *= fontScale;
+            
+            let rectFallback = this.elText ? this.elText.getBoundingClientRect() : { width: this.attrs.width, height: this.attrs.height };
+            let canvas = document.createElement('canvas');
+            
+            let _width = rectFallback.width / this.scale * fontScale;
+            let _height = linesFallback.length * fallLineHeight;
+            canvas.width = _width + 20;
+            canvas.height = _height + 20;
+            
+            let ctx = canvas.getContext('2d');
+        
+            let fontStyle = [];
+            if (this.attrs.italic) fontStyle.push('italic');
+            if (this.attrs.bold) fontStyle.push('bold');
+            fontStyle.push(fallFontSize + 'px');
+            fontStyle.push(this.attrs.fontFamily || 'sans-serif');
+            ctx.font = fontStyle.join(' ');
+            ctx.fillStyle = this.attrs.color;
+            ctx.textBaseline = 'top';
+
+            for (let i = 0; i < linesFallback.length; i++) {
+                ctx.fillText(linesFallback[i], 5, fallLineHeight * i + 5, canvas.width);
             }
+        
+            let _embedImage = await embedImage(this.page.pdfDocument.documentProxy, 'image/png', canvas.toDataURL('image/png', 1));
+            let imgWidth = _embedImage.width / fontScale;
+            let imgHeight = _embedImage.height / fontScale;
+            let imgOptions = {
+                x: options.x,
+                y: options.y,
+                width: imgWidth,
+                height: imgHeight,
+                opacity: this.attrs.textOpacity
+            };
+            if (this.attrs.rotate) {
+                imgOptions.rotate = this.degrees(this.attrs.rotate);
+            }
+            this.page.pageProxy.drawImage(_embedImage, imgOptions);
         }
         
         if (this.attrs.lineStyle) {

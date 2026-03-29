@@ -308,22 +308,57 @@ class TextElement extends BaseElement {
             if (wordSpacing !== 0) ops.push(this.editor.PDFLib.setWordSpacing(wordSpacing));
             this.page.pageProxy.pushOperators(...ops);
         }
-                try {
+        try {
             this.page.pageProxy.drawText(this.attrs.text, options);
         } catch (e) {
-            console.warn('[pdfeditor] Font encoding error, filtering text:', e);
-            if (options.font && typeof options.font.encodeText === 'function') {
-                let filtered = '';
-                for (let c of this.attrs.text) {
-                    try {
-                        options.font.encodeText(c);
-                        filtered += c;
-                    } catch(err) {
-                        filtered += '?';
-                    }
-                }
-                this.page.pageProxy.drawText(filtered, options);
+            console.warn('[pdfeditor] Font encoding error, using Canvas rasterization fallback for CJK:', e);
+            let fontScale = (this.pageScale < 2 ? 2 : this.pageScale) + this.scale;
+            let fallFontSize = this.attrs.size * fontScale;
+            let linesFallback = this.attrs.text.split(/[\n\f\r\u000B]/);
+            let fallLineHeight = (this.attrs.lineHeight ? this.attrs.lineHeight : fallFontSize) + 4;
+            fallLineHeight *= fontScale;
+            
+            let rectFallback = this.elText ? this.elText.getBoundingClientRect() : { width: this.attrs.size * this.attrs.text.length, height: fallLineHeight };
+            let canvas = document.createElement('canvas');
+            
+            let _width = rectFallback.width / this.scale * fontScale;
+            let _height = linesFallback.length * fallLineHeight;
+            canvas.width = _width + 20;
+            canvas.height = _height + 20;
+            
+            let ctx = canvas.getContext('2d');
+            if (this.attrs.background) {
+                ctx.fillStyle = this.attrs.background;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
+        
+            let fontStyle = [];
+            if (this.attrs.italic) fontStyle.push('italic');
+            if (this.attrs.bold) fontStyle.push('bold');
+            fontStyle.push(fallFontSize + 'px');
+            fontStyle.push(this.attrs.fontFamily || 'sans-serif');
+            ctx.font = fontStyle.join(' ');
+            ctx.fillStyle = this.attrs.color;
+            ctx.textBaseline = 'top';
+
+            for (let i = 0; i < linesFallback.length; i++) {
+                ctx.fillText(linesFallback[i], 5, fallLineHeight * i + 5, canvas.width);
+            }
+        
+            let _embedImage = await embedImage(this.page.pdfDocument.documentProxy, 'image/png', canvas.toDataURL('image/png', 1));
+            let imgWidth = _embedImage.width / fontScale;
+            let imgHeight = _embedImage.height / fontScale;
+            let imgOptions = {
+                x: x,
+                y: this.page.height - (this.getY() + imgHeight),
+                width: imgWidth,
+                height: imgHeight,
+                opacity: this.attrs.opacity
+            };
+            if (this.attrs.rotate) {
+                imgOptions.rotate = this.degrees(this.attrs.rotate);
+            }
+            this.page.pageProxy.drawImage(_embedImage, imgOptions);
         }
         if (hasSpacing) {
             const resetOps = [];
