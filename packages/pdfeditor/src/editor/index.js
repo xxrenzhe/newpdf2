@@ -1028,6 +1028,12 @@ export class PDFEditor {
         let bindedLang = {};
 
         const showActions = e => {
+            // [KISS Optimization] 隔离绘图模式的文本误触
+            if (['mouse', 'hand', 'text'].indexOf(e.data.name) === -1) {
+                document.body.classList.add('pdf-drawing-mode');
+            } else {
+                document.body.classList.remove('pdf-drawing-mode');
+            }
             if(e.data.name != 'textArt'){
                 const dropdownTextArt = document.querySelector("#dropdown_textArt");
                 if(dropdownTextArt){
@@ -1091,6 +1097,7 @@ export class PDFEditor {
         });
 
         PDFEvent.on(Events.TOOLBAR_ITEM_BLUR, e => {
+            document.body.classList.remove('pdf-drawing-mode');
             toolActive?.classList.remove('active');
             toolActive = null;
             // elSliderHide(this.pdfElActionsWrapper, 'show');

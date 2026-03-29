@@ -2989,3 +2989,9 @@ dialog :link {
     display: none;
   }
 }
+
+/* [KISS Optimization] 隔离绘图时的文本误触 */
+.pdf-drawing-mode .textLayer {
+  pointer-events: none !important;
+  user-select: none !important;
+}
