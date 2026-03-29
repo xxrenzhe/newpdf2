@@ -71,6 +71,7 @@ class TextElement extends BaseElement {
         this.elText.style.wordSpacing = this.attrs.wordSpacing != null ? this.attrs.wordSpacing + 'px' : '';
         if (this.attrs.rotate) {
             this.elText.style.transform = 'rotate('+ this.attrs.rotate +'deg)';
+            this.elText.style.transformOrigin = 'left top';
         }
         switch (this.attrs.lineStyle) {
             case 'underline':

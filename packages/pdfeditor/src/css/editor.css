@@ -73,8 +73,8 @@ span.__pdf_find_match_active {
 
 div[contenteditable] {
     outline: none;
-    word-wrap: break-word;
-    word-break: break-all;
+    word-break: normal;
+    overflow-wrap: break-word;
     white-space: pre-wrap;
 }
 

@@ -156,6 +156,10 @@ export class PDFPage extends PDFPageBase {
 
                 const rect = elDiv.getBoundingClientRect();
                 textWidth += rect.width;
+                // [KISS Optimization] 智能 Z-Index 碰撞体积优化：按面积反比分配 z-index，保证短文本/内联文本不会被大文本框遮挡而无法点击
+                const area = rect.width * rect.height;
+                const zIndex = Math.max(1, Math.floor(1000000 / (area || 1)));
+                elDiv.style.zIndex = zIndex;
                 if (wrapperRect) {
                     const left = rect.left - wrapperRect.left;
                     const top = rect.top - wrapperRect.top;
@@ -461,7 +465,7 @@ export class PDFPage extends PDFPageBase {
                 size: fontSize / this.scale,
                 color: color,
                 text: textPart.text,
-                lineHeight: null,
+                lineHeight: (textPart.bounds ? (textPart.bounds.bottom - textPart.bounds.top) : fontSize) / this.scale,
                 fontFamily: fontFamily,
                 fontFile: fontFamily,
                 fontName: elDiv.getAttribute('data-fontname'),
