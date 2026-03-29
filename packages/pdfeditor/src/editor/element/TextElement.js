@@ -308,7 +308,23 @@ class TextElement extends BaseElement {
             if (wordSpacing !== 0) ops.push(this.editor.PDFLib.setWordSpacing(wordSpacing));
             this.page.pageProxy.pushOperators(...ops);
         }
-        this.page.pageProxy.drawText(this.attrs.text, options);
+                try {
+            this.page.pageProxy.drawText(this.attrs.text, options);
+        } catch (e) {
+            console.warn('[pdfeditor] Font encoding error, filtering text:', e);
+            if (options.font && typeof options.font.encodeText === 'function') {
+                let filtered = '';
+                for (let c of this.attrs.text) {
+                    try {
+                        options.font.encodeText(c);
+                        filtered += c;
+                    } catch(err) {
+                        filtered += '?';
+                    }
+                }
+                this.page.pageProxy.drawText(filtered, options);
+            }
+        }
         if (hasSpacing) {
             const resetOps = [];
             if (charSpacing !== 0) resetOps.push(this.editor.PDFLib.setCharacterSpacing(0));

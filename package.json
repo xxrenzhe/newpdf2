@@ -7,7 +7,7 @@
     "clean:next": "node scripts/clean-next.mjs",
     "dev": "npm run clean:next && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0",
     "dev:turbopack": "npm run clean:next && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev -H 0.0.0.0 --turbopack",
-    "build:pdfeditor": "node scripts/sync-pdfjs-worker.mjs && NODE_ENV=production BASE_URL=/pdfeditor/ webpack --config packages/pdfeditor/webpack.build.js",
+    "build:pdfeditor": "PDFEDITOR_USE_OLDCODE_WORKER=1 node scripts/sync-pdfjs-worker.mjs && NODE_ENV=production BASE_URL=/pdfeditor/ webpack --config packages/pdfeditor/webpack.build.js",
     "build": "node scripts/build.mjs",
     "start": "node scripts/validate-prod-env.mjs && NEXT_IGNORE_INCORRECT_LOCKFILE=1 next start",
     "prelint": "node scripts/ensure-next-types.mjs",

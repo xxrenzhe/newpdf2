@@ -150,7 +150,23 @@ class TextBoxElement extends TextElement {
         }
 
         options.opacity = this.attrs.textOpacity;
-        this.page.pageProxy.drawText(exportText, options);
+                try {
+            this.page.pageProxy.drawText(exportText, options);
+        } catch (e) {
+            console.warn('[pdfeditor] Font encoding error, filtering text:', e);
+            if (options.font && typeof options.font.encodeText === 'function') {
+                let filtered = '';
+                for (let c of exportText) {
+                    try {
+                        options.font.encodeText(c);
+                        filtered += c;
+                    } catch(err) {
+                        filtered += '?';
+                    }
+                }
+                this.page.pageProxy.drawText(filtered, options);
+            }
+        }
         
         if (this.attrs.lineStyle) {
             let lineY = 0;
