@@ -69,8 +69,19 @@ const ENABLE_ENCRYPTION =
 // 内存存储
 // ============================================================================
 
+// [KISS Optimization] 阻止客户端 OOM: 原生 Map 没有过期机制，长久挂载大文件会导致浏览器直接卡死。添加一个带容量上限的安全缓存。
+const IN_MEMORY_LIMIT = 5;
 const inMemoryStore = new Map<string, AnyStoredUpload>();
 const pendingDbWrites = new Map<string, Promise<void>>();
+
+function _setInMemory(id: string, value: AnyStoredUpload) {
+  _setInMemory(id, value);
+  if (inMemoryStore.size > IN_MEMORY_LIMIT) {
+    const firstKey = inMemoryStore.keys().next().value;
+    if (firstKey) inMemoryStore.delete(firstKey);
+  }
+}
+
 const deletedIds = new Set<string>();
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -280,7 +291,7 @@ export async function saveUpload(files: File[]): Promise<string> {
   }
 
   // 先存入内存
-  inMemoryStore.set(id, value);
+  _setInMemory(id, value);
 
   // 异步持久化到 IndexedDB
   const writePromise = putUploadRecord(value).catch(() => {});

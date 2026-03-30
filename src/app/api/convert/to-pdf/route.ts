@@ -24,6 +24,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // [KISS Optimization] OOM防御：在分配极高成本的 FormData 内存前，先验证表单声称的大小
+  const maxBytes = 25 * 1024 * 1024;
+  const contentLength = Number(request.headers.get("content-length") || "0");
+  if (contentLength > maxBytes + 5 * 1024 * 1024) { // Buffer for multipart boundaries
+    return NextResponse.json(
+      { error: "Payload too large (max 25MB)" },
+      { status: 413, headers: rateLimitHeaders(rl) }
+    );
+  }
+
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File)) {
