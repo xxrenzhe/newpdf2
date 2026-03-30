@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "file is required" }, { status: 400, headers: rateLimitHeaders(rl) });
   }
 
-  const maxBytes = 25 * 1024 * 1024;
   if (file.size > maxBytes) {
     return NextResponse.json(
       { error: "File is too large (max 25MB)" },
