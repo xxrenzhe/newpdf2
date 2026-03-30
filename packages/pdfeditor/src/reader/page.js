@@ -480,9 +480,10 @@ export class PDFPage extends PDFPageBase {
         let fontSize = parseFloat(elDiv.getAttribute('data-fontsize'));
         let color = elDiv.getAttribute('data-fontcolor');
                 // [KISS Optimization] 优化背景取色的精准度：采用段落包围盒的中心点提取背景色，防止只取首字母边缘引发透明黑底 (Ghosting Background)
-        let bgX = x + (textPart.bounds ? (textPart.bounds.right - textPart.bounds.left) / 2 : 0);
-        let bgY = y + (textPart.bounds ? (textPart.bounds.bottom - textPart.bounds.top) / 2 : 0);
-        let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), bgX * this.outputScale, bgY * this.outputScale);
+        // [KISS Optimization] 安全边缘背景采样机制 (Safe Edge Background Sampling)：彻底摒弃中心点取色，改为提取左上角包围盒外部 2px 处的绝对纸张像素，彻底规避文字墨迹造成的黑底污染。
+        let bgX = textPart.bounds ? textPart.bounds.left - 2 : x - 2;
+        let bgY = textPart.bounds ? textPart.bounds.top - 2 : y - 2;
+        let bgColor = elDiv.getAttribute('data-bgcolor') || getPixelColor(this.content.getContext('2d'), Math.max(0, bgX) * this.outputScale, Math.max(0, bgY) * this.outputScale);
         let fontFamily = elDiv.getAttribute('data-loadedname') || 'Helvetica';
         const rotate = Number.isFinite(textPart.rotate) ? textPart.rotate : null;
 

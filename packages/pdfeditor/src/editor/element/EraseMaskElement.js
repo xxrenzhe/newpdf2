@@ -1,3 +1,4 @@
+import { hexToRgb } from '../../misc';
 import { RectElement } from './RectElement';
 
 class EraseMaskElement extends RectElement {
@@ -16,7 +17,7 @@ class EraseMaskElement extends RectElement {
             y: this.page.height - (y + _height),
             width: _width,
             height: _height,
-            color: this.editor.PDFLib.rgb(1, 1, 1),
+            color: this.attrs.background ? this.editor.PDFLib.componentsToColor(hexToRgb(this.attrs.background).map(v => (v / 255))) : this.editor.PDFLib.rgb(1, 1, 1),
             opacity: 1,
             borderWidth: 0
         };

@@ -92,26 +92,42 @@ class TextHighLight extends ToolbarItemBase {
                 if (el.classList.contains(REMOVED_CLASS)) {
                     return;
                 }
-                const rect = {
-                    x: parseFloat(el.getAttribute('data-x')),
-                    y: parseFloat(el.getAttribute('data-y')),
-                    width: parseFloat(el.getAttribute('data-w')),
-                    height: parseFloat(el.getAttribute('data-h'))
-                };
-
                 const pageId = el.getAttribute('data-pageid');
                 const page = this.editor.pdfDocument.getPageForId(pageId);
+                // [KISS Optimization] 动态提取实时物理坐标，彻底免疫缩放级别的变化导致标注偏移
+                const domRect = el.getBoundingClientRect();
+                const mainRect = page.readerPage.elWrapper.getBoundingClientRect();
+                const rect = {
+                    x: domRect.x - mainRect.x,
+                    y: domRect.y - mainRect.y,
+                    width: domRect.width,
+                    height: domRect.height
+                };
                 page.elements.add('rect', {
                     width: rect.width,
                     height: rect.height,
                     opacity: this.attrs.opacity,
                     background: this.attrs.background
                 }, {
+                    source: 'text_highlight_export',
                     pos: {
                         x: rect.x,
                         y: rect.y
                     }
                 });
+            });
+        });
+
+        // [KISS Optimization] 彻底清除文本标注保存时的图层污染：高亮在导出时转化为了原生的 Rect 图形，但导出完成后必须从 DOM 中删除，否则会导致用户在网页上看到被拉伸/错位的残影。
+        PDFEvent.on(Events.SAVE_AFTER, e => {
+            this.editor.pdfDocument.pages.forEach(page => {
+                let toRemove = [];
+                for (let key in page.elements.items) {
+                    if (page.elements.items[key].options?.source === 'text_highlight_export') {
+                        toRemove.push(key);
+                    }
+                }
+                toRemove.forEach(id => page.elements.remove(id));
             });
         });
     }
