@@ -178,20 +178,18 @@ function genTextImage(options) {
 
 function getPixelColor(context, x, y) {
     let imageData = context.getImageData(x, y, 1, 1);
-    // let canvas = document.createElement('canvas');
-    // canvas.width = imageData.width;
-    // canvas.height = imageData.height;
-    // let ctx = canvas.getContext('2d');
-    // ctx.putImageData(imageData, 0, 0);
-    // canvas.toBlob(blob => {
-    //     window.open(URL.createObjectURL(blob));
-    // });
     let pixel = imageData.data;
     let r = pixel[0];
     let g = pixel[1];
     let b = pixel[2];
     let a = pixel[3] / 255;
     a = Math.round(a * 100) / 100;
+    
+    // [KISS Optimization] 背景取色防污染机制：如果取到的是完全透明的像素，强制回退为白色底色
+    if (a === 0) {
+        return "rgb(255, 255, 255)";
+    }
+    
     let rgbaColor = "rgba(" + r + "," + g + "," + b + "," + a + ")";
     return rgbaColor;
 }

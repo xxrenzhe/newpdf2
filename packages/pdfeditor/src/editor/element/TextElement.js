@@ -182,9 +182,17 @@ class TextElement extends BaseElement {
                 return;
             }
             this.disableDrag = false;
-            // this.disableDrag = false;
-            // this.elText.setAttribute('contenteditable', false);
             
+            // [KISS Optimization] Fix text selection ghosting issue: 
+            // When losing focus, explicitly remove window selection.
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const node = selection.anchorNode;
+                if (this.elText.contains(node)) {
+                    selection.removeAllRanges();
+                }
+            }
+
             this.page.elements.activeId = null;
             //重复事件判断，编辑状态下点击console面板，再点击页面会多触发一次blur事件
             if (!this.el.classList.contains('active')) {
