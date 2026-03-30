@@ -217,7 +217,12 @@ export class PDFPage extends PDFPageBase {
                     break;
                 }
 
-                if (textItem.hasEOL || this.#isBreak(textItem, i+1)) {
+                if (textItem.hasEOL) {
+                    text += '\n';
+                }
+                
+                if (this.#isBreak(textItem, i+1)) {
+
                     this.textParts[n] = {
                         text: trimSpace(text),
                         elements: elements,
