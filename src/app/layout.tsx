@@ -9,14 +9,14 @@ import GlobalToaster from "@/components/GlobalToaster";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pdftools.app";
 
 const lato = localFont({
-  src: "../../public/pdfeditor/assets/fonts/Lato-Regular.ttf",
+  src: "./fonts/Lato-Regular.ttf",
   display: "swap",
   variable: "--font-body",
   weight: "400",
 });
 
 const notoSans = localFont({
-  src: "../../public/pdfeditor/assets/fonts/NotoSans-latin.woff",
+  src: "./fonts/NotoSans-latin.woff",
   display: "swap",
   variable: "--font-display",
   weight: "400",
