@@ -176,6 +176,13 @@ export const shouldBreakTextRun = (textItem, nextTextItem) => {
             return (nextTextItem.width || 0) > threshold;
         }
 
+        // [KISS Optimization] 公式符号/角标智能融合识别：若物理字间距极小，容忍字体大小/高度的突变（不强行截断），从而保持整个公式和大小混排文字在一个编辑框内
+        const gap = getRunReadGap(textItem, nextTextItem, vertical);
+        const maxH = Math.max(currentHeight, nextHeight);
+        if (gap < (maxH * 0.4)) {
+            return false;
+        }
+
         return hasDimensionDrift(textItem, nextTextItem, 'height');
     }
 
@@ -191,6 +198,12 @@ export const shouldBreakTextRun = (textItem, nextTextItem) => {
         const width = Math.max(currentWidth, nextWidth);
         const threshold = Math.max(8, width * 0.6);
         return (nextTextItem.height || 0) > threshold;
+    }
+
+    const gapWidth = getRunReadGap(textItem, nextTextItem, vertical);
+    const maxW = Math.max(currentWidth, nextWidth);
+    if (gapWidth < (maxW * 0.4)) {
+        return false;
     }
 
     return hasDimensionDrift(textItem, nextTextItem, 'width');
