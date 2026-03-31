@@ -147,9 +147,9 @@ export function getRateLimitKey(request: NextRequest, prefix: string): string {
 // ============================================================================
 
 const whitelist = new Set<string>([
-  // 添加可信 IP 或用户标识
-  // "127.0.0.1",
-  // "::1",
+  "127.0.0.1",
+  "::1",
+  "localhost",
 ]);
 
 /**

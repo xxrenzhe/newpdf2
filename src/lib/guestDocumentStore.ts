@@ -21,8 +21,18 @@ const DB_NAME = "qwerpdf";
 const DB_VERSION = 3;
 const STORE_NAME = "guest-documents";
 
+// [KISS Optimization] 阻止客户端 OOM: 原生 Map 没有过期机制，添加容量上限的安全缓存。
+const IN_MEMORY_LIMIT = 5;
 const inMemoryStore = new Map<string, GuestDocumentRecord>();
 const pendingDbWrites = new Map<string, Promise<void>>();
+
+function _setInMemory(id: string, value: GuestDocumentRecord) {
+  _setInMemory(id, value);
+  if (inMemoryStore.size > IN_MEMORY_LIMIT) {
+    const firstKey = inMemoryStore.keys().next().value;
+    if (firstKey) inMemoryStore.delete(firstKey);
+  }
+}
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 let dbFailed = false;
@@ -121,7 +131,7 @@ export async function createGuestDocument(toolKey: string, files: File[]): Promi
     files: filesToStored(files),
   };
 
-  inMemoryStore.set(id, value);
+  _setInMemory(id, value);
   enqueueGuestDocumentWrite(id);
 
   return id;
@@ -142,7 +152,7 @@ export async function loadGuestDocument(id: string): Promise<{ toolKey: string; 
   });
 
   if (!record) return null;
-  inMemoryStore.set(id, record);
+  _setInMemory(id, record);
   return { toolKey: record.toolKey, files: storedToFiles(record.files) };
 }
 
@@ -167,7 +177,7 @@ export async function updateGuestDocumentTool(id: string, toolKey: string): Prom
   if (!record) return;
   record.toolKey = toolKey;
   record.updatedAt = Date.now();
-  inMemoryStore.set(id, record);
+  _setInMemory(id, record);
   enqueueGuestDocumentWrite(id);
 }
 
@@ -192,6 +202,6 @@ export async function updateGuestDocumentFiles(id: string, files: File[]): Promi
   if (!record) return;
   record.files = filesToStored(files);
   record.updatedAt = Date.now();
-  inMemoryStore.set(id, record);
+  _setInMemory(id, record);
   enqueueGuestDocumentWrite(id);
 }

@@ -24,7 +24,7 @@ function getUtcDayKey(date = new Date()): string {
 }
 
 function getLimit(): number {
-  if (process.env.NEXT_PUBLIC_E2E === "1") return 1_000_000;
+  if (process.env.NEXT_PUBLIC_E2E === "1" || (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))) return 1_000_000;
   const raw = process.env.NEXT_PUBLIC_GUEST_DAILY_DOWNLOAD_LIMIT;
   const n = raw ? Number.parseInt(raw, 10) : Number.NaN;
   if (Number.isFinite(n) && n > 0) return n;
