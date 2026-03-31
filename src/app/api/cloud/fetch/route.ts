@@ -47,10 +47,10 @@ function parseAndValidateUrl(raw: string): URL {
   return url;
 }
 
-async function fetchWithRedirects(url: URL): Promise<Response> {
+async function fetchWithRedirects(url: URL, signal?: AbortSignal): Promise<Response> {
   let current = url;
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    const res = await fetch(current.toString(), { redirect: "manual", cache: "no-store" });
+    const res = await fetch(current.toString(), { redirect: "manual", cache: "no-store", signal });
 
     const status = res.status;
     const isRedirect = status >= 300 && status < 400;
@@ -128,14 +128,19 @@ export async function POST(request: NextRequest) {
   }
 
   let upstream: Response;
+  const abortCtrl = new AbortController();
+  const timeoutId = setTimeout(() => abortCtrl.abort(), 25000); // [KISS Optimization] 防止云端链接无响应导致的服务端挂起
   try {
-    upstream = await fetchWithRedirects(url);
+    upstream = await fetchWithRedirects(url, abortCtrl.signal);
   } catch (err) {
+    clearTimeout(timeoutId);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Upstream fetch failed" },
       { status: 502, headers: rateLimitHeaders(rl) }
     );
   }
+
+  clearTimeout(timeoutId);
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");
